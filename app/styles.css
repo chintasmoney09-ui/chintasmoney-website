@@ -240,6 +240,20 @@ select option { background: var(--surface); }
 .jrn-chip .jc-n{opacity:.6;font-weight:700;margin-left:2px}
 .jrn-chip.on .jc-n{opacity:.9}
 
+/* Activity heatmap */
+.heatmap{display:flex;gap:4px;overflow-x:auto;padding:4px 0 2px}
+.hm-col{display:flex;flex-direction:column;gap:4px;flex:0 0 auto}
+.hm-cell{width:14px;height:14px;border-radius:3px;display:block;background:rgba(255,255,255,.06)}
+.hm-l0{background:rgba(255,255,255,.06)}
+.hm-l1{background:rgba(34,224,138,.30)}
+.hm-l2{background:rgba(34,224,138,.50)}
+.hm-l3{background:rgba(34,224,138,.72)}
+.hm-l4{background:#22e08a}
+.hm-future{background:transparent}
+.hm-legend{display:flex;justify-content:space-between;align-items:center;margin-top:10px;color:var(--muted);font-size:.8rem;flex-wrap:wrap;gap:8px}
+.hm-legend .hm-scale{display:inline-flex;align-items:center;gap:4px}
+.hm-legend .hm-cell{width:12px;height:12px}
+
 /* Global quick-log floating action button */
 .fab{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:40;width:58px;height:58px;border-radius:50%;border:none;cursor:pointer;
   background:linear-gradient(135deg,#22e08a,#0f9d76);color:#04140d;font-size:2rem;font-weight:800;line-height:1;

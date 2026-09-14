@@ -1326,6 +1326,30 @@
       '<div class="th-xp"><i style="width:' + pct + '%"></i></div>' +
       '<div class="th-xpt">' + (got === all.length ? "All badges unlocked — legend. 👑" : (all.length - got) + ' more to collect') + '</div>';
     v.appendChild(hero);
+
+    // Activity heatmap — last 12 weeks of logging (GitHub-style)
+    var hmCard = el('<div class="card" style="margin-top:16px"><div class="card-hd"><h3>Your logging activity</h3><span class="hint">last 12 weeks</span></div></div>');
+    var counts = {}; CM.load().trades.forEach(function (t) { var d = new Date(t.date); if (!isNaN(d)) { var k = d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate(); counts[k] = (counts[k] || 0) + 1; } });
+    var WEEKS = 12, today = new Date(); today.setHours(0, 0, 0, 0);
+    var end = new Date(today); end.setDate(end.getDate() + (6 - end.getDay())); // Sat of this week
+    var days = WEEKS * 7, activeDays = 0, cellsHtml = "";
+    var cols = [];
+    for (var w = 0; w < WEEKS; w++) cols.push([]);
+    for (var i = days - 1; i >= 0; i--) {
+      var d = new Date(end); d.setDate(end.getDate() - i);
+      var k = d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+      var n = counts[k] || 0; if (n > 0 && d <= today) activeDays++;
+      var lvl = d > today ? -1 : n === 0 ? 0 : n === 1 ? 1 : n === 2 ? 2 : n <= 4 ? 3 : 4;
+      var colIdx = Math.floor((days - 1 - i) / 7);
+      cols[colIdx].push({ lvl: lvl, k: d.toLocaleDateString("en-IN", { day: "numeric", month: "short" }), n: n });
+    }
+    var grid = '<div class="heatmap">';
+    cols.forEach(function (col) { grid += '<div class="hm-col">' + col.map(function (c) { return c.lvl < 0 ? '<i class="hm-cell hm-future"></i>' : '<i class="hm-cell hm-l' + c.lvl + '" title="' + c.k + ' · ' + c.n + ' trade' + (c.n === 1 ? "" : "s") + '"></i>'; }).join("") + '</div>'; });
+    grid += '</div>';
+    hmCard.appendChild(el(grid));
+    hmCard.appendChild(el('<div class="hm-legend"><span>' + activeDays + ' active day' + (activeDays === 1 ? "" : "s") + '</span><span class="hm-scale">Less <i class="hm-cell hm-l0"></i><i class="hm-cell hm-l1"></i><i class="hm-cell hm-l2"></i><i class="hm-cell hm-l3"></i><i class="hm-cell hm-l4"></i> More</span></div>'));
+    v.appendChild(hmCard);
+
     var g = el('<div class="grid g3" style="margin-top:16px"></div>');
     all.slice().sort(function (a, b) { return (b.got ? 1 : 0) - (a.got ? 1 : 0); }).forEach(function (b) {
       g.appendChild(el('<div class="badge-card' + (b.got ? " got" : "") + '"><div class="bc-em">' + b.em + '</div><div class="bc-name">' + esc(b.name) + '</div><div class="bc-desc">' + esc(b.desc) + '</div><div class="bc-tag">' + (b.got ? '✓ Earned' : '🔒 Locked') + '</div></div>'));
