@@ -848,12 +848,27 @@
         return;
       }
       var slv = c.querySelector("#sl").value;
-      CM.addTrade({ symbol: sym, side: c.querySelector("#side").value, qty: +c.querySelector("#qty").value || 0,
+      var saved = CM.addTrade({ symbol: sym, side: c.querySelector("#side").value, qty: +c.querySelector("#qty").value || 0,
         entry: +c.querySelector("#entry").value || 0, exit: +c.querySelector("#exit").value || 0,
         plannedSL: slv === "" ? null : +slv, target: null, setup: c.querySelector("#setup").value,
         exit_reason: c.querySelector("#xr").value, emotion: c.querySelector("#emo").value,
         note: (c.querySelector("#note").value || "").trim().slice(0, 500), date: new Date().toISOString() });
-      go("home"); render();
+      // Instant honest feedback on the trade just logged (reinforces the loop).
+      var d = CM.tradeDiscipline(saved), p = CM.pnl(saved);
+      var verdict = d >= 75 ? "Disciplined trade 👏" : d >= 50 ? "Some leaks to plug" : "Undisciplined — this is what costs money";
+      var msgs = [];
+      if (!CM.hasSL(saved)) msgs.push("No stop-loss logged (−40).");
+      if (!/target|stop-loss/i.test(saved.exit_reason)) msgs.push("You didn't exit on plan (−25).");
+      if (/revenge|fomo|fear|greed|bored/i.test(saved.exit_reason) || /revenge|fomo|fear|greed|overconfident/i.test(saved.emotion)) msgs.push("Emotional decision (−25).");
+      var body = '<div style="text-align:center;margin-bottom:10px">' + gauge(d, 120) + '</div>' +
+        '<div style="text-align:center;font-weight:800;font-size:1.05rem;color:' + scoreColor(d) + '">' + verdict + '</div>' +
+        '<p class="hint" style="text-align:center;margin:6px 0 0">P&amp;L on this trade: <b class="' + (p >= 0 ? "pos" : "neg") + '">' + money(p) + '</b></p>' +
+        (msgs.length ? '<ul class="hint" style="margin:12px 0 0;padding-left:18px">' + msgs.map(function (m) { return '<li>' + m + '</li>'; }).join("") + '</ul>' : '<p class="hint" style="text-align:center;margin-top:10px">Stop set, exited on plan, stayed calm. Keep it up.</p>') +
+        '<div style="display:flex;gap:10px;margin-top:18px"><button class="btn btn-primary" id="tvReport">See my report card →</button><button class="btn btn-ghost" id="tvAnother">Log another</button></div>';
+      dialog("Trade saved · discipline " + d + "/100", body, function (b, close) {
+        b.querySelector("#tvReport").addEventListener("click", function () { close(); go("home"); render(); });
+        b.querySelector("#tvAnother").addEventListener("click", function () { close(); go("log"); render(); });
+      });
     });
     c.appendChild(save);
     c.appendChild(el('<p class="hint" style="margin-top:10px">Tip: leaving <b>Planned SL</b> empty counts as “traded without a stop” — because that’s the truth we\'re measuring.</p>'));
