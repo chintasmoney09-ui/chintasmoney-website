@@ -392,3 +392,14 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .side-legal{margin-top:10px;font-size:.7rem;color:var(--muted);line-height:1.5}
 .side-legal a{color:var(--ink-soft)}
 .side-legal a:hover{color:var(--green)}
+
+/* Print — clean report/PDF output: drop chrome, expand content, light ground */
+@media print{
+  .sidebar,.scrim,.fab,.install-banner,.toast-wrap,.topbar .btn,.side-shortcuts{display:none!important}
+  .app{display:block}
+  .main{margin:0!important;padding:0!important;max-width:none!important;width:100%!important;animation:none!important}
+  body,.app,.main{background:#fff!important;color:#0a0f1c!important}
+  .card{break-inside:avoid;page-break-inside:avoid;border-color:#dbe2ef!important;box-shadow:none!important;background:#fff!important}
+  a[href]::after{content:""}
+  .btn{display:none!important}
+}
