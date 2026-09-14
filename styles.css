@@ -286,6 +286,15 @@ img{max-width:100%;display:block}
 @media(max-width:560px){.bento{grid-template-columns:1fr}.col-2,.col-3,.col-4,.col-6{grid-column:span 1}}
 
 /* ===== Addictive-features additions ===== */
+/* Live / Soon status badges on feature cards */
+.card:has(.fbadge){position:relative}
+.fbadge{position:absolute;top:14px;right:14px;font-size:.64rem;font-weight:800;letter-spacing:.06em;
+  text-transform:uppercase;padding:4px 9px;border-radius:999px;border:1px solid;line-height:1}
+.fbadge.live{color:var(--green);border-color:rgba(34,224,138,.4);background:rgba(34,224,138,.1)}
+.fbadge.soon{color:var(--gold);border-color:rgba(245,184,73,.4);background:rgba(245,184,73,.1)}
+.feat-legend{margin-top:16px;color:var(--ink-soft);font-size:.9rem;display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap}
+.feat-legend .fbadge{position:static;top:auto;right:auto}
+
 /* Streak flames */
 .flames{display:flex;align-items:center;gap:3px;margin-top:14px;font-size:1.15rem}
 .flames .off{filter:grayscale(1);opacity:.35}

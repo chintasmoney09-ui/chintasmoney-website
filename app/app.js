@@ -263,7 +263,7 @@
       symRow.appendChild(b);
     });
     card.appendChild(symRow);
-    card.appendChild(tvAdvanced(TV_SYM[mkState.sym] || "NSE:NIFTY", 520));
+    card.appendChild(tvAdvanced(TV_SYM[mkState.sym] || "NSE:NIFTYBEES", 520));
     card.appendChild(el('<p class="hint" style="margin-top:10px">Full candles, volume &amp; every indicator (RSI, MACD, MA, Bollinger…) — add them from the chart toolbar. Change the symbol to any NSE stock.</p>'));
     v.appendChild(card);
     return v;
@@ -278,16 +278,19 @@
     wrap.appendChild(s);
     return wrap;
   }
-  var TV_SYM = { NIFTY: "NSE:NIFTY", BANKNIFTY: "NSE:BANKNIFTY", RELIANCE: "NSE:RELIANCE", TCS: "NSE:TCS", TATAMOTORS: "NSE:TATAMOTORS", ZOMATO: "NSE:ZOMATO" };
+  // NSE *index* symbols (NIFTY/BANKNIFTY) aren't available in TradingView's free
+  // embeds, so we map them to their liquid tracking ETFs (NIFTYBEES/BANKBEES),
+  // which mirror the index and DO load. Stocks work as-is.
+  var TV_SYM = { NIFTY: "NSE:NIFTYBEES", BANKNIFTY: "NSE:BANKBEES", RELIANCE: "NSE:RELIANCE", TCS: "NSE:TCS", TATAMOTORS: "NSE:TATAMOTORS", ZOMATO: "NSE:ZOMATO" };
   // Guess the live TradingView symbol from a user's trade symbol string.
   function tvSymbolFor(s) {
     s = (s || "").trim().toUpperCase();
-    if (/BANKNIFTY/.test(s)) return "NSE:BANKNIFTY";
-    if (/FINNIFTY/.test(s)) return "NSE:CNXFINANCE";
-    if (/NIFTY/.test(s)) return "NSE:NIFTY";
-    if (/SENSEX/.test(s)) return "BSE:SENSEX";
+    if (/BANKNIFTY/.test(s)) return "NSE:BANKBEES";
+    if (/FINNIFTY/.test(s)) return "NSE:NIFTYBEES";
+    if (/NIFTY/.test(s)) return "NSE:NIFTYBEES";
+    if (/SENSEX/.test(s)) return "NSE:NIFTYBEES";
     var first = s.split(/\s+/)[0].replace(/[^A-Z0-9&-]/g, "");
-    return first ? "NSE:" + first : "NSE:NIFTY";
+    return first ? "NSE:" + first : "NSE:NIFTYBEES";
   }
   function tvAdvanced(sym, h) {
     return tvEmbed("https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js", {
@@ -375,7 +378,7 @@
     // 5. mini chart nudge
     var mc = el('<div class="card"></div>');
     mc.appendChild(el('<div class="card-hd"><h3>📈 NIFTY 50 · live</h3></div>'));
-    mc.appendChild(tvMini("NSE:NIFTY", "NIFTY 50", 200));
+    mc.appendChild(tvMini("NSE:NIFTYBEES", "NIFTY 50", 200));
     feed.appendChild(mc);
     // 6. equity nudge
     var eq = CM.equityCurve();
@@ -452,7 +455,7 @@
     // live chart card
     var chc = el('<div class="card" style="margin-top:16px"></div>');
     chc.appendChild(el('<div class="card-hd"><h3>📈 NIFTY 50 · live</h3></div>'));
-    chc.appendChild(tvMini("NSE:NIFTY", "NIFTY 50", 220));
+    chc.appendChild(tvMini("NSE:NIFTYBEES", "NIFTY 50", 220));
     var chb = el('<button class="btn btn-ghost btn-sm" style="margin-top:8px">Open full charts →</button>');
     chb.addEventListener("click", function () { go("markets"); });
     chc.appendChild(chb);
