@@ -1365,6 +1365,38 @@
       card.appendChild(b); plans.appendChild(card);
     });
     v.appendChild(plans);
+    // Data backup / restore (all data lives in this browser — let people take it with them)
+    var dataCard = el('<div class="card" style="margin-top:20px"><div class="card-hd"><h3>Your data</h3></div><p class="hint" style="margin:0 0 12px">Everything is stored in this browser. Back it up before you clear your browser or switch devices.</p></div>');
+    var dataRow = el('<div style="display:flex;gap:10px;flex-wrap:wrap"></div>');
+    var backup = el('<button class="btn btn-sm">⬇ Backup (JSON)</button>');
+    backup.addEventListener("click", function () {
+      var blob = new Blob([JSON.stringify(CM.load(), null, 2)], { type: "application/json" });
+      var a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+      a.download = "chintasmoney-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    });
+    var restore = el('<button class="btn btn-sm">⬆ Restore backup</button>');
+    restore.addEventListener("click", function () {
+      dialog("Restore from backup", '<p class="hint">Upload a ChintasMoney JSON backup. This <b>replaces</b> your current data in this browser.</p><input type="file" id="bkf" accept=".json,application/json" style="margin-top:10px" /><p class="hint" id="bknote" style="margin-top:8px"></p>', function (b, close) {
+        b.querySelector("#bkf").addEventListener("change", function (e) {
+          var f = e.target.files[0]; if (!f) return;
+          var rd = new FileReader();
+          rd.onload = function () {
+            try {
+              var obj = JSON.parse(String(rd.result));
+              if (!obj || typeof obj !== "object" || !obj.profile || !Array.isArray(obj.trades)) throw new Error("bad");
+              CM.hydrate(obj);
+              b.querySelector("#bknote").innerHTML = '<span class="pos">Restored ' + obj.trades.length + ' trade(s).</span>';
+              setTimeout(function () { close(); go("home"); render(); }, 700);
+            } catch (err) { b.querySelector("#bknote").innerHTML = '<span class="neg">That doesn\'t look like a valid ChintasMoney backup.</span>'; }
+          };
+          rd.readAsText(f);
+        });
+      });
+    });
+    dataRow.appendChild(backup); dataRow.appendChild(restore); dataCard.appendChild(dataRow);
+    v.appendChild(dataCard);
     var reset = el('<button class="btn btn-ghost" style="margin-top:20px">↺ Reset demo data</button>'); reset.addEventListener("click", function () { if (confirm("Reset all local data?")) { CM.reset(); go("home"); render(); } });
     v.appendChild(reset);
     if (window.CMCloud && window.CMCloud.state === "authed") {
