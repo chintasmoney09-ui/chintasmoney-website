@@ -354,3 +354,12 @@ img{max-width:100%;display:block}
 .tok-ic{font-size:1.2rem}
 .tok-packs{display:flex;gap:10px;flex-wrap:wrap}
 .tok-pack{font-weight:700;font-size:.84rem;color:var(--ink);border:1px solid var(--line-2);border-radius:10px;padding:7px 12px;background:var(--bg-2)}
+
+/* ===== Outcomes ===== */
+.outcomes{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.outcome{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);padding:24px;display:flex;flex-direction:column;gap:8px}
+.outcome .oc-ic{font-size:2rem;line-height:1}
+.outcome h3{margin:6px 0 0;font-size:1.1rem}
+.outcome p{color:var(--ink-soft);font-size:.92rem;margin:0}
+@media(max-width:900px){ .outcomes{grid-template-columns:repeat(2,1fr)} }
+@media(max-width:520px){ .outcomes{grid-template-columns:1fr} }
