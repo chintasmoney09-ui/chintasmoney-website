@@ -512,6 +512,42 @@
     emc.appendChild(el(svgDonut([{ value: calm, color: "#22e08a" }, { value: emotional, color: "#f5b849" }], { size: 136, center: calmPct + "%", sub: "calm" })));
     charts.appendChild(emc);
     c.appendChild(charts);
+
+    // Best & worst trade (by discipline) + this-week-vs-last-week trend
+    var allT = CM.load().trades;
+    if (allT.length) {
+      var scored = allT.map(function (t) { return { t: t, d: CM.tradeDiscipline(t), p: CM.pnl(t) }; });
+      var best = scored.reduce(function (a, x) { return (x.d > a.d || (x.d === a.d && x.p > a.p)) ? x : a; });
+      var worst = scored.reduce(function (a, x) { return (x.d < a.d || (x.d === a.d && x.p < a.p)) ? x : a; });
+      function bwCard(title, x, good) {
+        var note = x.t.note ? '<div class="hint tnote" style="max-width:none;margin-top:4px" title="' + esc(x.t.note) + '">💬 ' + esc(x.t.note) + '</div>' : '';
+        return '<div class="card" style="padding:14px"><div class="hint" style="font-weight:600;margin-bottom:6px">' + title + '</div>' +
+          '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><b>' + esc(x.t.symbol) + '</b>' +
+          '<span class="num" style="font-weight:800;color:' + scoreColor(x.d) + '">' + x.d + '</span></div>' +
+          '<div class="hint">' + esc(x.t.setup) + ' · ' + esc(x.t.exit_reason) + ' · <span class="' + (x.p >= 0 ? "pos" : "neg") + '">' + money(x.p) + '</span></div>' + note + '</div>';
+      }
+      var bw = el('<div class="grid g2" style="margin-top:14px;align-items:start"></div>');
+      bw.appendChild(el(bwCard("🏆 Most disciplined trade", best, true)));
+      bw.appendChild(el(bwCard("⚠️ Least disciplined trade", worst, false)));
+      c.appendChild(bw);
+
+      var now = Date.now(), DAY = 864e5;
+      function avgDiscBetween(from, to) {
+        var xs = scored.filter(function (x) { var tm = new Date(x.t.date).getTime(); return isFinite(tm) && tm >= from && tm < to; });
+        return xs.length ? { n: xs.length, avg: Math.round(xs.reduce(function (a, x) { return a + x.d; }, 0) / xs.length) } : { n: 0, avg: null };
+      }
+      var thisW = avgDiscBetween(now - 7 * DAY, now + DAY), lastW = avgDiscBetween(now - 14 * DAY, now - 7 * DAY);
+      if (thisW.n) {
+        var trend, tColor, tArrow;
+        if (lastW.avg == null) { trend = "First week logged"; tColor = "var(--muted)"; tArrow = "•"; }
+        else { var delta = thisW.avg - lastW.avg; tArrow = delta > 0 ? "▲" : delta < 0 ? "▼" : "▬"; tColor = delta > 0 ? "var(--emerald)" : delta < 0 ? "var(--red)" : "var(--muted)"; trend = (delta > 0 ? "+" : "") + delta + " vs last week (" + lastW.avg + ")"; }
+        c.appendChild(el('<div class="card" style="margin-top:14px;padding:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">' +
+          '<div><div class="hint" style="font-weight:600">This week\'s discipline</div><div class="hint">' + thisW.n + ' trade' + (thisW.n === 1 ? "" : "s") + ' in the last 7 days</div></div>' +
+          '<div style="text-align:right"><div style="font-size:1.6rem;font-weight:800;color:' + scoreColor(thisW.avg) + '">' + thisW.avg + '</div>' +
+          '<div style="font-size:.82rem;font-weight:700;color:' + tColor + '">' + tArrow + ' ' + esc(trend) + '</div></div></div>'));
+      }
+    }
+
     c.appendChild(el('<h3 style="margin:16px 0 6px">Top mistakes to fix</h3>'));
     var ul = el('<ol style="margin:0;padding-left:18px;color:var(--ink-soft)"></ol>');
     (ms.length ? ms : [{ name: "No repeating mistakes — clean sheet.", n: 0 }]).slice(0, 5).forEach(function (m) { ul.appendChild(el('<li style="margin:3px 0">' + esc(m.name) + (m.n ? ' <b>×' + m.n + '</b>' : '') + '</li>')); });
