@@ -1506,5 +1506,31 @@
     wrap.appendChild(c); root.appendChild(wrap);
   }
 
+  // ---- PWA install prompt (custom, dismissible) ----------------------------
+  var DISMISS_KEY = "chintasmoney.installDismissed.v1";
+  var deferredInstall = null;
+  function installDismissed() { try { return localStorage.getItem(DISMISS_KEY) === "1"; } catch (e) { return false; } }
+  function showInstallBanner() {
+    if (deferredInstall == null || installDismissed() || document.querySelector(".install-banner")) return;
+    var bar = el('<div class="install-banner"><span class="ib-ic"><img src="assets/logo-icon.png" alt=""/></span>' +
+      '<div class="ib-txt"><b>Install ChintasMoney</b><small>Add it to your home screen — works offline, opens instantly.</small></div>' +
+      '<button class="btn btn-primary btn-sm" id="ibGo">Install</button><button class="ib-x" id="ibX" aria-label="Dismiss">✕</button></div>');
+    bar.querySelector("#ibGo").addEventListener("click", function () {
+      if (!deferredInstall) return;
+      deferredInstall.prompt();
+      deferredInstall.userChoice.then(function (c) {
+        if (c && c.outcome === "accepted" && typeof toast === "function") toast("Installing ChintasMoney… 🎉", "ok");
+        deferredInstall = null; if (bar.parentNode) bar.parentNode.removeChild(bar);
+      });
+    });
+    bar.querySelector("#ibX").addEventListener("click", function () {
+      try { localStorage.setItem(DISMISS_KEY, "1"); } catch (e) {}
+      if (bar.parentNode) bar.parentNode.removeChild(bar);
+    });
+    document.body.appendChild(bar);
+  }
+  window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); deferredInstall = e; showInstallBanner(); });
+  window.addEventListener("appinstalled", function () { deferredInstall = null; var bar = document.querySelector(".install-banner"); if (bar) bar.remove(); });
+
   render();
 })();
