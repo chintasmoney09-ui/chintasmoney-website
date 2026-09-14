@@ -1320,6 +1320,7 @@
     card.innerHTML =
       '<div class="sc-top"><b>ChintasMoney</b><span>TRADER REPORT CARD</span></div>' +
       '<div class="sc-rank">🏆 TOP ' + topPct + '% DISCIPLINED · this week</div>' +
+      '<div style="text-align:center;margin:2px 0 0"><span style="display:inline-block;padding:3px 12px;border-radius:999px;font-size:.8rem;font-weight:800;background:' + leagueOf(st.discipline).c + '22;border:1px solid ' + leagueOf(st.discipline).c + '66;color:' + leagueOf(st.discipline).c + '">' + leagueOf(st.discipline).em + ' ' + leagueOf(st.discipline).n + ' League</span></div>' +
       '<div style="text-align:center;margin:6px 0 2px">' + g + '</div>' +
       '<div style="text-align:center"><div style="font-size:1.9rem">' + p.em + '</div><h2 style="margin:2px 0;color:#fff">' + esc(p.key) + '</h2><p style="color:#b7c4dd;font-size:.9rem;margin:0 auto;max-width:34ch">' + esc(p.line) + '</p></div>' +
       '<div class="sc-level"><span class="sc-pill">' + e.em + ' Lv ' + e.level + ' · ' + esc(e.title) + '</span><span class="sc-pill flame">🔥 ' + e.streak + '-day streak</span></div>' +
@@ -1330,7 +1331,7 @@
     v.appendChild(card);
     var share = el('<div style="display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap"><button class="btn btn-primary" id="scShare">📤 Share my card</button><button class="btn" id="scChallenge">🏆 Challenge a friend</button></div>');
     share.querySelector("#scShare").addEventListener("click", function () {
-      var text = "My ChintasMoney Discipline Score: " + st.discipline + "/100 — " + p.key + ". Top " + topPct + "% this week. Beat me 👉 chintasmoney.com";
+      var text = "My ChintasMoney Discipline Score: " + st.discipline + "/100 — " + p.key + " · " + leagueOf(st.discipline).em + " " + leagueOf(st.discipline).n + " League. Top " + topPct + "% this week. Beat me 👉 chintasmoney.com";
       if (navigator.share) navigator.share({ title: "My Trader Report Card", text: text, url: "https://chintasmoney.com" }).catch(function () {});
       else { try { navigator.clipboard.writeText(text); this.textContent = "✓ Copied!"; } catch (er) {} }
     });
