@@ -280,3 +280,6 @@ select option { background: var(--surface); }
 .bc-tag{margin-top:12px;font-size:.72rem;font-weight:800;letter-spacing:.04em}
 .badge-card.got .bc-tag{color:var(--green)}
 .badge-card:not(.got) .bc-tag{color:var(--muted)}
+
+/* Let main shrink so wide tables scroll inside their card, not the page */
+.main{min-width:0;overflow-x:clip}
