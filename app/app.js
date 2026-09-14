@@ -900,6 +900,14 @@
   };
 
   // ---- TRADE JOURNAL -------------------------------------------------------
+  var tradesFilter = "all";
+  var TRADE_FILTERS = [
+    { id: "all", label: "All", fn: function () { return true; } },
+    { id: "nosl", label: "No stop-loss", fn: function (t) { return !CM.hasSL(t); } },
+    { id: "emo", label: "Emotional", fn: function (t) { return /revenge|fomo|fear|greed|bored/i.test(t.exit_reason) || /revenge|fomo|fear|greed|overconfident/i.test(t.emotion); } },
+    { id: "win", label: "Winners", fn: function (t) { return CM.pnl(t) > 0; } },
+    { id: "loss", label: "Losers", fn: function (t) { return CM.pnl(t) < 0; } }
+  ];
   VIEWS.trades = function () {
     var s = CM.load(), st = CM.stats();
     var v = el('<div></div>');
@@ -907,14 +915,25 @@
     var imp = el('<button class="btn btn-sm">⬆ Import CSV</button>'); imp.addEventListener("click", importCSV);
     v.appendChild(topbar("Trade Journal", st.count + " trades logged", [exp, imp, logBtn()]));
     var limit = CM.PLANS[s.profile.plan].limits.history;
-    var shown = st.trades;
-    if (!shown.length) {
+    if (!st.trades.length) {
       var empty = el('<div class="card paywall"><div class="lock-ic">📓</div><h3>No trades yet</h3><p class="hint">Log your first trade to see your Discipline Score come alive.</p></div>');
       var b = el('<button class="btn btn-primary" style="margin-top:8px">＋ Log a trade</button>'); b.addEventListener("click", function () { go("log"); });
       empty.appendChild(b); v.appendChild(empty); return v;
     }
+    // Filter chips — isolate your worst habits or your best trades.
+    var chips = el('<div class="jrn-filters"></div>');
+    TRADE_FILTERS.forEach(function (f) {
+      var n = st.trades.filter(f.fn).length;
+      var chip = el('<button class="jrn-chip' + (tradesFilter === f.id ? " on" : "") + '">' + f.label + ' <span class="jc-n">' + n + '</span></button>');
+      chip.addEventListener("click", function () { tradesFilter = f.id; render(); });
+      chips.appendChild(chip);
+    });
+    v.appendChild(chips);
+    var activeFilter = (TRADE_FILTERS.filter(function (f) { return f.id === tradesFilter; })[0] || TRADE_FILTERS[0]).fn;
+    var shown = st.trades.filter(activeFilter);
     var c = el('<div class="card" style="overflow-x:auto"><table class="tbl"><thead><tr><th>Symbol</th><th>Setup</th><th class="num">P&L</th><th>Exit reason</th><th>Emotion</th><th class="num">Disc.</th><th>When</th><th></th></tr></thead><tbody></tbody></table></div>');
     var tb = c.querySelector("tbody");
+    if (!shown.length) tb.appendChild(el('<tr><td colspan="8" class="hint" style="text-align:center;padding:18px">No trades match this filter — nice.</td></tr>'));
     shown.forEach(function (t) {
       var p = CM.pnl(t), d = CM.tradeDiscipline(t);
       var tr = el('<tr><td><b>' + esc(t.symbol) + '</b><div class="hint">' + t.side + ' ' + t.qty + '</div>' + (t.note ? '<div class="hint tnote" title="' + esc(t.note) + '">💬 ' + esc(t.note) + '</div>' : '') + '</td>' +
