@@ -1,0 +1,9 @@
+{
+  // Cloudflare Workers config for the ChintasMoney static site.
+  // Serves the repository root as static assets (no build step).
+  "name": "chintasmoney",
+  "compatibility_date": "2026-09-14",
+  "assets": {
+    "directory": "."
+  }
+}
