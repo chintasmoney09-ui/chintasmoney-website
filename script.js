@@ -44,12 +44,34 @@
     tk.innerHTML = row + row; // duplicate for seamless -50% scroll loop
     if (tkWrap) tkWrap.hidden = false;
   }
-  if (tk) {
+  // Shared: charts block sets this so snapshot cards can load a symbol
+  var loadMarketChart = null;
+  var QUOTE_TV = { "NIFTY 50": "NSE:NIFTYBEES", "BANK NIFTY": "NSE:BANKBEES", "RELIANCE": "NSE:RELIANCE", "TCS": "NSE:TCS", "HDFC BANK": "NSE:HDFCBANK", "INFY": "NSE:INFY", "TATA MOTORS": "NSE:TATAMOTORS" };
+  var quoteGrid = $("#quoteGrid"), snapSection = $("#snapshot");
+  function renderSnapshot(quotes) {
+    if (!quoteGrid || !quotes || !quotes.length) return;
+    quoteGrid.innerHTML = quotes.map(function (s) {
+      var up = Number(s.change) >= 0, sign = up ? "+" : "", sym = QUOTE_TV[s.name] || "";
+      return '<button class="quote-card" data-sym="' + sym + '"><div class="q-name">' + s.name + '</div>' +
+        '<div class="q-price">' + s.price + '</div>' +
+        '<div class="q-chg ' + (up ? "up" : "down") + '">' + (up ? "▲" : "▼") + " " + sign + s.changePct + '%</div></button>';
+    }).join("");
+    quoteGrid.querySelectorAll(".quote-card").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var sym = b.dataset.sym; if (!sym) return;
+        if (loadMarketChart) loadMarketChart(sym);
+        var t = document.getElementById("charts"); if (t) t.scrollIntoView({ behavior: "smooth" });
+      });
+    });
+    if (snapSection) snapSection.hidden = false;
+  }
+  if (tk || quoteGrid) {
     fetch("/api/quotes", { cache: "no-store" })
       .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (d) { if (d && d.quotes) renderTicker(d.quotes); })
-      .catch(function () { /* leave the strip hidden if quotes are unavailable */ });
+      .then(function (d) { if (d && d.quotes) { renderTicker(d.quotes); renderSnapshot(d.quotes); } })
+      .catch(function () { /* leave strips hidden if quotes are unavailable */ });
   }
+  window.__cmSetChartLoader = function (fn) { loadMarketChart = fn; };
 
   // candles (random up/down bars)
   var cw = $("#candles");
@@ -216,5 +238,6 @@
     if (mktChips) mktChips.addEventListener("click", function (e) { var b = e.target.closest(".chart-chip"); if (b) mountMkt(b.dataset.sym); });
     if (mktFull) mktFull.addEventListener("click", function () { if (mktBox.requestFullscreen) mktBox.requestFullscreen(); else if (mktBox.webkitRequestFullscreen) mktBox.webkitRequestFullscreen(); });
     mountMkt(mktCur);
+    if (window.__cmSetChartLoader) window.__cmSetChartLoader(mountMkt);
   }
 })();
