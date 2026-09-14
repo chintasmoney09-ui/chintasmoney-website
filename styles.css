@@ -391,3 +391,26 @@ img{max-width:100%;display:block}
 .q-name{font-size:.8rem;color:var(--ink-soft);font-weight:600}
 .q-price{font-family:var(--mono);font-size:1.25rem;font-weight:800;margin:4px 0 2px}
 .q-chg{font-family:var(--mono);font-size:.85rem;font-weight:700}
+
+/* ===== Legal pages ===== */
+.legal{padding:40px 0 72px}
+.legal-inner{max-width:760px;margin:0 auto;padding-inline:22px}
+.legal h1{font-size:clamp(1.8rem,4vw,2.5rem);font-weight:800;letter-spacing:-.02em;margin:.2rem 0}
+.legal .updated{color:var(--muted);font-size:.85rem;margin-bottom:26px}
+.legal h2{font-size:1.2rem;margin:30px 0 10px;font-weight:700;color:var(--ink)}
+.legal p,.legal li{color:var(--ink-soft);line-height:1.75}
+.legal ul{padding-left:20px;display:grid;gap:6px;margin:10px 0}
+.legal a{color:var(--green)}
+.legal .note{background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:18px 0;color:var(--ink)}
+.legal .back{display:inline-block;margin-top:32px;color:var(--green);font-weight:700}
+/* Footer columns */
+.foot-cols{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:26px;margin-bottom:26px}
+.foot-cols h4{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 12px}
+.foot-cols a{display:block;color:var(--ink-soft);font-size:.9rem;margin-bottom:8px}
+.foot-cols a:hover{color:var(--green)}
+.foot-about{color:var(--ink-soft);font-size:.9rem;max-width:34ch;margin:12px 0 0}
+.foot-social{display:flex;gap:10px;margin-top:14px}
+.foot-social a{width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--line-2);border-radius:10px;color:var(--ink-soft);font-size:1rem}
+.foot-social a:hover{border-color:var(--green);color:var(--green)}
+@media(max-width:760px){ .foot-cols{grid-template-columns:1fr 1fr} }
+@media(max-width:440px){ .foot-cols{grid-template-columns:1fr} }
