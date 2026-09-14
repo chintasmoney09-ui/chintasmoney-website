@@ -209,7 +209,8 @@ select option { background: var(--surface); }
 .quota-bar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#22e08a,#f5b849)}
 
 /* Live trade preview (P&L / R:R / risk) in the log form */
-.trade-preview{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0 4px}
+.trade-preview{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0 4px}
+@media(max-width:520px){.trade-preview{grid-template-columns:repeat(2,1fr)}}
 .trade-preview .tp-cell{background:var(--bg,#0a0f1c);border:1px solid var(--line);border-radius:12px;padding:10px 12px;text-align:center;min-width:0}
 .trade-preview .tp-lbl{display:block;font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .trade-preview .tp-val{display:block;font-size:1.05rem;font-weight:700;margin-top:4px}

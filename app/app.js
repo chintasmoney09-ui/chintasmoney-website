@@ -795,7 +795,7 @@
       '<label class="fld"><span>Note <small class="muted" style="font-weight:400">— why you took it, what you learned (optional)</small></span><textarea id="note" rows="2" placeholder="e.g. Clean breakout retest, but I moved my stop — won\'t do that again." style="resize:vertical"></textarea></label>';
     c.innerHTML = f;
     // Live P&L + risk:reward preview — updates as you type (reinforces the plan-first habit).
-    var preview = el('<div class="trade-preview" hidden><div class="tp-cell"><span class="tp-lbl">Est. P&amp;L</span><b id="tpPnl" class="tp-val">—</b></div><div class="tp-cell"><span class="tp-lbl">Risk : Reward</span><b id="tpRR" class="tp-val">—</b></div><div class="tp-cell"><span class="tp-lbl">Risk / share</span><b id="tpRisk" class="tp-val">—</b></div></div>');
+    var preview = el('<div class="trade-preview" hidden><div class="tp-cell"><span class="tp-lbl">Est. P&amp;L</span><b id="tpPnl" class="tp-val">—</b></div><div class="tp-cell"><span class="tp-lbl">Risk : Reward</span><b id="tpRR" class="tp-val">—</b></div><div class="tp-cell"><span class="tp-lbl">Risk</span><b id="tpRisk" class="tp-val">—</b></div><div class="tp-cell"><span class="tp-lbl">Discipline</span><b id="tpDisc" class="tp-val">—</b></div></div>');
     c.appendChild(preview);
     function num(id) { var x = parseFloat(c.querySelector(id).value); return isFinite(x) ? x : null; }
     function updatePreview() {
@@ -816,9 +816,16 @@
           rrEl.textContent = "1 : " + rr.toFixed(2); rrEl.className = "tp-val " + (rr >= 2 ? "pos" : rr >= 1 ? "" : "neg");
         } else { rrEl.textContent = "—"; rrEl.className = "tp-val"; }
       } else { riskEl.textContent = sl == null ? "no SL" : "—"; riskEl.className = "tp-val" + (sl == null ? " neg" : ""); rrEl.textContent = "—"; rrEl.className = "tp-val"; if (sl == null && (entry != null || exit != null)) show = true; }
+      // Discipline score this trade will earn (same logic as saved trades)
+      var discEl = preview.querySelector("#tpDisc");
+      if (show) {
+        var d = CM.tradeDiscipline({ plannedSL: sl == null ? null : sl, exit_reason: c.querySelector("#xr").value, emotion: c.querySelector("#emo").value });
+        discEl.textContent = String(d);
+        discEl.className = "tp-val " + (d >= 75 ? "pos" : d >= 50 ? "" : "neg");
+      } else { discEl.textContent = "—"; discEl.className = "tp-val"; }
       preview.hidden = !show;
     }
-    ["#side", "#qty", "#entry", "#exit", "#sl"].forEach(function (id) { c.querySelector(id).addEventListener("input", updatePreview); c.querySelector(id).addEventListener("change", updatePreview); });
+    ["#side", "#qty", "#entry", "#exit", "#sl", "#xr", "#emo"].forEach(function (id) { c.querySelector(id).addEventListener("input", updatePreview); c.querySelector(id).addEventListener("change", updatePreview); });
     // Free-plan monthly quota indicator
     var q0 = CM.quota();
     if (q0.limit !== Infinity) {
