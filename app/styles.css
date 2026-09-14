@@ -270,6 +270,12 @@ select option { background: var(--surface); }
 .confetti-wrap i{position:absolute;top:-12px;width:9px;height:14px;border-radius:2px;opacity:.95;animation:confFall linear forwards}
 @keyframes confFall{to{transform:translateY(105vh) rotate(720deg);opacity:.6}}
 
+/* Market quick-pick chips */
+.mk-quick{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.mk-chip{background:var(--bg,#0a0f1c);border:1px solid var(--line);color:var(--ink-soft,var(--ink));border-radius:999px;padding:7px 14px;font-size:.85rem;font-weight:600;cursor:pointer;transition:border-color .15s,background .15s,color .15s}
+.mk-chip:hover{border-color:rgba(34,224,138,.4)}
+.mk-chip.on{background:rgba(34,224,138,.14);border-color:rgba(34,224,138,.6);color:var(--ink)}
+
 /* TradingView iframe chart */
 .tv-frame{width:100%;border-radius:12px;overflow:hidden;background:#0a0713;border:1px solid var(--line)}
 .tv-frame iframe{display:block;width:100%;height:100%;border:0}

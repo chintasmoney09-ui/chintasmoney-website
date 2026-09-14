@@ -303,18 +303,30 @@
     var v = el('<div></div>');
     v.appendChild(topbar("Live Charts", "Analyse any market — NSE, gold, crude, crypto & more. Real candles, volume & every indicator."));
     var card = el('<div class="card"></div>');
+    // One-tap quick picks for the most-wanted markets
+    var MK_QUICK = [["NIFTY 50", "NSE:NIFTYBEES"], ["Bank Nifty", "NSE:BANKBEES"], ["Gold", "OANDA:XAUUSD"], ["Crude Oil", "TVC:USOIL"], ["Bitcoin", "BINANCE:BTCUSDT"], ["Reliance", "NSE:RELIANCE"], ["Nasdaq", "TVC:NDX"]];
+    var quick = el('<div class="mk-quick"></div>');
     var symRow = el('<div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px">' +
       '<label class="fld" style="margin:0;flex:1;min-width:200px"><span>Market / symbol</span><select id="mkSym">' + marketOptions(mkState.sym) + '</select></label>' +
       '<button class="btn" id="mkFull" title="Full screen — rotate your phone to analyse big">⛶ Fullscreen</button>' +
       '<a class="btn" id="mkDeep" target="_blank" rel="noopener nofollow" href="#">Deep analysis ↗</a></div>');
     var box = el('<div id="mkBox" style="margin-top:14px"></div>');
+    function refreshQuick() { quick.querySelectorAll(".mk-chip").forEach(function (ch) { ch.classList.toggle("on", ch.getAttribute("data-sym") === mkState.sym); }); }
+    function setSym(sym) { mkState.sym = sym; var sel = symRow.querySelector("#mkSym"); sel.value = sym; mountMk(); refreshQuick(); }
+    MK_QUICK.forEach(function (m) {
+      var ch = el('<button class="mk-chip" data-sym="' + m[1] + '">' + m[0] + '</button>');
+      ch.addEventListener("click", function () { setSym(m[1]); });
+      quick.appendChild(ch);
+    });
     function mountMk() {
       box.innerHTML = ""; box.appendChild(tvChart(mkState.sym, 620, false));
       symRow.querySelector("#mkDeep").href = "https://www.tradingview.com/symbols/" + encodeURIComponent(mkState.sym).replace("%3A", "-") + "/";
     }
-    symRow.querySelector("#mkSym").addEventListener("change", function () { mkState.sym = this.value; mountMk(); });
+    symRow.querySelector("#mkSym").addEventListener("change", function () { mkState.sym = this.value; mountMk(); refreshQuick(); });
     symRow.querySelector("#mkFull").addEventListener("click", function () { goFullscreen(box); });
+    card.appendChild(quick);
     card.appendChild(symRow);
+    refreshQuick();
     card.appendChild(box);
     mountMk();
     card.appendChild(el('<p class="hint" style="margin-top:10px">Tap the chart toolbar for indicators (RSI, MACD, MA, Bollinger…) and drawing tools. Hit <b>⛶ Fullscreen</b> and rotate your phone for a big landscape view. Indian indices show their tracking ETF; use <b>Deep analysis</b> for full technicals &amp; fundamentals on TradingView.</p>'));
