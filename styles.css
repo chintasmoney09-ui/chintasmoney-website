@@ -329,7 +329,28 @@ img{max-width:100%;display:block}
 .xpbar{height:12px;border-radius:8px;background:var(--bg);border:1px solid var(--line);overflow:hidden}
 .xpbar i{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,var(--green),var(--gold))}
 .badgegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.badge{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:12px 6px;border:1px solid var(--line);border-radius:14px;background:var(--bg);font-size:.72rem;font-weight:600;color:var(--ink-soft)}
-.badge b{font-size:1.5rem;line-height:1}
-.badge.locked{opacity:.4;filter:grayscale(.6)}
+.lbadge{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:12px 6px;border:1px solid var(--line);border-radius:14px;background:var(--bg);font-size:.72rem;font-weight:600;color:var(--ink-soft)}
+.lbadge b{font-size:1.5rem;line-height:1}
+.lbadge.locked{opacity:.4;filter:grayscale(.6)}
 @media(max-width:760px){.league-grid{grid-template-columns:1fr}}
+
+/* ===== Premium pricing tiers ===== */
+.plans-4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:1080px){ .plans-4{grid-template-columns:repeat(2,1fr)} }
+@media(max-width:600px){ .plans-4{grid-template-columns:1fr} }
+.plan-tier{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;font-weight:800;font-size:1.05rem;padding:5px 13px;border-radius:999px;border:1px solid var(--line-2);margin-bottom:8px}
+.plan-tier.free{color:var(--ink)}
+.plan-tier.plus{color:var(--green);border-color:rgba(34,224,138,.4);background:rgba(34,224,138,.08)}
+.plan-tier.platinum{color:var(--teal);border-color:rgba(25,211,197,.45);background:rgba(25,211,197,.08)}
+.plan-tier.diamond{color:var(--gold);border-color:rgba(245,184,73,.45);background:rgba(245,184,73,.08)}
+.plan-limit{font-size:.83rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 11px;margin:2px 0 8px}
+.plan-limit b{color:var(--green)}
+.tier-diamond{border-color:rgba(245,184,73,.45);background:linear-gradient(180deg,rgba(245,184,73,.06),var(--panel))}
+.tier-platinum{border-color:rgba(25,211,197,.5)}
+/* token recharge strip */
+.token-strip{margin-top:26px;display:flex;flex-wrap:wrap;gap:14px 20px;justify-content:space-between;align-items:center;
+  background:linear-gradient(100deg,rgba(34,224,138,.06),rgba(245,184,73,.06));border:1px solid var(--line);border-radius:16px;padding:16px 20px}
+.token-strip b{color:var(--ink)}
+.tok-ic{font-size:1.2rem}
+.tok-packs{display:flex;gap:10px;flex-wrap:wrap}
+.tok-pack{font-weight:700;font-size:.84rem;color:var(--ink);border:1px solid var(--line-2);border-radius:10px;padding:7px 12px;background:var(--bg-2)}

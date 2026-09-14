@@ -314,12 +314,12 @@
           <p class="muted mono" style="font-size:.82rem;margin:8px 0 18px">720 / 1000 XP to <b>Diamond</b></p>
           <h3 style="margin-bottom:12px">Badges unlocked</h3>
           <div class="badgegrid">
-            <span class="badge"><b>🥇</b>No-Revenge Week</span>
-            <span class="badge"><b>🛡️</b>SL Respecter</span>
-            <span class="badge"><b>🎯</b>Planned Exit ×5</span>
-            <span class="badge"><b>🔥</b>10-Day Streak</span>
-            <span class="badge locked"><b>💎</b>Diamond Mind</span>
-            <span class="badge locked"><b>🧘</b>Zero-Tilt Month</span>
+            <span class="lbadge"><b>🥇</b>No-Revenge Week</span>
+            <span class="lbadge"><b>🛡️</b>SL Respecter</span>
+            <span class="lbadge"><b>🎯</b>Planned Exit ×5</span>
+            <span class="lbadge"><b>🔥</b>10-Day Streak</span>
+            <span class="lbadge locked"><b>💎</b>Diamond Mind</span>
+            <span class="lbadge locked"><b>🧘</b>Zero-Tilt Month</span>
           </div>
         </div>
       </div>
@@ -342,26 +342,49 @@
   <!-- Pricing -->
   <section class="section" id="pricing">
     <div class="container">
-      <div class="center reveal"><span class="eyebrow">Pricing</span><h2>Start free. Try Pro for 7 days.</h2><p class="sub">Free forever to log trades &amp; get your score. Upgrade for the full picture — cancel anytime.</p></div>
-      <div class="plans">
+      <div class="center reveal"><span class="eyebrow">Pricing</span><h2>Start free. <span class="grad">Level up when you're ready.</span></h2><p class="sub">Log your first trades free. Upgrade for unlimited history, AI coaching and deeper analytics — cancel anytime.</p></div>
+      <div class="plans plans-4">
         <div class="plan reveal">
-          <h3>Free</h3><div class="amt">₹0<span> /forever</span></div>
-          <ul><li>Log trades &amp; Discipline Score</li><li>Trader personality</li><li>Risk calculator</li><li>Basic mistakes · last 30 days</li></ul>
+          <span class="plan-tier free">🌱 Free</span>
+          <div class="amt">₹0<span> /forever</span></div>
+          <div class="plan-limit">Up to <b>15 trades / month</b> · <b>5 AI tokens</b></div>
+          <ul><li>Log trades &amp; Discipline Score</li><li>Trader personality</li><li>Risk &amp; position-size calculator</li><li>Basic mistakes · last 30 days</li></ul>
           <a href="app/index.html" class="btn btn-ghost">Start free</a>
         </div>
-        <div class="plan feat reveal">
+        <div class="plan reveal">
+          <span class="plan-tier plus">⚡ Go Plus</span>
+          <div class="amt">₹199<span> /month</span></div>
+          <div class="plan-limit">Unlimited trades · <b>50 AI tokens / mo</b></div>
+          <ul><li>Everything in Free</li><li>Unlimited history &amp; full mistake analysis</li><li>Setup &amp; time-of-day insights</li><li>Streaks, badges &amp; shareable card</li></ul>
+          <a href="app/index.html" class="btn btn-ghost">Choose Go Plus</a>
+        </div>
+        <div class="plan feat reveal tier-platinum">
           <span class="badge">Most popular · 7-day trial</span>
-          <h3>Plus</h3><div class="amt">₹199<span> /month</span></div>
-          <ul><li>Everything in Free</li><li>Unlimited history &amp; full mistake analysis</li><li>Setup &amp; time-of-day insights</li><li>Streaks, badges &amp; pro shareable card</li><li>AI Discipline Coach</li></ul>
+          <span class="plan-tier platinum">💎 Platinum</span>
+          <div class="amt">₹499<span> /month</span></div>
+          <div class="plan-limit"><b>Unlimited AI tokens</b> · broker import</div>
+          <ul><li>Everything in Go Plus</li><li>AI Discipline Coach — unlimited</li><li>Strategy / setup performance</li><li>Risk &amp; R-multiple analytics</li><li>CSV &amp; broker import · weekly report</li></ul>
           <a href="app/index.html" class="btn btn-primary">Start 7-day trial</a>
         </div>
-        <div class="plan reveal">
-          <h3>Pro</h3><div class="amt">₹499<span> /month</span></div>
-          <ul><li>Everything in Plus</li><li>Strategy / setup performance</li><li>Risk &amp; R-multiple analytics</li><li>CSV import/export &amp; weekly report</li></ul>
-          <a href="app/index.html" class="btn btn-ghost">Go Pro</a>
+        <div class="plan reveal tier-diamond">
+          <span class="plan-tier diamond">👑 Diamond</span>
+          <div class="amt">₹999<span> /month</span></div>
+          <div class="plan-limit">Everything unlimited · <b>white-glove</b></div>
+          <ul><li>Everything in Platinum</li><li>Priority AI + monthly 1:1 discipline review</li><li>Backtest your discipline over history</li><li>Early access to new features</li><li>Personal onboarding</li></ul>
+          <a href="app/index.html" class="btn btn-ghost">Go Diamond</a>
         </div>
       </div>
-      <p class="center sub" style="margin-top:22px;font-size:.9rem">Prices are configurable. No card required to start the free plan or the trial in this preview.</p>
+
+      <!-- Token recharge -->
+      <div class="token-strip reveal">
+        <div><span class="tok-ic">🎟️</span> <b>Out of AI tokens?</b> Top up anytime — no subscription needed.</div>
+        <div class="tok-packs">
+          <span class="tok-pack">20 tokens · ₹49</span>
+          <span class="tok-pack">60 tokens · ₹99</span>
+          <span class="tok-pack">150 tokens · ₹199</span>
+        </div>
+      </div>
+      <p class="center sub" style="margin-top:18px;font-size:.88rem">1 AI token = one deep analysis (AI coach verdict, weekly wrapped, pattern scan). Cancel anytime · no card to start free.</p>
     </div>
   </section>
 
