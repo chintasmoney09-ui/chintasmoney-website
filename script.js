@@ -32,19 +32,23 @@
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeNav(); });
   }
 
-  // ticker (mock symbols; duplicated for seamless loop)
-  var syms = [
-    ["NIFTY", "24,812", "+0.62%", 1], ["BANKNIFTY", "51,240", "-0.34%", 0], ["RELIANCE", "2,984", "+1.10%", 1],
-    ["TCS", "3,910", "+0.20%", 1], ["HDFCBANK", "1,502", "-0.48%", 0], ["INFY", "1,648", "+0.72%", 1],
-    ["TATAMOTORS", "985", "+2.05%", 1], ["ZOMATO", "168", "-1.30%", 0], ["ADANIENT", "2,988", "+0.90%", 1],
-    ["SBIN", "832", "-0.22%", 0]
-  ];
-  var tk = $("#ticker");
-  if (tk) {
-    var row = syms.map(function (s) {
-      return '<span class="t"><b>' + s[0] + '</b> ' + s[1] + ' <span class="' + (s[3] ? "up" : "down") + '">' + s[2] + '</span></span>';
+  // Live market ticker — real quotes from our own /api/quotes endpoint
+  var tk = $("#ticker"), tkWrap = $("#tickerWrap");
+  function renderTicker(quotes) {
+    if (!tk || !quotes || !quotes.length) return;
+    var row = quotes.map(function (s) {
+      var up = Number(s.change) >= 0, sign = up ? "+" : "";
+      return '<span class="t"><b>' + s.name + '</b> ' + s.price +
+        ' <span class="' + (up ? "up" : "down") + '">' + sign + s.changePct + '%</span></span>';
     }).join("");
-    tk.innerHTML = row + row; // duplicate for -50% scroll loop
+    tk.innerHTML = row + row; // duplicate for seamless -50% scroll loop
+    if (tkWrap) tkWrap.hidden = false;
+  }
+  if (tk) {
+    fetch("/api/quotes", { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (d && d.quotes) renderTicker(d.quotes); })
+      .catch(function () { /* leave the strip hidden if quotes are unavailable */ });
   }
 
   // candles (random up/down bars)
