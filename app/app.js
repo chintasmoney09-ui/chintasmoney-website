@@ -16,6 +16,7 @@
   var NAV = [
     { id: "today", label: "Today", ic: "⚡" },
     { id: "home", label: "My Report Card", ic: "◎" },
+    { id: "checklist", label: "Pre-Trade Check", ic: "✅" },
     { id: "log", label: "Log a Trade", ic: "＋" },
     { id: "trades", label: "Trade Journal", ic: "▤" },
     { id: "markets", label: "Charts", ic: "📈" },
@@ -680,6 +681,67 @@
   };
 
   // ---- LOG A TRADE ---------------------------------------------------------
+  // ---- PRE-TRADE READINESS CHECK ------------------------------------------
+  // A discipline gate BEFORE the click: weighted gates -> readiness score + verdict.
+  var CHECK_GATES = [
+    { id: "sl", w: 25, q: "I have set a stop-loss", why: "No stop = one trade can end your account." },
+    { id: "risk", w: 20, q: "My risk is ≤ 1–2% of capital", why: "Small risk lets you survive a losing streak." },
+    { id: "setup", w: 15, q: "This matches a planned setup (not FOMO)", why: "Boredom and chasing are not setups." },
+    { id: "rr", w: 15, q: "My reward is at least 1.5× my risk", why: "Poor R:R loses money even at a high win rate." },
+    { id: "calm", w: 15, q: "I'm calm — not revenge-trading", why: "Emotion turns one red trade into five." },
+    { id: "limit", w: 10, q: "I'm within my trade count for today", why: "Overtrading just adds brokerage and mistakes." }
+  ];
+  function readyGauge(score, verdict, color) {
+    var size = 190, r = size / 2 - 14, c = 2 * Math.PI * r, off = c * (1 - score / 100);
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">' +
+      '<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="none" stroke="var(--line)" stroke-width="14"/>' +
+      '<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="none" stroke="' + color + '" stroke-width="14" stroke-linecap="round" stroke-dasharray="' + c + '" stroke-dashoffset="' + off + '" transform="rotate(-90 ' + size / 2 + ' ' + size / 2 + ')"/>' +
+      '<text x="50%" y="45%" text-anchor="middle" font-size="' + (size * 0.26) + '" font-weight="800" fill="var(--ink)">' + score + '</text>' +
+      '<text x="50%" y="62%" text-anchor="middle" font-size="' + (size * 0.085) + '" font-weight="700" fill="' + color + '">' + verdict + '</text></svg>';
+  }
+  VIEWS.checklist = function () {
+    var v = el('<div></div>');
+    v.appendChild(topbar("Should I take this trade?", "Run the gate before you click. Green means go — everything else means wait."));
+    var c = el('<div class="card"></div>');
+    var gauge = el('<div style="display:flex;justify-content:center;margin:4px 0 8px" id="ckGauge"></div>');
+    var verdictMsg = el('<p class="hint" id="ckMsg" style="text-align:center;margin:0 0 14px"></p>');
+    var list = el('<div class="check-gates"></div>');
+    CHECK_GATES.forEach(function (g) {
+      var row = el('<label class="check-gate"><input type="checkbox" data-w="' + g.w + '" id="ck_' + g.id + '"/>' +
+        '<span class="cg-body"><b>' + g.q + '</b><small>' + g.why + '</small></span>' +
+        '<span class="cg-w">+' + g.w + '</span></label>');
+      list.appendChild(row);
+    });
+    c.appendChild(gauge); c.appendChild(verdictMsg); c.appendChild(list);
+    var actions = el('<div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap"></div>');
+    var logIt = el('<button class="btn btn-primary" id="ckLog" disabled>Log this trade →</button>');
+    logIt.addEventListener("click", function () { go("log"); });
+    var reset = el('<button class="btn btn-ghost" id="ckReset">Reset</button>');
+    reset.addEventListener("click", function () { list.querySelectorAll("input").forEach(function (i) { i.checked = false; }); update(); });
+    actions.appendChild(logIt); actions.appendChild(reset);
+    c.appendChild(actions);
+    v.appendChild(c);
+    v.appendChild(el('<p class="hint" style="margin-top:12px;text-align:center">A checklist is not a guarantee — it keeps you honest. Educational only, not investment advice.</p>'));
+    function update() {
+      var score = 0;
+      list.querySelectorAll("input").forEach(function (i) { if (i.checked) score += +i.getAttribute("data-w"); });
+      var slOn = c.querySelector("#ck_sl").checked;
+      var verdict, color, msg;
+      if (!slOn) { verdict = "STOP"; color = "var(--red)"; msg = "No stop-loss ticked — do not take this trade until you have one."; }
+      else if (score >= 80) { verdict = "GO"; color = "var(--emerald)"; msg = "Disciplined setup. Size it as planned and stick to your stop."; }
+      else if (score >= 55) { verdict = "CAUTION"; color = "var(--gold)"; msg = "Some boxes are unticked. Fix them or trade smaller than usual."; }
+      else { verdict = "WAIT"; color = "var(--red)"; msg = "Too many gaps. This looks like an emotional or unplanned trade — wait."; }
+      gauge.innerHTML = readyGauge(score, verdict, color);
+      verdictMsg.textContent = msg; verdictMsg.style.color = color;
+      var green = slOn && score >= 80;
+      logIt.disabled = !green;
+      logIt.style.opacity = green ? "1" : ".5";
+    }
+    list.querySelectorAll("input").forEach(function (i) { i.addEventListener("change", update); });
+    update();
+    return v;
+  };
+
   VIEWS.log = function () {
     var v = el('<div></div>');
     v.appendChild(topbar("Log a Trade", "Honesty in = honesty out. This is between you and your data."));

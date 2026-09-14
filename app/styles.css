@@ -217,6 +217,17 @@ select option { background: var(--surface); }
 .trade-preview .tp-val.neg{color:#ff6b6b}
 @media(max-width:520px){.trade-preview .tp-val{font-size:.95rem}}
 
+/* Pre-trade readiness checklist */
+.check-gates{display:flex;flex-direction:column;gap:10px}
+.check-gate{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--bg,#0a0f1c);cursor:pointer;transition:border-color .15s,background .15s}
+.check-gate:hover{border-color:rgba(34,224,138,.35)}
+.check-gate:has(input:checked){border-color:rgba(34,224,138,.55);background:rgba(34,224,138,.06)}
+.check-gate input{margin-top:3px;width:20px;height:20px;flex:0 0 auto;accent-color:#22e08a;cursor:pointer}
+.check-gate .cg-body{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.check-gate .cg-body b{font-size:.95rem}
+.check-gate .cg-body small{color:var(--muted);font-size:.8rem;line-height:1.4}
+.check-gate .cg-w{flex:0 0 auto;font-size:.78rem;font-weight:700;color:var(--muted);align-self:center}
+
 /* TradingView iframe chart */
 .tv-frame{width:100%;border-radius:12px;overflow:hidden;background:#0a0713;border:1px solid var(--line)}
 .tv-frame iframe{display:block;width:100%;height:100%;border:0}
