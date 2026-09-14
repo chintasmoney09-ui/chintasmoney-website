@@ -252,10 +252,10 @@ img{max-width:100%;display:block}
   .col-2,.col-3,.col-4,.col-6{grid-column:span 2}
   .step .arrow{display:none}
   /* Mobile header: centered logo + hamburger only */
-  .nav{min-height:150px;padding-inline:20px}
-  .hdr .brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);gap:4px;max-width:70vw}
-  .hdr .brand img{height:118px}
-  .hdr .brand-name{font-size:1.05rem}
+  .nav{min-height:118px;padding-inline:20px}
+  .hdr .brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);gap:3px;max-width:72vw}
+  .hdr .brand img{height:88px}
+  .hdr .brand-name{font-size:1rem}
   .nav-toggle{display:flex;margin-left:auto}
   /* Right-side navigation drawer */
   .nav-links{position:fixed;top:0;right:0;height:100dvh;width:min(84vw,330px);
