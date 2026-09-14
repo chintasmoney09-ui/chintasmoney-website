@@ -52,9 +52,9 @@ img{max-width:100%;display:block}
 
 /* Header */
 .hdr{position:sticky;top:0;z-index:60;backdrop-filter:blur(14px);background:rgba(5,7,14,.72);border-bottom:1px solid var(--line)}
-.nav{position:relative;display:flex;align-items:center;justify-content:space-between;min-height:110px;gap:16px;padding-block:10px}
+.nav{position:relative;display:flex;align-items:center;justify-content:space-between;min-height:180px;gap:16px;padding-block:10px}
 .brand{display:flex;flex-direction:column;align-items:center;gap:5px;font-weight:800;letter-spacing:-.02em;line-height:1}
-.brand img{height:78px;width:auto;background:none;padding:0}
+.brand img{height:150px;width:auto;background:none;padding:0}
 .brand-name{font-size:1.2rem;white-space:nowrap}
 .brand-name b{color:var(--green)}
 .brand-emoji{font-size:1.05em}
@@ -239,9 +239,9 @@ img{max-width:100%;display:block}
   .col-2,.col-3,.col-4,.col-6{grid-column:span 2}
   .step .arrow{display:none}
   /* Mobile header: centered logo + hamburger only */
-  .nav{min-height:108px;padding-inline:20px}
+  .nav{min-height:150px;padding-inline:20px}
   .brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);gap:4px}
-  .brand img{height:74px}
+  .brand img{height:124px}
   .brand-name{font-size:1.05rem}
   .nav-toggle{display:flex;margin-left:auto}
   /* Right-side navigation drawer */
