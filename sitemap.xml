@@ -2,6 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://chintasmoney.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
   <url><loc>https://chintasmoney.com/app/index.html</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://chintasmoney.com/learn.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://chintasmoney.com/privacy.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://chintasmoney.com/terms.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://chintasmoney.com/refund.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
