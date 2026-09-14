@@ -876,6 +876,7 @@
         b.querySelector("#tvReport").addEventListener("click", function () { close(); go("home"); render(); });
         b.querySelector("#tvAnother").addEventListener("click", function () { close(); go("log"); render(); });
       });
+      if (d >= 75) confetti();
     });
     c.appendChild(save);
     c.appendChild(el('<p class="hint" style="margin-top:10px">Tip: leaving <b>Planned SL</b> empty counts as “traded without a stop” — because that’s the truth we\'re measuring.</p>'));
@@ -1055,6 +1056,24 @@
     var t = el('<div class="toast' + (kind ? " " + kind : "") + '">' + esc(msg) + '</div>');
     _toastWrap.appendChild(t);
     setTimeout(function () { t.classList.add("out"); setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 300); }, 2600);
+  }
+
+  // Lightweight confetti burst — celebrates disciplined behaviour (no library).
+  function confetti() {
+    try { if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return; } catch (e) {}
+    var colors = ["#22e08a", "#f5b849", "#8b5cf6", "#19d3c5", "#ff5a6a", "#7cc7ff"];
+    var wrap = el('<div class="confetti-wrap"></div>');
+    for (var i = 0; i < 40; i++) {
+      var p = document.createElement("i");
+      p.style.left = Math.random() * 100 + "%";
+      p.style.background = colors[i % colors.length];
+      p.style.animationDelay = (Math.random() * 0.2) + "s";
+      p.style.animationDuration = (0.9 + Math.random() * 0.7) + "s";
+      p.style.transform = "rotate(" + (Math.random() * 360) + "deg)";
+      wrap.appendChild(p);
+    }
+    document.body.appendChild(wrap);
+    setTimeout(function () { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); }, 1900);
   }
 
   // ---- RISK CALCULATOR -----------------------------------------------------
