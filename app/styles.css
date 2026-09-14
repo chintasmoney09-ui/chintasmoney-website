@@ -240,6 +240,16 @@ select option { background: var(--surface); }
 .jrn-chip .jc-n{opacity:.6;font-weight:700;margin-left:2px}
 .jrn-chip.on .jc-n{opacity:.9}
 
+/* Global quick-log floating action button */
+.fab{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:40;width:58px;height:58px;border-radius:50%;border:none;cursor:pointer;
+  background:linear-gradient(135deg,#22e08a,#0f9d76);color:#04140d;font-size:2rem;font-weight:800;line-height:1;
+  box-shadow:0 8px 24px rgba(34,224,138,.4),0 2px 6px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;
+  transition:transform .15s ease,box-shadow .15s ease;animation:fabIn .3s ease}
+.fab:hover{transform:scale(1.08);box-shadow:0 10px 30px rgba(34,224,138,.55)}
+.fab:active{transform:scale(.96)}
+@keyframes fabIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+@media(min-width:900px){.fab{right:32px;bottom:32px}}
+
 /* TradingView iframe chart */
 .tv-frame{width:100%;border-radius:12px;overflow:hidden;background:#0a0713;border:1px solid var(--line)}
 .tv-frame iframe{display:block;width:100%;height:100%;border:0}

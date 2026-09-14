@@ -110,6 +110,13 @@
     var main = el('<main class="main"></main>');
     main.appendChild(!CM.planAllows(s.profile.plan, r) ? paywall(r) : (VIEWS[r] || VIEWS.home)());
     wrap.appendChild(main);
+
+    // Global quick-log floating action button (hidden on the log view itself)
+    if (r !== "log") {
+      var fab = el('<button class="fab" title="Log a trade" aria-label="Log a trade">＋</button>');
+      fab.addEventListener("click", function () { go("log"); });
+      wrap.appendChild(fab);
+    }
     return wrap;
   }
 
