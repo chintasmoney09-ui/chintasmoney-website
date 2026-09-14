@@ -13,13 +13,13 @@
   function openNav() {
     links.classList.add("open");
     if (backdrop) backdrop.classList.add("open");
-    if (tgl) tgl.setAttribute("aria-expanded", "true");
+    if (tgl) { tgl.classList.add("open"); tgl.setAttribute("aria-expanded", "true"); }
     document.body.style.overflow = "hidden";
   }
   function closeNav() {
     links.classList.remove("open");
     if (backdrop) backdrop.classList.remove("open");
-    if (tgl) tgl.setAttribute("aria-expanded", "false");
+    if (tgl) { tgl.classList.remove("open"); tgl.setAttribute("aria-expanded", "false"); }
     document.body.style.overflow = "";
   }
   if (tgl && links) {

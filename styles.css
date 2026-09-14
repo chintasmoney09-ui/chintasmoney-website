@@ -68,7 +68,10 @@ img{max-width:100%;display:block}
 .nav-backdrop{position:fixed;inset:0;z-index:70;background:rgba(3,5,10,.6);backdrop-filter:blur(2px);opacity:0;visibility:hidden;transition:opacity .3s ease,visibility .3s ease}
 .nav-backdrop.open{opacity:1;visibility:visible}
 .nav-toggle{display:none;flex-direction:column;gap:5px;background:none;border:0;cursor:pointer;padding:8px;z-index:82}
-.nav-toggle span{width:24px;height:2px;background:var(--ink);border-radius:2px}
+.nav-toggle span{width:26px;height:2px;background:var(--ink);border-radius:2px;transition:transform .28s ease,opacity .2s ease}
+.nav-toggle.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.nav-toggle.open span:nth-child(2){opacity:0}
+.nav-toggle.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
 
 /* Ticker */
 .tv-ticker{border-block:1px solid var(--line);background:var(--bg-2);min-height:46px}
@@ -236,10 +239,10 @@ img{max-width:100%;display:block}
   .col-2,.col-3,.col-4,.col-6{grid-column:span 2}
   .step .arrow{display:none}
   /* Mobile header: centered logo + hamburger only */
-  .nav{min-height:96px;padding-inline:20px}
+  .nav{min-height:108px;padding-inline:20px}
   .brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);gap:4px}
-  .brand img{height:62px}
-  .brand-name{font-size:.98rem}
+  .brand img{height:74px}
+  .brand-name{font-size:1.05rem}
   .nav-toggle{display:flex;margin-left:auto}
   /* Right-side navigation drawer */
   .nav-links{position:fixed;top:0;right:0;height:100dvh;width:min(84vw,330px);
