@@ -879,6 +879,8 @@
       if (d >= 75) confetti();
     });
     c.appendChild(save);
+    // Enter in any single-line field saves the trade (textarea keeps normal newlines).
+    c.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.target.tagName === "INPUT") { e.preventDefault(); save.click(); } });
     c.appendChild(el('<p class="hint" style="margin-top:10px">Tip: leaving <b>Planned SL</b> empty counts as “traded without a stop” — because that’s the truth we\'re measuring.</p>'));
     var preCheck = el('<button class="btn btn-ghost btn-sm" style="margin-top:6px">✅ Not sure? Run the Pre-Trade Check first</button>');
     preCheck.addEventListener("click", function () { go("checklist"); });
@@ -1149,7 +1151,7 @@
           try {
             var n = parseCSV(String(rd.result));
             b.querySelector("#csvnote").innerHTML = '<span class="pos">Imported ' + n + ' trade(s).</span>';
-            setTimeout(function () { close(); go("home"); render(); }, 700);
+            setTimeout(function () { close(); go("home"); render(); toast("Imported " + n + " trade(s) ✓", "ok"); }, 700);
           } catch (err) { b.querySelector("#csvnote").innerHTML = '<span class="neg">Could not read that file.</span>'; }
         };
         rd.readAsText(f);
@@ -1444,7 +1446,7 @@
               if (!obj || typeof obj !== "object" || !obj.profile || !Array.isArray(obj.trades)) throw new Error("bad");
               CM.hydrate(obj);
               b.querySelector("#bknote").innerHTML = '<span class="pos">Restored ' + obj.trades.length + ' trade(s).</span>';
-              setTimeout(function () { close(); go("home"); render(); }, 700);
+              setTimeout(function () { close(); go("home"); render(); toast("Backup restored ✓", "ok"); }, 700);
             } catch (err) { b.querySelector("#bknote").innerHTML = '<span class="neg">That doesn\'t look like a valid ChintasMoney backup.</span>'; }
           };
           rd.readAsText(f);
