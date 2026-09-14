@@ -101,9 +101,12 @@
       a.addEventListener("click", function () { mobileOpen = false; });
       side.appendChild(a);
     });
-    side.appendChild(el('<div class="side-foot"><span class="plan-pill">● ' + CM.PLANS[s.profile.plan].name + ' plan</span>' +
+    var foot = el('<div class="side-foot"><span class="plan-pill">● ' + CM.PLANS[s.profile.plan].name + ' plan</span>' +
       '<div class="side-legal"><a href="../learn.html">Learn</a> · <a href="../privacy.html">Privacy</a> · <a href="../terms.html">Terms</a> · <a href="../disclaimer.html">Disclaimer</a></div>' +
-      '<div class="side-legal" style="margin-top:6px">Not investment advice · F&amp;O is risky.</div></div>'));
+      '<div class="side-legal" style="margin-top:6px">Not investment advice · F&amp;O is risky.</div></div>');
+    var scBtn = el('<button class="side-shortcuts">⌨ Keyboard shortcuts (?)</button>'); scBtn.addEventListener("click", function () { showShortcuts(); });
+    foot.appendChild(scBtn);
+    side.appendChild(foot);
     wrap.appendChild(side);
     if (mobileOpen) { var sc = el('<div class="scrim"></div>'); sc.addEventListener("click", function () { mobileOpen = false; render(); }); wrap.appendChild(sc); }
 
@@ -1585,6 +1588,27 @@
   // data is safe locally, and confirm when connectivity returns.
   window.addEventListener("offline", function () { if (typeof toast === "function") toast("You're offline — your data is safe on this device 📴", "err"); });
   window.addEventListener("online", function () { if (typeof toast === "function") toast("Back online ✓", "ok"); });
+
+  // ---- Keyboard shortcuts (power users) ------------------------------------
+  var SHORTCUTS = [["l", "log", "Log a trade"], ["t", "today", "Today"], ["h", "home", "Report Card"], ["c", "markets", "Charts"], ["j", "trades", "Journal"], ["a", "analytics", "Analytics"], ["k", "checklist", "Pre-Trade Check"]];
+  document.addEventListener("keydown", function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    var t = e.target, tag = t && t.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (t && t.isContentEditable)) return;
+    if (document.querySelector('[style*="z-index:120"]')) return; // a modal dialog is open
+    var key = (e.key || "").toLowerCase();
+    if (key === "?") { e.preventDefault(); showShortcuts(); return; }
+    for (var i = 0; i < SHORTCUTS.length; i++) {
+      if (SHORTCUTS[i][0] === key) { e.preventDefault(); go(SHORTCUTS[i][1]); return; }
+    }
+  });
+  function showShortcuts() {
+    if (typeof dialog !== "function") return;
+    var rows = SHORTCUTS.concat([["?", "", "This help"]]).map(function (s) {
+      return '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line)"><span>' + s[2] + '</span><kbd class="kbd">' + s[0].toUpperCase() + '</kbd></div>';
+    }).join("");
+    dialog("Keyboard shortcuts", '<p class="hint" style="margin:0 0 10px">Press a key anywhere (outside a text field) to jump around.</p>' + rows);
+  }
 
   render();
 })();

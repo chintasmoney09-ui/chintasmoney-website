@@ -240,6 +240,11 @@ select option { background: var(--surface); }
 .jrn-chip .jc-n{opacity:.6;font-weight:700;margin-left:2px}
 .jrn-chip.on .jc-n{opacity:.9}
 
+/* Keyboard shortcut key caps */
+.kbd{display:inline-block;min-width:22px;text-align:center;padding:2px 7px;border:1px solid var(--line-2,#2a3550);border-bottom-width:2px;border-radius:6px;background:var(--bg,#0a0f1c);font-family:ui-monospace,Menlo,monospace;font-size:.8rem;font-weight:700;color:var(--ink)}
+.side-shortcuts{background:none;border:none;color:var(--muted);font-size:.72rem;cursor:pointer;padding:6px 0 0;text-align:left}
+.side-shortcuts:hover{color:var(--ink)}
+
 /* Activity heatmap */
 .heatmap{display:flex;gap:4px;overflow-x:auto;padding:4px 0 2px}
 .hm-col{display:flex;flex-direction:column;gap:4px;flex:0 0 auto}
