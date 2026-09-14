@@ -240,9 +240,9 @@ img{max-width:100%;display:block}
   .step .arrow{display:none}
   /* Mobile header: centered logo + hamburger only */
   .nav{min-height:150px;padding-inline:20px}
-  .brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);gap:4px}
-  .brand img{height:124px}
-  .brand-name{font-size:1.05rem}
+  .hdr .brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);gap:4px;max-width:70vw}
+  .hdr .brand img{height:118px}
+  .hdr .brand-name{font-size:1.05rem}
   .nav-toggle{display:flex;margin-left:auto}
   /* Right-side navigation drawer */
   .nav-links{position:fixed;top:0;right:0;height:100dvh;width:min(84vw,330px);
