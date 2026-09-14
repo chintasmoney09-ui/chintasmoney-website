@@ -1039,15 +1039,36 @@
     var s = CM.load(), st = CM.stats(), p = st.personality;
     var v = el('<div></div>');
     v.appendChild(topbar("Your Shareable Card", "Screenshot it. Post it. Tag a trader who needs it."));
-    var card = el('<div class="card" style="max-width:440px;margin:0 auto;background:linear-gradient(160deg,var(--navy),var(--navy-2));color:#fff;border:0"></div>');
-    card.appendChild(el('<div style="display:flex;justify-content:space-between;align-items:center"><b style="letter-spacing:.02em">ChintasMoney</b><span style="color:#8ea3c9;font-size:.75rem">TRADER REPORT CARD</span></div>'));
-    card.appendChild(el('<div style="text-align:center;margin:14px 0">' + gauge(st.discipline, 170).replace('fill="var(--ink)"', 'fill="#fff"').replace('fill="var(--line)"', 'fill="rgba(255,255,255,.15)"').replace('fill="var(--muted)"', 'fill="#8ea3c9"') + '</div>'));
-    card.appendChild(el('<div style="text-align:center"><div style="font-size:1.9rem">' + p.em + '</div><h2 style="margin:2px 0;color:#fff">' + esc(p.key) + '</h2><p style="color:#b7c4dd;font-size:.9rem;margin:0 auto;max-width:34ch">' + esc(p.line) + '</p></div>'));
-    function cell(l, val) { return '<div><div style="font-size:1.3rem;font-weight:800">' + val + '</div><div style="color:#8ea3c9;font-size:.72rem">' + l + '</div></div>'; }
-    card.appendChild(el('<div style="display:flex;justify-content:space-around;margin-top:16px;text-align:center">' + cell("Win rate", st.winRate + "%") + cell("No-SL", st.noSL) + cell("Emo exits", st.emotional) + '</div>'));
-    card.appendChild(el('<div style="text-align:center;margin-top:16px;color:#8ea3c9;font-size:.75rem">chintasmoney.com · discipline over profit</div>'));
+    var e = CM.engagement();
+    var topPct = Math.max(3, Math.round((100 - st.discipline) * 0.55));
+    var rare = st.discipline >= 75;
+    function cell(l, val) { return '<div><div style="font-size:1.35rem;font-weight:800">' + val + '</div><div style="color:#8ea3c9;font-size:.72rem">' + l + '</div></div>'; }
+    var g = gauge(st.discipline, 168).replace('fill="var(--ink)"', 'fill="#fff"').replace('fill="var(--line)"', 'fill="rgba(255,255,255,.13)"').replace('fill="var(--muted)"', 'fill="#8ea3c9"');
+    var card = el('<div class="share-card' + (rare ? " rare" : "") + '"></div>');
+    card.innerHTML =
+      '<div class="sc-top"><b>ChintasMoney</b><span>TRADER REPORT CARD</span></div>' +
+      '<div class="sc-rank">🏆 TOP ' + topPct + '% DISCIPLINED · this week</div>' +
+      '<div style="text-align:center;margin:6px 0 2px">' + g + '</div>' +
+      '<div style="text-align:center"><div style="font-size:1.9rem">' + p.em + '</div><h2 style="margin:2px 0;color:#fff">' + esc(p.key) + '</h2><p style="color:#b7c4dd;font-size:.9rem;margin:0 auto;max-width:34ch">' + esc(p.line) + '</p></div>' +
+      '<div class="sc-level"><span class="sc-pill">' + e.em + ' Lv ' + e.level + ' · ' + esc(e.title) + '</span><span class="sc-pill flame">🔥 ' + e.streak + '-day streak</span></div>' +
+      '<div class="sc-xp"><i style="width:' + e.pct + '%"></i></div><div class="sc-xpt">' + e.xpToNext + ' XP to level ' + (e.level + 1) + '</div>' +
+      '<div class="sc-stats">' + cell("Win rate", st.winRate + "%") + cell("No-SL", st.noSL) + cell("Emo exits", st.emotional) + '</div>' +
+      '<div class="sc-flex">Only the disciplined survive F&amp;O. 🧠</div>' +
+      '<div class="sc-foot">chintasmoney.com · discipline over profit</div>';
     v.appendChild(card);
-    v.appendChild(el('<p class="hint" style="text-align:center;margin-top:12px">Take a screenshot to share. (Auto image export &amp; one-tap share come with the backend.)</p>'));
+    var share = el('<div style="display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap"><button class="btn btn-primary" id="scShare">📤 Share my card</button><button class="btn" id="scChallenge">🏆 Challenge a friend</button></div>');
+    share.querySelector("#scShare").addEventListener("click", function () {
+      var text = "My ChintasMoney Discipline Score: " + st.discipline + "/100 — " + p.key + ". Top " + topPct + "% this week. Beat me 👉 chintasmoney.com";
+      if (navigator.share) navigator.share({ title: "My Trader Report Card", text: text, url: "https://chintasmoney.com" }).catch(function () {});
+      else { try { navigator.clipboard.writeText(text); this.textContent = "✓ Copied!"; } catch (er) {} }
+    });
+    share.querySelector("#scChallenge").addEventListener("click", function () {
+      var text = "I scored " + st.discipline + "/100 on discipline (Top " + topPct + "%). Think you're more disciplined? Prove it 👉 chintasmoney.com";
+      if (navigator.share) navigator.share({ title: "Discipline challenge", text: text }).catch(function () {});
+      else { try { navigator.clipboard.writeText(text); this.textContent = "✓ Copied!"; } catch (er) {} }
+    });
+    v.appendChild(share);
+    v.appendChild(el('<p class="hint" style="text-align:center;margin-top:10px">Screenshot or tap Share. Post it, tag a trader, climb the league. 🔥</p>'));
     return v;
   };
 

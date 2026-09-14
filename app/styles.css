@@ -213,3 +213,23 @@ select option { background: var(--surface); }
 .tv-frame iframe{display:block;width:100%;height:100%;border:0}
 .tv-frame:fullscreen{height:100vh!important;border-radius:0;border:0}
 .tv-frame:-webkit-full-screen{height:100vh!important;border-radius:0}
+
+/* Shareable card — flex-worthy, addictive */
+.share-card{max-width:440px;margin:0 auto;padding:22px;border-radius:20px;color:#fff;position:relative;overflow:hidden;
+  background:linear-gradient(160deg,#1a1140,#0f0b1c);border:1px solid rgba(167,139,250,.4);box-shadow:0 30px 70px rgba(0,0,0,.5)}
+.share-card.rare{border-color:rgba(245,184,73,.6);box-shadow:0 0 50px rgba(245,184,73,.22),0 30px 70px rgba(0,0,0,.5)}
+.share-card.rare::before{content:"";position:absolute;inset:0;background:radial-gradient(600px 200px at 50% -10%,rgba(245,184,73,.18),transparent 60%);pointer-events:none}
+.sc-top{display:flex;justify-content:space-between;align-items:center;position:relative}
+.sc-top b{letter-spacing:.02em;font-size:1.05rem}
+.sc-top span{color:#8ea3c9;font-size:.72rem;letter-spacing:.06em}
+.sc-rank{margin:12px auto 0;width:max-content;max-width:100%;font-size:.74rem;font-weight:800;letter-spacing:.03em;color:#f5b849;
+  background:rgba(245,184,73,.12);border:1px solid rgba(245,184,73,.4);border-radius:999px;padding:5px 14px;text-align:center}
+.sc-level{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+.sc-pill{font-size:.78rem;font-weight:700;color:#d9d2f5;background:rgba(139,92,246,.18);border:1px solid rgba(167,139,250,.4);border-radius:999px;padding:5px 12px}
+.sc-pill.flame{color:#f5b849;background:rgba(245,184,73,.12);border-color:rgba(245,184,73,.4)}
+.sc-xp{height:8px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden;margin:12px 0 4px}
+.sc-xp i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#22e08a,#f5b849)}
+.sc-xpt{text-align:center;color:#8ea3c9;font-size:.72rem}
+.sc-stats{display:flex;justify-content:space-around;margin-top:16px;text-align:center}
+.sc-flex{text-align:center;margin-top:16px;font-weight:700;color:#e7e0ff;font-size:.9rem}
+.sc-foot{text-align:center;margin-top:10px;color:#8ea3c9;font-size:.75rem}
