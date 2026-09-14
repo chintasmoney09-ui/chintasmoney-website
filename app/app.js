@@ -1057,9 +1057,18 @@
   VIEWS.badges = function () {
     var v = el('<div></div>');
     v.appendChild(topbar("Streaks & Badges", "Earn these by trading with discipline — not by winning."));
-    var g = el('<div class="grid g3"></div>');
-    CM.badges().forEach(function (b) {
-      g.appendChild(el('<div class="card" style="text-align:center;opacity:' + (b.got ? "1" : ".45") + '"><div style="font-size:2.2rem">' + b.em + '</div><h3>' + esc(b.name) + ' ' + (b.got ? '<span class="badge b-green">earned</span>' : '<span class="badge b-navy">locked</span>') + '</h3><p class="hint">' + esc(b.desc) + '</p></div>'));
+    var e = CM.engagement(), all = CM.badges(), got = all.filter(function (b) { return b.got; }).length, pct = Math.round(got / all.length * 100);
+    var hero = el('<div class="today-hero" style="max-width:none"></div>');
+    hero.innerHTML =
+      '<div class="th-row"><div><div class="th-hi">🏅 ' + got + ' of ' + all.length + ' badges earned</div>' +
+        '<div class="th-sub">Every badge is a discipline habit locked in.</div></div>' +
+        '<div class="th-rank">🔥 ' + e.streak + '-day streak</div></div>' +
+      '<div class="th-xp"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="th-xpt">' + (got === all.length ? "All badges unlocked — legend. 👑" : (all.length - got) + ' more to collect') + '</div>';
+    v.appendChild(hero);
+    var g = el('<div class="grid g3" style="margin-top:16px"></div>');
+    all.slice().sort(function (a, b) { return (b.got ? 1 : 0) - (a.got ? 1 : 0); }).forEach(function (b) {
+      g.appendChild(el('<div class="badge-card' + (b.got ? " got" : "") + '"><div class="bc-em">' + b.em + '</div><div class="bc-name">' + esc(b.name) + '</div><div class="bc-desc">' + esc(b.desc) + '</div><div class="bc-tag">' + (b.got ? '✓ Earned' : '🔒 Locked') + '</div></div>'));
     });
     v.appendChild(g);
     return v;
