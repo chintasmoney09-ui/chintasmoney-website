@@ -755,7 +755,8 @@
       '<label class="fld"><span>Planned SL</span><input id="sl" type="number" placeholder="(be honest)" /></label></div>' +
       '<div class="grid g3"><label class="fld"><span>Setup</span><select id="setup">' + CM.SETUPS.map(function (x) { return '<option>' + x + '</option>'; }).join("") + '</select></label>' +
       '<label class="fld"><span>Why did you exit?</span><select id="xr">' + CM.EXITS.map(function (x) { return '<option>' + x + '</option>'; }).join("") + '</select></label>' +
-      '<label class="fld"><span>Your emotion</span><select id="emo">' + CM.EMOTIONS.map(function (x) { return '<option>' + x + '</option>'; }).join("") + '</select></label></div>';
+      '<label class="fld"><span>Your emotion</span><select id="emo">' + CM.EMOTIONS.map(function (x) { return '<option>' + x + '</option>'; }).join("") + '</select></label></div>' +
+      '<label class="fld"><span>Note <small class="muted" style="font-weight:400">— why you took it, what you learned (optional)</small></span><textarea id="note" rows="2" placeholder="e.g. Clean breakout retest, but I moved my stop — won\'t do that again." style="resize:vertical"></textarea></label>';
     c.innerHTML = f;
     // Live P&L + risk:reward preview — updates as you type (reinforces the plan-first habit).
     var preview = el('<div class="trade-preview" hidden><div class="tp-cell"><span class="tp-lbl">Est. P&amp;L</span><b id="tpPnl" class="tp-val">—</b></div><div class="tp-cell"><span class="tp-lbl">Risk : Reward</span><b id="tpRR" class="tp-val">—</b></div><div class="tp-cell"><span class="tp-lbl">Risk / share</span><b id="tpRisk" class="tp-val">—</b></div></div>');
@@ -804,7 +805,8 @@
       CM.addTrade({ symbol: sym, side: c.querySelector("#side").value, qty: +c.querySelector("#qty").value || 0,
         entry: +c.querySelector("#entry").value || 0, exit: +c.querySelector("#exit").value || 0,
         plannedSL: slv === "" ? null : +slv, target: null, setup: c.querySelector("#setup").value,
-        exit_reason: c.querySelector("#xr").value, emotion: c.querySelector("#emo").value, date: new Date().toISOString() });
+        exit_reason: c.querySelector("#xr").value, emotion: c.querySelector("#emo").value,
+        note: (c.querySelector("#note").value || "").trim().slice(0, 500), date: new Date().toISOString() });
       go("home"); render();
     });
     c.appendChild(save);
@@ -851,7 +853,7 @@
     var tb = c.querySelector("tbody");
     shown.forEach(function (t) {
       var p = CM.pnl(t), d = CM.tradeDiscipline(t);
-      var tr = el('<tr><td><b>' + esc(t.symbol) + '</b><div class="hint">' + t.side + ' ' + t.qty + '</div></td>' +
+      var tr = el('<tr><td><b>' + esc(t.symbol) + '</b><div class="hint">' + t.side + ' ' + t.qty + '</div>' + (t.note ? '<div class="hint tnote" title="' + esc(t.note) + '">💬 ' + esc(t.note) + '</div>' : '') + '</td>' +
         '<td><span class="chip">' + esc(t.setup) + '</span></td>' +
         '<td class="num ' + (p >= 0 ? "pos" : "neg") + '">' + money(p) + '</td>' +
         '<td>' + esc(t.exit_reason) + (CM.hasSL(t) ? '' : ' <span class="badge b-red">no SL</span>') + '</td>' +
@@ -1007,7 +1009,7 @@
   };
 
   // ---- CSV export / import -------------------------------------------------
-  var CSV_COLS = ["symbol", "side", "qty", "entry", "exit", "plannedSL", "setup", "exit_reason", "emotion", "date"];
+  var CSV_COLS = ["symbol", "side", "qty", "entry", "exit", "plannedSL", "setup", "exit_reason", "emotion", "note", "date"];
   function exportCSV() {
     var tr = CM.load().trades;
     var rows = [CSV_COLS.join(",")].concat(tr.map(function (t) {
@@ -1050,7 +1052,7 @@
       CM.addTrade({ symbol: sym, side: get("side") || "Buy", qty: +get("qty") || 0, entry: +get("entry") || 0,
         exit: +get("exit") || 0, plannedSL: sl === "" ? null : +sl, target: null,
         setup: get("setup") || "Other", exit_reason: get("exit_reason") || "Hit target",
-        emotion: get("emotion") || "Calm", date: get("date") || new Date().toISOString() });
+        emotion: get("emotion") || "Calm", note: (get("note") || "").slice(0, 500), date: get("date") || new Date().toISOString() });
       count++;
     }
     return count;
