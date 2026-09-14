@@ -283,3 +283,8 @@ select option { background: var(--surface); }
 
 /* Let main shrink so wide tables scroll inside their card, not the page */
 .main{min-width:0;overflow-x:clip}
+
+/* Sidebar legal links */
+.side-legal{margin-top:10px;font-size:.7rem;color:var(--muted);line-height:1.5}
+.side-legal a{color:var(--ink-soft)}
+.side-legal a:hover{color:var(--green)}

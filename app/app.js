@@ -100,7 +100,9 @@
       a.addEventListener("click", function () { mobileOpen = false; });
       side.appendChild(a);
     });
-    side.appendChild(el('<div class="side-foot"><span class="plan-pill">● ' + CM.PLANS[s.profile.plan].name + ' plan</span></div>'));
+    side.appendChild(el('<div class="side-foot"><span class="plan-pill">● ' + CM.PLANS[s.profile.plan].name + ' plan</span>' +
+      '<div class="side-legal"><a href="../learn.html">Learn</a> · <a href="../privacy.html">Privacy</a> · <a href="../terms.html">Terms</a> · <a href="../disclaimer.html">Disclaimer</a></div>' +
+      '<div class="side-legal" style="margin-top:6px">Not investment advice · F&amp;O is risky.</div></div>'));
     wrap.appendChild(side);
     if (mobileOpen) { var sc = el('<div class="scrim"></div>'); sc.addEventListener("click", function () { mobileOpen = false; render(); }); wrap.appendChild(sc); }
 
