@@ -695,6 +695,31 @@
       '<label class="fld"><span>Why did you exit?</span><select id="xr">' + CM.EXITS.map(function (x) { return '<option>' + x + '</option>'; }).join("") + '</select></label>' +
       '<label class="fld"><span>Your emotion</span><select id="emo">' + CM.EMOTIONS.map(function (x) { return '<option>' + x + '</option>'; }).join("") + '</select></label></div>';
     c.innerHTML = f;
+    // Live P&L + risk:reward preview — updates as you type (reinforces the plan-first habit).
+    var preview = el('<div class="trade-preview" hidden><div class="tp-cell"><span class="tp-lbl">Est. P&amp;L</span><b id="tpPnl" class="tp-val">—</b></div><div class="tp-cell"><span class="tp-lbl">Risk : Reward</span><b id="tpRR" class="tp-val">—</b></div><div class="tp-cell"><span class="tp-lbl">Risk / share</span><b id="tpRisk" class="tp-val">—</b></div></div>');
+    c.appendChild(preview);
+    function num(id) { var x = parseFloat(c.querySelector(id).value); return isFinite(x) ? x : null; }
+    function updatePreview() {
+      var side = c.querySelector("#side").value, qty = num("#qty"), entry = num("#entry"), exit = num("#exit"), sl = num("#sl");
+      var dir = /sell/i.test(side) ? -1 : 1;
+      var show = false;
+      var pnlEl = preview.querySelector("#tpPnl"), rrEl = preview.querySelector("#tpRR"), riskEl = preview.querySelector("#tpRisk");
+      if (entry != null && exit != null && qty) {
+        var p = dir * (exit - entry) * qty;
+        pnlEl.textContent = money(p); pnlEl.className = "tp-val " + (p >= 0 ? "pos" : "neg"); show = true;
+      } else { pnlEl.textContent = "—"; pnlEl.className = "tp-val"; }
+      if (entry != null && sl != null && entry !== sl) {
+        var riskPer = Math.abs(entry - sl);
+        riskEl.textContent = money(riskPer * (qty || 1)) + (qty ? "" : " /sh"); show = true;
+        if (exit != null) {
+          var reward = Math.abs(exit - entry);
+          var rr = reward / riskPer;
+          rrEl.textContent = "1 : " + rr.toFixed(2); rrEl.className = "tp-val " + (rr >= 2 ? "pos" : rr >= 1 ? "" : "neg");
+        } else { rrEl.textContent = "—"; rrEl.className = "tp-val"; }
+      } else { riskEl.textContent = sl == null ? "no SL" : "—"; riskEl.className = "tp-val" + (sl == null ? " neg" : ""); rrEl.textContent = "—"; rrEl.className = "tp-val"; if (sl == null && (entry != null || exit != null)) show = true; }
+      preview.hidden = !show;
+    }
+    ["#side", "#qty", "#entry", "#exit", "#sl"].forEach(function (id) { c.querySelector(id).addEventListener("input", updatePreview); c.querySelector(id).addEventListener("change", updatePreview); });
     // Free-plan monthly quota indicator
     var q0 = CM.quota();
     if (q0.limit !== Infinity) {
@@ -739,8 +764,9 @@
       if (hint) hint.textContent = lot ? "· 1 lot = " + lot : "";
       if (lot && (qtyEl.value.trim() === "" || isLotValue(qtyEl.value))) qtyEl.value = lot;
     }
-    var ct; c.querySelector("#sym").addEventListener("input", function () { syncLot(); clearTimeout(ct); ct = setTimeout(mountChart, 700); });
+    var ct; c.querySelector("#sym").addEventListener("input", function () { syncLot(); updatePreview(); clearTimeout(ct); ct = setTimeout(mountChart, 700); });
     syncLot();
+    updatePreview();
     mountChart();
     return v;
   };

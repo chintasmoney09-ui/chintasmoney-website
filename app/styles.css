@@ -208,6 +208,15 @@ select option { background: var(--surface); }
 .quota-bar{height:8px;border-radius:6px;background:rgba(255,255,255,.06);overflow:hidden}
 .quota-bar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#22e08a,#f5b849)}
 
+/* Live trade preview (P&L / R:R / risk) in the log form */
+.trade-preview{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0 4px}
+.trade-preview .tp-cell{background:var(--bg,#0a0f1c);border:1px solid var(--line);border-radius:12px;padding:10px 12px;text-align:center;min-width:0}
+.trade-preview .tp-lbl{display:block;font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.trade-preview .tp-val{display:block;font-size:1.05rem;font-weight:700;margin-top:4px}
+.trade-preview .tp-val.pos{color:#22e08a}
+.trade-preview .tp-val.neg{color:#ff6b6b}
+@media(max-width:520px){.trade-preview .tp-val{font-size:.95rem}}
+
 /* TradingView iframe chart */
 .tv-frame{width:100%;border-radius:12px;overflow:hidden;background:#0a0713;border:1px solid var(--line)}
 .tv-frame iframe{display:block;width:100%;height:100%;border:0}
