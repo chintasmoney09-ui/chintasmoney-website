@@ -289,6 +289,7 @@
         allowed: limit === Infinity || used < limit };
     },
     addTrade: function (t) { t.id = uid("t"); load().trades.unshift(t); save(); return t; },
-    deleteTrade: function (id) { var s = load(); s.trades = s.trades.filter(function (t) { return t.id !== id; }); save(); }
+    deleteTrade: function (id) { var s = load(); s.trades = s.trades.filter(function (t) { return t.id !== id; }); save(); },
+    updateTrade: function (id, patch) { var s = load(), t = null; for (var i = 0; i < s.trades.length; i++) { if (s.trades[i].id === id) { t = s.trades[i]; break; } } if (t) { Object.assign(t, patch); save(); } return t; }
   };
 })(window);

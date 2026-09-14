@@ -993,13 +993,45 @@
         '<td class="num"><b style="color:' + scoreColor(d) + '">' + d + '</b></td>' +
         '<td class="hint">' + ago(t.date) + '</td><td></td></tr>');
       var an = el('<button class="btn btn-sm" title="Analyse on real chart">📈</button>'); an.addEventListener("click", function () { analyseTrade(t); });
-      var del = el('<button class="btn btn-sm" title="Delete">✕</button>'); del.addEventListener("click", function () { CM.deleteTrade(t.id); render(); });
-      tr.lastChild.appendChild(an); tr.lastChild.appendChild(del); tb.appendChild(tr);
+      var edit = el('<button class="btn btn-sm" title="Edit trade">✎</button>'); edit.addEventListener("click", function () { editTrade(t); });
+      var del = el('<button class="btn btn-sm" title="Delete">✕</button>'); del.addEventListener("click", function () { if (confirm("Delete this " + t.symbol + " trade?")) { CM.deleteTrade(t.id); toast("Trade deleted", "err"); render(); } });
+      tr.lastChild.appendChild(an); tr.lastChild.appendChild(edit); tr.lastChild.appendChild(del); tb.appendChild(tr);
     });
     v.appendChild(c);
     if (limit !== Infinity) v.appendChild(el('<div class="notice" style="margin-top:12px">Free plan analyses your data — full unlimited history &amp; export is in <b>Plus</b>.</div>'));
     return v;
   };
+
+  // Edit an existing trade (fix a typo, correct the exit, add a note).
+  function editTrade(t) {
+    function opts(list, sel) { return list.map(function (x) { return '<option' + (x === sel ? " selected" : "") + '>' + x + '</option>'; }).join(""); }
+    function sideOpts(sel) { return ["Buy", "Sell"].map(function (x) { return '<option' + (x === sel ? " selected" : "") + '>' + x + '</option>'; }).join(""); }
+    var body =
+      '<div class="grid g2"><label class="fld"><span>Symbol</span><input id="eSym" value="' + esc(t.symbol) + '"/></label>' +
+      '<label class="fld"><span>Side</span><select id="eSide">' + sideOpts(t.side) + '</select></label></div>' +
+      '<div class="grid g4"><label class="fld"><span>Qty</span><input id="eQty" type="number" value="' + (t.qty || 0) + '"/></label>' +
+      '<label class="fld"><span>Entry</span><input id="eEntry" type="number" value="' + (t.entry || 0) + '"/></label>' +
+      '<label class="fld"><span>Exit</span><input id="eExit" type="number" value="' + (t.exit || 0) + '"/></label>' +
+      '<label class="fld"><span>Planned SL</span><input id="eSL" type="number" value="' + (t.plannedSL == null ? "" : t.plannedSL) + '"/></label></div>' +
+      '<div class="grid g3"><label class="fld"><span>Setup</span><select id="eSetup">' + opts(CM.SETUPS, t.setup) + '</select></label>' +
+      '<label class="fld"><span>Why did you exit?</span><select id="eXr">' + opts(CM.EXITS, t.exit_reason) + '</select></label>' +
+      '<label class="fld"><span>Emotion</span><select id="eEmo">' + opts(CM.EMOTIONS, t.emotion) + '</select></label></div>' +
+      '<label class="fld"><span>Note</span><textarea id="eNote" rows="2">' + esc(t.note || "") + '</textarea></label>' +
+      '<div style="display:flex;gap:10px;margin-top:6px"><button class="btn btn-primary" id="eSave">Save changes</button></div>';
+    dialog("Edit " + esc(t.symbol) + " trade", body, function (b, close) {
+      b.querySelector("#eSave").addEventListener("click", function () {
+        var sl = b.querySelector("#eSL").value;
+        CM.updateTrade(t.id, {
+          symbol: b.querySelector("#eSym").value.trim() || t.symbol, side: b.querySelector("#eSide").value,
+          qty: +b.querySelector("#eQty").value || 0, entry: +b.querySelector("#eEntry").value || 0,
+          exit: +b.querySelector("#eExit").value || 0, plannedSL: sl === "" ? null : +sl,
+          setup: b.querySelector("#eSetup").value, exit_reason: b.querySelector("#eXr").value,
+          emotion: b.querySelector("#eEmo").value, note: (b.querySelector("#eNote").value || "").trim().slice(0, 500)
+        });
+        close(); toast("Trade updated ✓", "ok"); render();
+      });
+    });
+  }
 
   // ---- DREAMS / WEALTH PLANNER (the aspiration engine) ---------------------
   var DREAM_PRESETS = [["🏡", "Dream home", 10000000], ["🏎️", "Dream car", 2500000], ["🏝️", "Yearly vacations", 500000], ["🎓", "Kids' education", 5000000], ["🔥", "Financial freedom", 50000000]];
