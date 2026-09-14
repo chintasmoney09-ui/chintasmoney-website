@@ -250,7 +250,7 @@
     return s;
   }
 
-  var mkState = { sym: "NIFTY" };
+  var mkState = { sym: "NSE:NIFTYBEES" };
   var SYMBOLS = [["NIFTY", 24800, 11], ["BANKNIFTY", 51200, 23], ["RELIANCE", 2980, 7], ["TCS", 3910, 31], ["TATAMOTORS", 985, 5], ["ZOMATO", 168, 13]];
   // Real NSE symbols users can pick from (indices resolve to tracking ETFs via tvSymbolFor).
   var POPULAR_SYMS = ["NIFTY", "BANKNIFTY", "FINNIFTY", "RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY", "SBIN",
@@ -263,30 +263,79 @@
       return '<option value="' + s + '"' + (sel && sel === s ? " selected" : "") + '>' + s + '</option>';
     }).join("");
   }
+  // F&O lot sizes (SEBI revises these periodically — reasonable current defaults).
+  function lotFor(s) {
+    s = (s || "").toUpperCase();
+    if (/MIDCPNIFTY/.test(s)) return 120;
+    if (/FINNIFTY/.test(s)) return 65;
+    if (/BANKNIFTY/.test(s)) return 35;
+    if (/NIFTYNXT50/.test(s)) return 25;
+    if (/SENSEX/.test(s)) return 20;
+    if (/BANKEX/.test(s)) return 30;
+    if (/NIFTY/.test(s)) return 75;
+    return null;
+  }
+  var LOT_VALUES = [120, 75, 65, 35, 30, 25, 20];
+  function isLotValue(v) { return LOT_VALUES.indexOf(+v) >= 0; }
+  function marketOptions(sel) {
+    return MARKET_GROUPS.map(function (g) {
+      return '<optgroup label="' + g[0] + '">' + g[1].map(function (o) {
+        return '<option value="' + o[1] + '"' + (sel === o[1] ? " selected" : "") + '>' + o[0] + '</option>';
+      }).join("") + '</optgroup>';
+    }).join("");
+  }
+  function labelFor(sym) {
+    for (var i = 0; i < MARKET_GROUPS.length; i++) for (var j = 0; j < MARKET_GROUPS[i][1].length; j++)
+      if (MARKET_GROUPS[i][1][j][1] === sym) return MARKET_GROUPS[i][1][j][0];
+    return sym;
+  }
   VIEWS.markets = function () {
     var v = el('<div></div>');
-    v.appendChild(topbar("Live Charts", "Real market data — candles, volume, indicators. Powered by TradingView."));
+    v.appendChild(topbar("Live Charts", "Analyse any market — NSE, gold, crude, crypto & more. Real candles, volume & every indicator."));
     var card = el('<div class="card"></div>');
-    var symRow = el('<div class="chart-toolbar" style="align-items:center;gap:10px"><label class="fld" style="margin:0;min-width:220px"><span>Symbol</span><select id="mkSym">' + symOptions(mkState.sym) + '</select></label></div>');
-    var box = el('<div id="mkBox" style="margin-top:12px"></div>');
-    function mountMk() { box.innerHTML = ""; box.appendChild(tvAdvanced(tvSymbolFor(mkState.sym), 600)); }
+    var symRow = el('<div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px">' +
+      '<label class="fld" style="margin:0;flex:1;min-width:200px"><span>Market / symbol</span><select id="mkSym">' + marketOptions(mkState.sym) + '</select></label>' +
+      '<button class="btn" id="mkFull" title="Full screen — rotate your phone to analyse big">⛶ Fullscreen</button>' +
+      '<a class="btn" id="mkDeep" target="_blank" rel="noopener nofollow" href="#">Deep analysis ↗</a></div>');
+    var box = el('<div id="mkBox" style="margin-top:14px"></div>');
+    function mountMk() {
+      box.innerHTML = ""; box.appendChild(tvChart(mkState.sym, 620, false));
+      symRow.querySelector("#mkDeep").href = "https://www.tradingview.com/symbols/" + encodeURIComponent(mkState.sym).replace("%3A", "-") + "/";
+    }
     symRow.querySelector("#mkSym").addEventListener("change", function () { mkState.sym = this.value; mountMk(); });
+    symRow.querySelector("#mkFull").addEventListener("click", function () { goFullscreen(box); });
     card.appendChild(symRow);
     card.appendChild(box);
     mountMk();
-    card.appendChild(el('<p class="hint" style="margin-top:10px">Full candles, volume &amp; every indicator (RSI, MACD, MA, Bollinger…) — add them from the chart toolbar. Pick any NSE symbol above (indices show their tracking ETF).</p>'));
+    card.appendChild(el('<p class="hint" style="margin-top:10px">Tap the chart toolbar for indicators (RSI, MACD, MA, Bollinger…) and drawing tools. Hit <b>⛶ Fullscreen</b> and rotate your phone for a big landscape view. Indian indices show their tracking ETF; use <b>Deep analysis</b> for full technicals &amp; fundamentals on TradingView.</p>'));
     v.appendChild(card);
     return v;
   };
 
-  // ---- TradingView live embeds (real market data) --------------------------
-  function tvEmbed(src, config, heightPx) {
-    var wrap = el('<div class="tradingview-widget-container" style="height:' + heightPx + 'px;width:100%;position:relative">' +
-      '<div class="tradingview-widget-container__widget" style="height:calc(100% - 22px);width:100%"></div>' +
-      '<div class="tradingview-widget-copyright"><a href="https://www.tradingview.com/" rel="noopener nofollow" target="_blank" style="color:#8a83a6;font-size:.72rem;text-decoration:none">Live data by TradingView</a></div></div>');
-    var s = document.createElement("script"); s.async = true; s.src = src; s.type = "text/javascript"; s.innerHTML = JSON.stringify(config);
-    wrap.appendChild(s);
-    return wrap;
+  // ---- TradingView live charts (iframe embed) ------------------------------
+  // We use the iframe widgetembed (symbol in the URL) instead of the JS embed:
+  // the JS embed can't read its config when injected dynamically (no
+  // document.currentScript), so it silently falls back to AAPL. The iframe
+  // always shows the symbol we ask for and updates when we swap it.
+  function tvChart(sym, h, mini) {
+    var params = [
+      "symbol=" + encodeURIComponent(sym), "interval=D", "theme=dark", "style=1",
+      "timezone=Asia/Kolkata", "locale=in", "withdateranges=1", "hideideas=1",
+      "symboledit=0", "saveimage=0",
+      "hidesidetoolbar=" + (mini ? "1" : "0"), "hidetoptoolbar=" + (mini ? "1" : "0")
+    ].join("&");
+    var wrap = el('<div class="tv-frame" style="height:' + (h || 480) + 'px"></div>');
+    var ifr = document.createElement("iframe");
+    ifr.src = "https://s.tradingview.com/widgetembed/?" + params;
+    ifr.setAttribute("frameborder", "0");
+    ifr.setAttribute("allowtransparency", "true");
+    ifr.setAttribute("scrolling", "no");
+    ifr.setAttribute("allowfullscreen", "");
+    ifr.style.cssText = "width:100%;height:100%;border:0;display:block";
+    var cap = el('<div style="text-align:right"><a href="https://www.tradingview.com/symbols/' + encodeURIComponent(sym).replace("%3A", "-") + '/" rel="noopener nofollow" target="_blank" style="color:#8a83a6;font-size:.7rem;text-decoration:none">Live data by TradingView</a></div>');
+    wrap.appendChild(ifr);
+    var outer = el('<div></div>'); outer.appendChild(wrap); outer.appendChild(cap);
+    return outer;
   }
   // NSE *index* symbols (NIFTY/BANKNIFTY) aren't available in TradingView's free
   // embeds, so we map them to their liquid tracking ETFs (NIFTYBEES/BANKBEES),
@@ -302,23 +351,23 @@
     var first = s.split(/\s+/)[0].replace(/[^A-Z0-9&-]/g, "");
     return first ? "NSE:" + first : "NSE:NIFTYBEES";
   }
-  function tvAdvanced(sym, h) {
-    return tvEmbed("https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js", {
-      autosize: true, symbol: sym, interval: "D", timezone: "Asia/Kolkata", theme: "dark", style: "1",
-      locale: "in", allow_symbol_change: true, hide_side_toolbar: false, backgroundColor: "#0a0713",
-      gridColor: "rgba(139,92,246,0.08)", support_host: "https://www.tradingview.com"
-    }, h || 480);
+  function tvAdvanced(sym, h) { return tvChart(sym, h || 480, false); }
+  function tvMini(sym, title, h) { return tvChart(sym, h || 240, true); }
+  // Full-screen a chart wrapper (lets the user rotate to landscape on mobile).
+  function goFullscreen(node) {
+    var t = node.querySelector(".tv-frame") || node;
+    if (t.requestFullscreen) t.requestFullscreen();
+    else if (t.webkitRequestFullscreen) t.webkitRequestFullscreen();
   }
-  function tvMini(sym, title, h) {
-    // Compact advanced chart — renders NSE index symbols reliably (the lightweight
-    // symbol-overview widget shows a "only available on TradingView" error for them).
-    return tvEmbed("https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js", {
-      autosize: true, symbol: sym, interval: "D", timezone: "Asia/Kolkata", theme: "dark", style: "3",
-      locale: "in", hide_top_toolbar: true, hide_legend: true, hide_side_toolbar: true,
-      allow_symbol_change: false, save_image: false, backgroundColor: "#0a0713",
-      gridColor: "rgba(139,92,246,0.08)", support_host: "https://www.tradingview.com"
-    }, h || 240);
-  }
+  // Markets catalogue for the Live Charts analyser (full TradingView symbols).
+  var MARKET_GROUPS = [
+    ["Indian Indices", [["NIFTY 50", "NSE:NIFTYBEES"], ["BANK NIFTY", "NSE:BANKBEES"], ["SENSEX", "BSE:SENSEX"]]],
+    ["NSE Stocks", [["RELIANCE", "NSE:RELIANCE"], ["TCS", "NSE:TCS"], ["HDFC BANK", "NSE:HDFCBANK"], ["INFOSYS", "NSE:INFY"], ["ICICI BANK", "NSE:ICICIBANK"], ["SBI", "NSE:SBIN"], ["TATA MOTORS", "NSE:TATAMOTORS"], ["ADANI ENT", "NSE:ADANIENT"]]],
+    ["Commodities", [["Gold · XAU/USD", "OANDA:XAUUSD"], ["Silver · XAG/USD", "OANDA:XAGUSD"], ["Crude Oil · WTI", "TVC:USOIL"], ["Brent Oil", "TVC:UKOIL"], ["Natural Gas", "NYMEX:NG1!"]]],
+    ["Crypto", [["Bitcoin", "BINANCE:BTCUSDT"], ["Ethereum", "BINANCE:ETHUSDT"], ["Solana", "BINANCE:SOLUSDT"], ["Dogecoin", "BINANCE:DOGEUSDT"]]],
+    ["Global Indices", [["S&P 500", "TVC:SPX"], ["Nasdaq 100", "TVC:NDX"], ["Dow Jones", "TVC:DJI"]]],
+    ["Forex", [["USD/INR", "FX_IDC:USDINR"], ["EUR/USD", "OANDA:EURUSD"], ["GBP/USD", "OANDA:GBPUSD"]]]
+  ];
 
   // ---- Chintamani mascot (wise old risk-manager) ---------------------------
   function mascot(size) {
@@ -572,7 +621,7 @@
     var f =
       '<div class="grid g2"><label class="fld"><span>Symbol</span><input id="sym" list="symList" placeholder="Type or pick — NIFTY, RELIANCE…" autocomplete="off" /><datalist id="symList">' + symOptions() + '</datalist></label>' +
       '<label class="fld"><span>Side</span><select id="side"><option>Buy</option><option>Sell</option></select></label></div>' +
-      '<div class="grid g4"><label class="fld"><span>Qty</span><input id="qty" type="number" /></label>' +
+      '<div class="grid g4"><label class="fld"><span>Qty <small id="lotHint" class="muted" style="font-weight:400"></small></span><input id="qty" type="number" /></label>' +
       '<label class="fld"><span>Entry</span><input id="entry" type="number" /></label>' +
       '<label class="fld"><span>Exit</span><input id="exit" type="number" /></label>' +
       '<label class="fld"><span>Planned SL</span><input id="sl" type="number" placeholder="(be honest)" /></label></div>' +
@@ -610,14 +659,22 @@
     v.appendChild(c);
 
     // live chart of the symbol being logged
-    var chartCard = el('<div class="card" style="margin-top:16px"><div class="card-hd"><h3>📈 Live chart</h3><span class="hint mono" id="chSym"></span></div><div id="chBox"></div><p class="hint" style="margin-top:8px">Analyse the real market for this symbol as you log. Change the symbol above to update it.</p></div>');
+    var chartCard = el('<div class="card" style="margin-top:16px"><div class="card-hd"><h3>📈 Live chart</h3><span class="hint mono" id="chSym" style="flex:1"></span><button class="btn btn-sm" id="chFull" title="Full screen — rotate your phone">⛶</button></div><div id="chBox"></div><p class="hint" style="margin-top:8px">Analyse the real market for this symbol as you log. Tap ⛶ and rotate your phone for a big view.</p></div>');
     v.appendChild(chartCard);
     function mountChart() {
       var sym = tvSymbolFor(c.querySelector("#sym").value);
       chartCard.querySelector("#chSym").textContent = sym;
-      var box = chartCard.querySelector("#chBox"); box.innerHTML = ""; box.appendChild(tvAdvanced(sym, 560));
+      var box = chartCard.querySelector("#chBox"); box.innerHTML = ""; box.appendChild(tvChart(sym, 560, false));
     }
-    var ct; c.querySelector("#sym").addEventListener("input", function () { clearTimeout(ct); ct = setTimeout(mountChart, 700); });
+    chartCard.querySelector("#chFull").addEventListener("click", function () { goFullscreen(chartCard.querySelector("#chBox")); });
+    function syncLot() {
+      var symEl = c.querySelector("#sym"), qtyEl = c.querySelector("#qty"), hint = c.querySelector("#lotHint");
+      var lot = lotFor(symEl.value);
+      if (hint) hint.textContent = lot ? "· 1 lot = " + lot : "";
+      if (lot && (qtyEl.value.trim() === "" || isLotValue(qtyEl.value))) qtyEl.value = lot;
+    }
+    var ct; c.querySelector("#sym").addEventListener("input", function () { syncLot(); clearTimeout(ct); ct = setTimeout(mountChart, 700); });
+    syncLot();
     mountChart();
     return v;
   };
