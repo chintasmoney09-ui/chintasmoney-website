@@ -122,6 +122,18 @@ img{max-width:100%;display:block}
 .chip.g{color:var(--green);border-color:rgba(34,224,138,.35)} .chip.r{color:var(--red);border-color:rgba(255,90,106,.35)}
 /* candles */
 .candles{display:flex;align-items:flex-end;gap:7px;height:78px;margin-top:16px;padding-top:10px;border-top:1px solid var(--line);min-width:0;overflow:hidden}
+/* Hero phone mockup */
+.hero-visual{display:flex;justify-content:center;align-items:center}
+.hero-shot{max-width:310px;width:100%;height:auto;border-radius:20px;filter:drop-shadow(0 34px 70px rgba(0,0,0,.55))}
+@media(max-width:920px){ .hero-shot{max-width:270px} }
+/* Meet Chintamani */
+.mentor-grid{display:grid;grid-template-columns:.92fr 1.08fr;gap:44px;align-items:center}
+.mentor-art img{width:100%;height:auto;border-radius:22px;filter:drop-shadow(0 30px 62px rgba(0,0,0,.5))}
+.mentor-list{list-style:none;padding:0;margin:18px 0 24px;display:grid;grid-template-columns:1fr 1fr;gap:11px 20px}
+.mentor-list li{position:relative;padding-left:24px;color:var(--ink-soft);font-size:.96rem}
+.mentor-list li:before{content:"✓";position:absolute;left:0;top:0;color:var(--green);font-weight:800}
+.mentor-list b{color:var(--ink)}
+@media(max-width:920px){ .mentor-grid{grid-template-columns:1fr;gap:26px} .mentor-list{grid-template-columns:1fr;gap:9px} .mentor-art img{max-width:360px;margin:0 auto} }
 .candle{position:relative;width:9px;border-radius:3px;animation:rise 1.1s ease both}
 .candle.g{background:linear-gradient(180deg,var(--green),var(--green-2))}
 .candle.r{background:linear-gradient(180deg,var(--red),#c53a48)}
