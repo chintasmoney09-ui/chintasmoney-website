@@ -474,8 +474,11 @@
     }
     // 7. CTA
     var cta = el('<div class="card" style="text-align:center;background:linear-gradient(120deg,rgba(34,224,138,.12),rgba(139,92,246,.12))"></div>');
-    cta.appendChild(el('<div style="font-weight:800;font-size:1.05rem">Keep the streak alive 🔥</div><p class="hint" style="margin:6px 0 12px">Log today\'s trades to earn XP and keep your report card honest.</p>'));
-    var cb = el('<button class="btn btn-primary">＋ Log a trade</button>'); cb.addEventListener("click", function () { go("log"); }); cta.appendChild(cb);
+    cta.appendChild(el('<div style="font-weight:800;font-size:1.05rem">Keep the streak alive 🔥</div><p class="hint" style="margin:6px 0 12px">Plan it, then log it — earn XP and keep your report card honest.</p>'));
+    var ctaRow = el('<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"></div>');
+    var pcb = el('<button class="btn btn-ghost">✅ Pre-Trade Check</button>'); pcb.addEventListener("click", function () { go("checklist"); });
+    var cb = el('<button class="btn btn-primary">＋ Log a trade</button>'); cb.addEventListener("click", function () { go("log"); });
+    ctaRow.appendChild(pcb); ctaRow.appendChild(cb); cta.appendChild(ctaRow);
     feed.appendChild(cta);
     v.appendChild(feed);
     return v;
