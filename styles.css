@@ -363,3 +363,9 @@ img{max-width:100%;display:block}
 .outcome p{color:var(--ink-soft);font-size:.92rem;margin:0}
 @media(max-width:900px){ .outcomes{grid-template-columns:repeat(2,1fr)} }
 @media(max-width:520px){ .outcomes{grid-template-columns:1fr} }
+
+/* ===== Trust bar ===== */
+.trustbar{border-block:1px solid var(--line);background:var(--bg-2)}
+.trust-row{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px 26px;padding:13px 22px}
+.trust-i{font-size:.88rem;color:var(--ink-soft);font-weight:600;white-space:nowrap}
+@media(max-width:560px){ .trust-row{gap:8px 16px} .trust-i{font-size:.78rem} }

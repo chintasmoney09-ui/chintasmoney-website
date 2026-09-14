@@ -580,9 +580,24 @@
       '<label class="fld"><span>Why did you exit?</span><select id="xr">' + CM.EXITS.map(function (x) { return '<option>' + x + '</option>'; }).join("") + '</select></label>' +
       '<label class="fld"><span>Your emotion</span><select id="emo">' + CM.EMOTIONS.map(function (x) { return '<option>' + x + '</option>'; }).join("") + '</select></label></div>';
     c.innerHTML = f;
+    // Free-plan monthly quota indicator
+    var q0 = CM.quota();
+    if (q0.limit !== Infinity) {
+      var pctUsed = Math.min(100, Math.round(q0.used / q0.limit * 100));
+      c.appendChild(el('<div class="quota-note' + (q0.remaining <= 3 ? " low" : "") + '">' +
+        '<div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:6px"><span>Free logs this month</span><b>' + q0.used + ' / ' + q0.limit + '</b></div>' +
+        '<div class="quota-bar"><i style="width:' + pctUsed + '%"></i></div>' +
+        (q0.remaining <= 3 ? '<div style="font-size:.78rem;margin-top:6px;color:var(--gold)">' + (q0.remaining > 0 ? q0.remaining + ' free logs left — upgrade for unlimited.' : "You've used all free logs this month.") + '</div>' : '') +
+        '</div>'));
+    }
     var save = el('<button class="btn btn-primary btn-lg">Save trade &amp; update my score</button>');
     save.addEventListener("click", function () {
       var sym = c.querySelector("#sym").value.trim(); if (!sym) { c.querySelector("#sym").focus(); return; }
+      var q = CM.quota();
+      if (!q.allowed) {
+        dialog("You've hit your free monthly limit", '<p class="hint">You\'ve logged all <b>' + q.limit + '</b> free trades this month. Upgrade to <b>Plus</b> for <b>unlimited</b> logging, full mistake analysis and the AI Discipline Coach — or come back next month, your data is safe.</p><div style="display:flex;gap:10px;margin-top:18px"><button class="btn btn-primary" id="qUpgrade">See plans</button></div>', function (b, close) { b.querySelector("#qUpgrade").addEventListener("click", function () { close(); go("profile"); render(); }); });
+        return;
+      }
       var slv = c.querySelector("#sl").value;
       CM.addTrade({ symbol: sym, side: c.querySelector("#side").value, qty: +c.querySelector("#qty").value || 0,
         entry: +c.querySelector("#entry").value || 0, exit: +c.querySelector("#exit").value || 0,

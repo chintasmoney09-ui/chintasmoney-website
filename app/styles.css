@@ -201,3 +201,9 @@ select option { background: var(--surface); }
   .persona-grid { grid-template-columns: 1fr; }
   .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 55; }
 }
+
+/* Free-plan quota indicator */
+.quota-note{background:var(--bg,#0a0f1c);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:4px 0 14px}
+.quota-note.low{border-color:rgba(245,184,73,.4)}
+.quota-bar{height:8px;border-radius:6px;background:rgba(255,255,255,.06);overflow:hidden}
+.quota-bar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#22e08a,#f5b849)}

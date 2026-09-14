@@ -18,7 +18,7 @@
     free:  { id: "free",  name: "Free",  price: 0,   cadence: "forever",
       blurb: "Score your discipline.",
       features: ["log-trades", "discipline-score", "trader-personality", "last-30-days", "basic-mistakes"],
-      limits: { history: 30 } },
+      limits: { history: 30, tradesPerMonth: 15 } },
     plus:  { id: "plus",  name: "Plus",  price: 199, cadence: "month",
       blurb: "See every leak in your trading.",
       features: ["everything-free", "unlimited-history", "full-mistake-analysis", "setup-and-time-insights", "streaks-and-badges", "ai-discipline-coach", "pro-shareable-card"],
@@ -275,6 +275,19 @@
     addDream: function (d) { d.id = uid("dm"); (load().dreams = load().dreams || []).unshift(d); save(); return d; },
     deleteDream: function (id) { var s = load(); s.dreams = (s.dreams || []).filter(function (d) { return d.id !== id; }); save(); },
     setProfile: function (patch) { Object.assign(load().profile, patch); save(); },
+    // Free-plan monthly logging quota (paid plans are unlimited).
+    quota: function () {
+      var s = load(), plan = PLANS[s.profile.plan] || PLANS.free;
+      var limit = (plan.limits && plan.limits.tradesPerMonth) || Infinity;
+      var now = new Date(), m = now.getMonth(), y = now.getFullYear();
+      var used = s.trades.filter(function (t) {
+        var d = new Date(t.date);
+        return !/^s\d+$/.test(t.id || "") && d.getMonth() === m && d.getFullYear() === y;
+      }).length;
+      return { plan: s.profile.plan, used: used, limit: limit,
+        remaining: limit === Infinity ? Infinity : Math.max(0, limit - used),
+        allowed: limit === Infinity || used < limit };
+    },
     addTrade: function (t) { t.id = uid("t"); load().trades.unshift(t); save(); return t; },
     deleteTrade: function (id) { var s = load(); s.trades = s.trades.filter(function (t) { return t.id !== id; }); save(); }
   };
