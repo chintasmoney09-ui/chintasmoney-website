@@ -470,6 +470,23 @@
     g.appendChild(tile("Net P&L", money(st.totalPnl), "from your logs", st.totalPnl >= 0));
     g.appendChild(tile("Discipline", st.discipline + "/100", scoreLabel(st.discipline), st.discipline >= 75));
     c.appendChild(g);
+    // Visual snapshot — donut charts
+    var RPIE = ["#8b5cf6", "#22e08a", "#f5b849", "#19d3c5", "#ff5a6a", "#a78bfa"];
+    var spR = CM.setupPerformance(), emoR = CM.emotionBreakdown();
+    var calm = emoR.filter(function (x) { return /calm/i.test(x.label); }).reduce(function (a, x) { return a + x.n; }, 0);
+    var emotional = emoR.reduce(function (a, x) { return a + x.n; }, 0) - calm;
+    var calmPct = (calm + emotional) ? Math.round(calm / (calm + emotional) * 100) : 0;
+    var charts = el('<div class="grid g3" style="margin-top:14px;align-items:start"></div>');
+    var wlc = el('<div class="card" style="padding:16px;text-align:center"><div class="hint" style="margin-bottom:8px;font-weight:600">Wins vs losses</div></div>');
+    wlc.appendChild(el(svgDonut([{ value: wl.wins, color: "#22c55e" }, { value: wl.losses, color: "#ef4444" }], { size: 136, center: st.winRate + "%", sub: "win rate" })));
+    charts.appendChild(wlc);
+    var spc = el('<div class="card" style="padding:16px;text-align:center"><div class="hint" style="margin-bottom:8px;font-weight:600">Setups traded</div></div>');
+    spc.appendChild(el(svgDonut(spR.map(function (r, i) { return { value: r.n, color: RPIE[i % RPIE.length] }; }), { size: 136, center: String(st.count), sub: "trades" })));
+    charts.appendChild(spc);
+    var emc = el('<div class="card" style="padding:16px;text-align:center"><div class="hint" style="margin-bottom:8px;font-weight:600">Calm vs emotional</div></div>');
+    emc.appendChild(el(svgDonut([{ value: calm, color: "#22e08a" }, { value: emotional, color: "#f5b849" }], { size: 136, center: calmPct + "%", sub: "calm" })));
+    charts.appendChild(emc);
+    c.appendChild(charts);
     c.appendChild(el('<h3 style="margin:16px 0 6px">Top mistakes to fix</h3>'));
     var ul = el('<ol style="margin:0;padding-left:18px;color:var(--ink-soft)"></ol>');
     (ms.length ? ms : [{ name: "No repeating mistakes — clean sheet.", n: 0 }]).slice(0, 5).forEach(function (m) { ul.appendChild(el('<li style="margin:3px 0">' + esc(m.name) + (m.n ? ' <b>×' + m.n + '</b>' : '') + '</li>')); });
@@ -736,8 +753,11 @@
       '<label class="fld"><span>Expected return (% / yr)</span><input id="dRate" type="number" value="14" step="0.5"/></label>' +
       '<label class="fld"><span>Years</span><input id="dYears" type="number" value="12" min="1"/></label>';
     c.appendChild(form);
-    var out = el('<div id="dOut" style="margin-top:6px"></div>');
-    c.appendChild(out);
+    c.addEventListener("input", function () { run(); });
+    // Results + projection chart live in their own card, shown ABOVE the inputs.
+    var resultsCard = el('<div class="card" style="margin-bottom:16px"><div class="card-hd"><h3>📈 Your projection</h3></div></div>');
+    var out = el('<div id="dOut"></div>');
+    resultsCard.appendChild(out);
     function n(id) { var x = parseFloat(c.querySelector(id).value); return isNaN(x) ? 0 : x; }
     function run() {
       var name = c.querySelector("#dName").value, emoji = c.querySelector("#dEmoji").value,
@@ -763,7 +783,8 @@
       out.appendChild(save);
       out.appendChild(el('<p class="hint" style="margin-top:10px"><span class="mock-tag">ILLUSTRATIVE</span> A projection using your assumed return — not a guarantee. Markets go up and down. Discipline + time is the real edge.</p>'));
     }
-    v.appendChild(c);
+    v.appendChild(resultsCard);   // chart above
+    v.appendChild(c);             // inputs below
 
     // saved dreams
     var saved = CM.dreams();
