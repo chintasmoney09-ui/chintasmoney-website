@@ -22,7 +22,7 @@
   --mono:"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;overflow-x:clip}
 body{
   margin:0;background:
     radial-gradient(900px 500px at 85% -5%, rgba(34,224,138,.10), transparent 60%),
@@ -72,6 +72,8 @@ img{max-width:100%;display:block}
 .nav-toggle.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
 .nav-toggle.open span:nth-child(2){opacity:0}
 .nav-toggle.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+/* When drawer is open, the panel has its own close button — hide the hamburger */
+.nav-links.open ~ .nav-toggle{opacity:0;pointer-events:none}
 
 /* Ticker */
 .tv-ticker{border-block:1px solid var(--line);background:var(--bg-2);min-height:46px}
