@@ -152,6 +152,28 @@
       '<text x="50%" y="63%" text-anchor="middle" font-size="' + (size * 0.075) + '" fill="var(--muted)">DISCIPLINE</text></svg>';
   }
 
+  // Animated gauge: renders at 0 then counts up to score (used on hero screens).
+  function mountGauge(container, score, size) {
+    container.innerHTML = gauge(score, size);
+    var reduce = false; try { reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
+    if (reduce) return;
+    var svg = container.querySelector("svg"); if (!svg) return;
+    var arc = svg.querySelectorAll("circle")[1], num = svg.querySelectorAll("text")[0];
+    if (!arc || !num) return;
+    var s = size || 190, r = s / 2 - 14, c = 2 * Math.PI * r;
+    var start = null, dur = 900;
+    function ease(t) { return 1 - Math.pow(1 - t, 3); }
+    arc.setAttribute("stroke-dashoffset", c); num.textContent = "0";
+    function step(ts) {
+      if (start == null) start = ts;
+      var p = Math.min(1, (ts - start) / dur), e = ease(p), val = Math.round(score * e);
+      arc.setAttribute("stroke-dashoffset", c * (1 - score / 100 * e));
+      num.textContent = val;
+      if (p < 1) requestAnimationFrame(step); else num.textContent = score;
+    }
+    requestAnimationFrame(step);
+  }
+
   var VIEWS = {};
 
   // ---- SVG chart helpers ---------------------------------------------------
@@ -462,7 +484,9 @@
     // 2. discipline snapshot
     var dcard = el('<div class="card"></div>');
     dcard.appendChild(el('<div class="card-hd"><h3>Your discipline right now</h3><span class="badge ' + (st.discipline >= 75 ? "b-green" : st.discipline >= 50 ? "b-yellow" : "b-red") + '">' + scoreLabel(st.discipline) + '</span></div>'));
-    dcard.appendChild(el('<div style="display:flex;align-items:center;gap:16px"><div>' + gauge(st.discipline, 120) + '</div><div><div class="persona" style="font-size:1.15rem;font-weight:800">' + st.personality.em + ' ' + esc(st.personality.key) + '</div><div class="hint">' + esc(st.personality.line) + '</div></div></div>'));
+    var dRow = el('<div style="display:flex;align-items:center;gap:16px"><div class="dcard-g"></div><div><div class="persona" style="font-size:1.15rem;font-weight:800">' + st.personality.em + ' ' + esc(st.personality.key) + '</div><div class="hint">' + esc(st.personality.line) + '</div></div></div>');
+    mountGauge(dRow.querySelector(".dcard-g"), st.discipline, 120);
+    dcard.appendChild(dRow);
     feed.appendChild(dcard);
     // 3. biggest leak to fix
     if (ms.length) {
@@ -602,7 +626,7 @@
 
     v.appendChild(engagementBar());
     var hero = el('<div class="card" style="display:flex;gap:24px;align-items:center;flex-wrap:wrap"></div>');
-    hero.appendChild(el('<div>' + gauge(st.discipline) + '</div>'));
+    var gwrap = el('<div></div>'); hero.appendChild(gwrap); mountGauge(gwrap, st.discipline);
     var right = el('<div style="flex:1;min-width:240px"></div>');
     right.appendChild(el('<div class="badge ' + (st.discipline >= 75 ? "b-green" : st.discipline >= 50 ? "b-yellow" : "b-red") + '">' + scoreLabel(st.discipline) + '</div>'));
     right.appendChild(el('<h2 style="margin:8px 0 2px;font-size:1.5rem">' + p.em + ' ' + esc(p.key) + '</h2>'));
