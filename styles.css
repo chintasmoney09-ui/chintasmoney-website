@@ -414,3 +414,16 @@ img{max-width:100%;display:block}
 .foot-social a:hover{border-color:var(--green);color:var(--green)}
 @media(max-width:760px){ .foot-cols{grid-template-columns:1fr 1fr} }
 @media(max-width:440px){ .foot-cols{grid-template-columns:1fr} }
+
+/* Top movers */
+.movers-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.mv-hd{font-weight:800;font-size:1rem;margin-bottom:6px}
+.mv-hd.up{color:var(--green)} .mv-hd.down{color:var(--red)}
+.mv-list{display:flex;flex-direction:column}
+.mv-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:11px 4px;cursor:pointer;color:var(--ink);font:inherit;transition:.12s}
+.mv-row:first-child{border-top:0}
+.mv-row:hover{background:rgba(34,224,138,.05)}
+.mv-name{flex:1;font-weight:600;font-size:.92rem}
+.mv-px{color:var(--ink-soft);font-size:.88rem}
+.mv-pct{width:80px;text-align:right;font-weight:700;font-size:.88rem}
+@media(max-width:640px){ .movers-grid{grid-template-columns:1fr} }

@@ -73,6 +73,37 @@
   }
   window.__cmSetChartLoader = function (fn) { loadMarketChart = fn; };
 
+  // ---- Top movers (live from /api/movers) ----
+  var MOVER_TV = { "RELIANCE": "NSE:RELIANCE", "TCS": "NSE:TCS", "HDFC BANK": "NSE:HDFCBANK", "INFOSYS": "NSE:INFY", "ICICI BANK": "NSE:ICICIBANK", "SBI": "NSE:SBIN", "AXIS BANK": "NSE:AXISBANK", "KOTAK": "NSE:KOTAKBANK", "ITC": "NSE:ITC", "L&T": "NSE:LT", "AIRTEL": "NSE:BHARTIARTL", "HUL": "NSE:HINDUNILVR", "MARUTI": "NSE:MARUTI", "SUN PHARMA": "NSE:SUNPHARMA", "TATA MOTORS": "NSE:TATAMOTORS", "TATA STEEL": "NSE:TATASTEEL", "ADANI ENT": "NSE:ADANIENT", "BAJAJ FIN": "NSE:BAJFINANCE", "WIPRO": "NSE:WIPRO", "ZOMATO": "NSE:ZOMATO" };
+  var moversSection = $("#movers"), gainersList = $("#gainersList"), losersList = $("#losersList");
+  function moverRow(s) {
+    var pct = Number(s.changePct), up = pct >= 0, sign = up ? "+" : "", sym = MOVER_TV[s.name] || "";
+    return '<button class="mv-row" data-sym="' + sym + '"><span class="mv-name">' + s.name + '</span>' +
+      '<span class="mv-px mono">' + s.price + '</span>' +
+      '<span class="mv-pct mono ' + (up ? "up" : "down") + '">' + sign + pct.toFixed(2) + '%</span></button>';
+  }
+  function wireMoverClicks(container) {
+    container.querySelectorAll(".mv-row").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var sym = b.dataset.sym; if (!sym) return;
+        if (loadMarketChart) loadMarketChart(sym);
+        var t = document.getElementById("charts"); if (t) t.scrollIntoView({ behavior: "smooth" });
+      });
+    });
+  }
+  if (gainersList && losersList) {
+    fetch("/api/movers", { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || !d.gainers || !d.gainers.length) return;
+        gainersList.innerHTML = d.gainers.map(moverRow).join("");
+        losersList.innerHTML = (d.losers || []).map(moverRow).join("");
+        wireMoverClicks(gainersList); wireMoverClicks(losersList);
+        if (moversSection) moversSection.hidden = false;
+      })
+      .catch(function () { /* keep hidden if unavailable */ });
+  }
+
   // candles (random up/down bars)
   var cw = $("#candles");
   if (cw) {

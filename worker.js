@@ -15,6 +15,16 @@ const SYMBOLS = [
   { y: "TATAMOTORS.NS", name: "TATA MOTORS" },
 ];
 
+// Broader large/mid-cap universe for the "top movers" strip.
+const MOVERS = [
+  ["RELIANCE.NS", "RELIANCE"], ["TCS.NS", "TCS"], ["HDFCBANK.NS", "HDFC BANK"], ["INFY.NS", "INFOSYS"],
+  ["ICICIBANK.NS", "ICICI BANK"], ["SBIN.NS", "SBI"], ["AXISBANK.NS", "AXIS BANK"], ["KOTAKBANK.NS", "KOTAK"],
+  ["ITC.NS", "ITC"], ["LT.NS", "L&T"], ["BHARTIARTL.NS", "AIRTEL"], ["HINDUNILVR.NS", "HUL"],
+  ["MARUTI.NS", "MARUTI"], ["SUNPHARMA.NS", "SUN PHARMA"], ["TATAMOTORS.NS", "TATA MOTORS"],
+  ["TATASTEEL.NS", "TATA STEEL"], ["ADANIENT.NS", "ADANI ENT"], ["BAJFINANCE.NS", "BAJAJ FIN"],
+  ["WIPRO.NS", "WIPRO"], ["ZOMATO.NS", "ZOMATO"],
+];
+
 function fmtIN(n) {
   if (n == null || isNaN(n)) return "—";
   const x = Number(n).toFixed(2);
@@ -51,25 +61,41 @@ async function oneQuote(s) {
   }
 }
 
-async function handleQuotes() {
-  const results = (await Promise.all(SYMBOLS.map(oneQuote))).filter(Boolean);
-  return new Response(JSON.stringify({ quotes: results, at: Date.now() }), {
+function jsonRes(obj, maxAge) {
+  return new Response(JSON.stringify(obj), {
     headers: {
       "content-type": "application/json; charset=utf-8",
-      "cache-control": "public, max-age=60",
+      "cache-control": "public, max-age=" + (maxAge || 60),
       "access-control-allow-origin": "*",
     },
   });
 }
 
+async function handleQuotes() {
+  const results = (await Promise.all(SYMBOLS.map(oneQuote))).filter(Boolean);
+  return jsonRes({ quotes: results, at: Date.now() });
+}
+
+async function handleMovers() {
+  const all = (await Promise.all(MOVERS.map(function (m) {
+    return oneQuote({ y: m[0], name: m[1] });
+  }))).filter(Boolean).map(function (q) {
+    return { name: q.name, price: q.price, changePct: Number(q.changePct) };
+  });
+  all.sort(function (a, b) { return b.changePct - a.changePct; });
+  const gainers = all.filter(function (q) { return q.changePct >= 0; }).slice(0, 5);
+  const losers = all.filter(function (q) { return q.changePct < 0; }).slice(-5).reverse();
+  return jsonRes({ gainers: gainers, losers: losers, at: Date.now() }, 120);
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (url.pathname === "/api/quotes") {
+    if (url.pathname === "/api/quotes" || url.pathname === "/api/movers") {
       const cache = caches.default;
       let res = await cache.match(request);
       if (!res) {
-        res = await handleQuotes();
+        res = url.pathname === "/api/movers" ? await handleMovers() : await handleQuotes();
         ctx.waitUntil(cache.put(request, res.clone()));
       }
       return res;
