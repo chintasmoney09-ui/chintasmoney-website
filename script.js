@@ -183,4 +183,38 @@
     ccCount.addEventListener("input", ccUpdate);
     ccUpdate();
   }
+
+  // ---- Free live-market chart (TradingView iframe) ----
+  var MKT_GROUPS = [
+    ["Indian Indices", [["NIFTY 50", "NSE:NIFTYBEES"], ["BANK NIFTY", "NSE:BANKBEES"], ["SENSEX", "BSE:SENSEX"]]],
+    ["NSE Stocks", [["RELIANCE", "NSE:RELIANCE"], ["TCS", "NSE:TCS"], ["HDFC BANK", "NSE:HDFCBANK"], ["INFOSYS", "NSE:INFY"], ["ICICI BANK", "NSE:ICICIBANK"], ["SBI", "NSE:SBIN"], ["TATA MOTORS", "NSE:TATAMOTORS"], ["ADANI ENT", "NSE:ADANIENT"]]],
+    ["Commodities", [["Gold · XAU/USD", "OANDA:XAUUSD"], ["Silver · XAG/USD", "OANDA:XAGUSD"], ["Crude Oil · WTI", "TVC:USOIL"], ["Brent Oil", "TVC:UKOIL"], ["Natural Gas", "NYMEX:NG1!"]]],
+    ["Crypto", [["Bitcoin", "BINANCE:BTCUSDT"], ["Ethereum", "BINANCE:ETHUSDT"], ["Solana", "BINANCE:SOLUSDT"], ["Dogecoin", "BINANCE:DOGEUSDT"]]],
+    ["Global Indices", [["S&P 500", "TVC:SPX"], ["Nasdaq 100", "TVC:NDX"], ["Dow Jones", "TVC:DJI"]]],
+    ["Forex", [["USD/INR", "FX_IDC:USDINR"], ["EUR/USD", "OANDA:EURUSD"], ["GBP/USD", "OANDA:GBPUSD"]]]
+  ];
+  var MKT_QUICK = [["NIFTY 50", "NSE:NIFTYBEES"], ["BANK NIFTY", "NSE:BANKBEES"], ["Gold", "OANDA:XAUUSD"], ["Bitcoin", "BINANCE:BTCUSDT"], ["Crude Oil", "TVC:USOIL"], ["S&P 500", "TVC:SPX"]];
+  var mktSel = $("#mktSelect"), mktBox = $("#mktChartBox"), mktChips = $("#chartChips"), mktFull = $("#mktFull");
+  if (mktSel && mktBox) {
+    var mktCur = "NSE:NIFTYBEES";
+    mktSel.innerHTML = MKT_GROUPS.map(function (g) {
+      return '<optgroup label="' + g[0] + '">' + g[1].map(function (o) {
+        return '<option value="' + o[1] + '"' + (o[1] === mktCur ? " selected" : "") + '>' + o[0] + '</option>';
+      }).join("") + '</optgroup>';
+    }).join("");
+    if (mktChips) mktChips.innerHTML = MKT_QUICK.map(function (o) {
+      return '<button class="chart-chip' + (o[1] === mktCur ? " on" : "") + '" data-sym="' + o[1] + '">' + o[0] + '</button>';
+    }).join("");
+    function mountMkt(sym) {
+      mktCur = sym;
+      var params = ["symbol=" + encodeURIComponent(sym), "interval=D", "theme=dark", "style=1", "timezone=Asia/Kolkata", "locale=in", "withdateranges=1", "hideideas=1", "symboledit=0", "saveimage=0", "hidesidetoolbar=0"].join("&");
+      mktBox.innerHTML = '<iframe src="https://s.tradingview.com/widgetembed/?' + params + '" frameborder="0" allowtransparency="true" scrolling="no" allowfullscreen style="width:100%;height:100%;border:0;display:block"></iframe>';
+      if (mktChips) mktChips.querySelectorAll(".chart-chip").forEach(function (b) { b.classList.toggle("on", b.dataset.sym === sym); });
+      if (mktSel.value !== sym) mktSel.value = sym;
+    }
+    mktSel.addEventListener("change", function () { mountMkt(this.value); });
+    if (mktChips) mktChips.addEventListener("click", function (e) { var b = e.target.closest(".chart-chip"); if (b) mountMkt(b.dataset.sym); });
+    if (mktFull) mktFull.addEventListener("click", function () { if (mktBox.requestFullscreen) mktBox.requestFullscreen(); else if (mktBox.webkitRequestFullscreen) mktBox.webkitRequestFullscreen(); });
+    mountMkt(mktCur);
+  }
 })();

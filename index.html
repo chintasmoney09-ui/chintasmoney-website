@@ -37,6 +37,7 @@
         <a href="#how">How it works</a>
         <a href="#who">Who it's for</a>
         <a href="#calc">Free tools</a>
+        <a href="#charts">Live charts</a>
         <a href="#league">Rewards</a>
         <a href="#pricing">Pricing</a>
         <a href="#faq">FAQ</a>
@@ -183,6 +184,24 @@
       <div class="bento">
         <a href="app/index.html#/dreams" class="card col-3 reveal" style="text-decoration:none"><div class="ic">💭</div><h3>Dream Planner</h3><p>See what disciplined, sized-right money becomes over time — car, home, financial freedom. The honest math of compounding. <span class="up">Open free →</span></p></a>
         <a href="app/index.html#/markets" class="card col-3 reveal" style="text-decoration:none"><div class="ic">🕯️</div><h3>Live-style Charts</h3><p>Candlesticks, volume, moving averages and trade markers — read the tape in a clean dark terminal. <span class="up">Open free →</span></p></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Live Markets (free charts) -->
+  <section class="section" id="charts">
+    <div class="container">
+      <div class="center reveal"><span class="eyebrow">Free · no signup</span><h2>Analyse <span class="grad">any market</span>, live</h2><p class="sub">Indices, stocks, gold, crude, crypto &amp; forex — real candles, volume and every indicator. Pick a market and dive in.</p></div>
+      <div class="chartwrap reveal">
+        <div class="chart-controls">
+          <div class="chart-chips" id="chartChips"></div>
+          <div class="chart-actions">
+            <select id="mktSelect" aria-label="Choose a market"></select>
+            <button class="btn btn-ghost" id="mktFull" title="Fullscreen — rotate your phone to analyse big">⛶ Fullscreen</button>
+          </div>
+        </div>
+        <div class="chart-box" id="mktChartBox"></div>
+        <p class="sub" style="text-align:center;font-size:.85rem;margin-top:14px">Tap the chart toolbar for indicators (RSI, MACD, Bollinger…). Data by TradingView · Indian indices show their tracking ETF. No account needed.</p>
       </div>
     </div>
   </section>
@@ -437,7 +456,7 @@
   <footer class="footer"><div class="container">
     <div class="foot-grid">
       <a href="#top" class="brand"><img src="assets/logo-tile.png" alt="ChintasMoney" /><span class="brand-name">Chinta's <span class="brand-emoji">🤑</span> <b>Money</b></span></a>
-      <nav><a href="#how">How it works</a><a href="#who">Who it's for</a><a href="#calc">Free tools</a><a href="#league">Rewards</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a><a href="app/index.html">Launch app</a></nav>
+      <nav><a href="#how">How it works</a><a href="#who">Who it's for</a><a href="#calc">Free tools</a><a href="#charts">Live charts</a><a href="#league">Rewards</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a><a href="app/index.html">Launch app</a></nav>
     </div>
     <p class="disclaimer">© <span id="year"></span> ChintasMoney · Discipline over profit. ChintasMoney is a trading self-awareness &amp; journaling tool. It gives no buy/sell calls, tips, or investment advice and makes no return claims. F&amp;O trading is risky and most traders lose money. The risk calculator is an educational tool, not advice.</p>
   </div></footer>
