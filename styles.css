@@ -121,7 +121,7 @@ img{max-width:100%;display:block}
 .chip{font-family:var(--mono);font-size:.74rem;padding:4px 10px;border-radius:8px;border:1px solid var(--line-2);background:var(--panel-2);color:var(--ink-soft)}
 .chip.g{color:var(--green);border-color:rgba(34,224,138,.35)} .chip.r{color:var(--red);border-color:rgba(255,90,106,.35)}
 /* candles */
-.candles{display:flex;align-items:flex-end;gap:7px;height:78px;margin-top:16px;padding-top:10px;border-top:1px solid var(--line)}
+.candles{display:flex;align-items:flex-end;gap:7px;height:78px;margin-top:16px;padding-top:10px;border-top:1px solid var(--line);min-width:0;overflow:hidden}
 .candle{position:relative;width:9px;border-radius:3px;animation:rise 1.1s ease both}
 .candle.g{background:linear-gradient(180deg,var(--green),var(--green-2))}
 .candle.r{background:linear-gradient(180deg,var(--red),#c53a48)}
@@ -218,9 +218,9 @@ img{max-width:100%;display:block}
 .seg-btn.active{color:#04120b;background:linear-gradient(100deg,var(--green),var(--green-2))}
 .seg-btn.active.bear{color:#170608;background:linear-gradient(100deg,var(--red),#c53a48)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.calc label{display:flex;flex-direction:column;gap:6px;font-size:.82rem;color:var(--ink-soft);font-weight:600}
+.calc label{display:flex;flex-direction:column;gap:6px;font-size:.82rem;color:var(--ink-soft);font-weight:600;min-width:0}
 .calc .opt{color:var(--muted);font-weight:500}
-.calc input{background:var(--bg);border:1px solid var(--line-2);color:var(--ink);border-radius:10px;padding:.6rem .7rem;font:inherit;font-family:var(--mono)}
+.calc input{width:100%;min-width:0;background:var(--bg);border:1px solid var(--line-2);color:var(--ink);border-radius:10px;padding:.6rem .7rem;font:inherit;font-family:var(--mono)}
 .calc input:focus{outline:2px solid var(--green);border-color:transparent}
 .calc-out{background:var(--bg-2);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:12px}
 .verdict{font-family:var(--mono);font-weight:700;font-size:.9rem}
@@ -247,6 +247,8 @@ img{max-width:100%;display:block}
   .bullbear{grid-template-columns:1fr}
   .bb-vs{padding:6px}
   .hero-grid,.band-grid{grid-template-columns:1fr}
+  .terminal{min-width:0;overflow:hidden}
+  .hero-grid > *{min-width:0}
   .steps,.quotes,.plans{grid-template-columns:1fr}
   .bento{grid-template-columns:repeat(2,1fr)}
   .col-2,.col-3,.col-4,.col-6{grid-column:span 2}

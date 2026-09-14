@@ -297,10 +297,13 @@
     }, h || 480);
   }
   function tvMini(sym, title, h) {
-    return tvEmbed("https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js", {
-      symbols: [[title || sym, sym + "|3M"]], chartOnly: false, colorTheme: "dark", isTransparent: true,
-      autosize: true, showVolume: false, locale: "in", gridLineColor: "rgba(139,92,246,0.08)",
-      lineColor: "#22e08a", topColor: "rgba(34,224,138,0.25)", bottomColor: "rgba(34,224,138,0)"
+    // Compact advanced chart — renders NSE index symbols reliably (the lightweight
+    // symbol-overview widget shows a "only available on TradingView" error for them).
+    return tvEmbed("https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js", {
+      autosize: true, symbol: sym, interval: "D", timezone: "Asia/Kolkata", theme: "dark", style: "3",
+      locale: "in", hide_top_toolbar: true, hide_legend: true, hide_side_toolbar: true,
+      allow_symbol_change: false, save_image: false, backgroundColor: "#0a0713",
+      gridColor: "rgba(139,92,246,0.08)", support_host: "https://www.tradingview.com"
     }, h || 240);
   }
 
