@@ -407,11 +407,33 @@
     return w;
   }
 
+  function hiText() { var h = new Date().getHours(); return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening"; }
+  function todayHero() {
+    var s = CM.load(), st = CM.stats(), e = CM.engagement();
+    var name = s.profile.name || "Trader";
+    var topPct = Math.max(3, Math.round((100 - st.discipline) * 0.55));
+    var hero = el('<div class="today-hero"></div>');
+    hero.innerHTML =
+      '<div class="th-row"><div><div class="th-hi">' + hiText() + ', ' + esc(name) + ' 👋</div>' +
+        '<div class="th-sub">' + (e.loggedToday ? "Streak safe today ✅" : "Log 1 trade to keep your streak alive 🔥") + '</div></div>' +
+        '<div class="th-rank">🏆 Top ' + topPct + '%</div></div>' +
+      '<div class="th-streak"><div class="th-flame">🔥</div>' +
+        '<div><div class="th-num" style="color:#f5b849">' + e.streak + '</div><div class="th-lbl">day streak</div></div>' +
+        '<div class="th-score"><div class="th-num" style="color:' + scoreColorHex(st.discipline) + '">' + st.discipline + '</div><div class="th-lbl">discipline</div></div>' +
+        '<div class="th-score"><div class="th-num">' + e.em + ' ' + e.level + '</div><div class="th-lbl">' + esc(e.title) + '</div></div></div>' +
+      '<div class="th-xp"><i style="width:' + e.pct + '%"></i></div>' +
+      '<div class="th-xpt">' + e.xpToNext + ' XP to level ' + (e.level + 1) + '</div>';
+    var cta = el('<button class="btn btn-primary" style="width:100%;margin-top:14px;justify-content:center">' + (e.loggedToday ? "＋ Log another trade" : "🔥 Keep my streak — log a trade") + '</button>');
+    cta.addEventListener("click", function () { go("log"); });
+    hero.appendChild(cta);
+    return hero;
+  }
+
   // ---- TODAY feed (the addictive scroll) -----------------------------------
   VIEWS.today = function () {
     var s = CM.load(), st = CM.stats(), e = CM.engagement(), ms = CM.mistakes(), v = el('<div></div>');
     v.appendChild(topbar("Today", "Your daily money mirror — a fresh look every time you open.", [logBtn()]));
-    v.appendChild(engagementBar());
+    v.appendChild(todayHero());
     var feed = el('<div class="grid" style="max-width:680px;margin:0 auto"></div>');
     // 1. Chintamani tip
     feed.appendChild(chintaCard());
@@ -1019,18 +1041,47 @@
   };
 
   // ---- LEADERBOARD (mock, discipline-based) --------------------------------
+  function leagueOf(d) {
+    if (d >= 90) return { n: "Diamond", em: "💎", c: "#7cc7ff", next: null };
+    if (d >= 75) return { n: "Platinum", em: "🛡️", c: "#19d3c5", next: "Diamond" };
+    if (d >= 60) return { n: "Gold", em: "🏆", c: "#f5b849", next: "Platinum" };
+    if (d >= 40) return { n: "Silver", em: "🥈", c: "#c9d2e3", next: "Gold" };
+    return { n: "Bronze", em: "🥉", c: "#cd7f32", next: "Silver" };
+  }
   VIEWS.leaderboard = function () {
-    var s = CM.load(), st = CM.stats();
+    var s = CM.load(), st = CM.stats(), e = CM.engagement();
     var v = el('<div></div>');
-    v.appendChild(topbar("Discipline Leaderboard", "Ranked by discipline, NOT by P&L — because P&L lies."));
-    var rows = [
-      { h: "@steady_sniper", d: 92 }, { h: "@nifty_ninja", d: 88 }, { h: "@calm_capital", d: 84 },
-      { h: (s.profile.handle || "you"), d: st.discipline, me: true }, { h: "@yolo_options", d: 41 }, { h: "@revenge_raj", d: 29 }
-    ].sort(function (a, b) { return b.d - a.d; });
-    var c = el('<div class="card"></div>');
-    rows.forEach(function (r, i) { c.appendChild(el('<div class="attn"' + (r.me ? ' style="background:rgba(20,184,166,.08);border-radius:10px;padding-left:8px"' : '') + '><div style="font-weight:800;width:26px;color:var(--muted)">' + (i + 1) + '</div><div style="flex:1"><b>' + esc(r.h) + '</b>' + (r.me ? ' <span class="badge b-navy">you</span>' : '') + '</div><div style="font-weight:800;color:' + scoreColor(r.d) + '">' + r.d + '</div></div>')); });
+    v.appendChild(topbar("Discipline League", "Ranked by discipline, NOT by P&L — because P&L lies."));
+    var lg = leagueOf(st.discipline);
+    var daysLeft = 7 - (new Date().getDay() || 7) + 1;
+    // Weekly field (demo rivals) with the player inserted.
+    var field = [
+      { h: "@steady_sniper", d: 92, s: 21 }, { h: "@nifty_ninja", d: 88, s: 16 }, { h: "@calm_capital", d: 84, s: 12 },
+      { h: "@sl_samurai", d: 80, s: 9 }, { h: "@zen_trader", d: 77, s: 30 }, { h: "@process_pete", d: 72, s: 7 },
+      { h: "@chart_monk", d: 68, s: 5 }, { h: "@patient_priya", d: 64, s: 11 }, { h: "@swingqueen", d: 58, s: 4 },
+      { h: "@fomo_fan", d: 44, s: 1 }, { h: "@yolo_options", d: 39, s: 0 }, { h: "@revenge_raj", d: 27, s: 0 }
+    ];
+    field.push({ h: s.profile.handle || "you", d: st.discipline, s: e.streak, me: true });
+    field.sort(function (a, b) { return b.d - a.d; });
+    var myRank = field.findIndex(function (r) { return r.me; }) + 1, total = field.length;
+    // Header hero
+    var hero = el('<div class="lg-hero"><div class="lg-badge" style="background:' + lg.c + '22;border-color:' + lg.c + '66;color:' + lg.c + '">' + lg.em + ' ' + lg.n + ' League</div>' +
+      '<div class="lg-rank">You\'re <b>#' + myRank + '</b> of ' + total + '</div>' +
+      '<div class="lg-sub">' + (myRank <= 3 ? '🚀 In the promotion zone — hold your rank to reach <b>' + (lg.next || "the top") + '</b>!' : 'Climb to <b>top 3</b> to get promoted' + (lg.next ? ' to <b>' + lg.next + '</b>' : '') + '.') + ' · ' + daysLeft + ' day' + (daysLeft > 1 ? 's' : '') + ' left</div></div>');
+    v.appendChild(hero);
+    var c = el('<div class="card" style="padding:8px 10px"></div>');
+    field.forEach(function (r, i) {
+      var rank = i + 1, promo = rank <= 3, releg = rank > total - 3;
+      var medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : String(rank);
+      c.appendChild(el('<div class="lg-row' + (r.me ? " me" : "") + (promo ? " promo" : releg ? " releg" : "") + '">' +
+        '<div class="lg-pos">' + medal + '</div>' +
+        '<div class="lg-who"><b>' + esc(r.h) + '</b>' + (r.me ? ' <span class="badge b-navy">you</span>' : '') + '<div class="lg-streak">🔥 ' + r.s + '</div></div>' +
+        '<div class="lg-score" style="color:' + scoreColor(r.d) + '">' + r.d + '</div></div>'));
+      if (rank === 3) c.appendChild(el('<div class="lg-line"><span>▲ promotion</span></div>'));
+      if (rank === total - 3) c.appendChild(el('<div class="lg-line down"><span>▼ relegation</span></div>'));
+    });
     v.appendChild(c);
-    v.appendChild(el('<div class="notice" style="margin-top:12px">Other traders here are demo accounts. A real leaderboard needs the backend — but rewarding <b>discipline</b> instead of P&L is the whole point.</div>'));
+    v.appendChild(el('<div class="notice" style="margin-top:12px">Rivals shown are demo accounts — real head-to-head leagues arrive with the backend. The point stands: we reward <b>discipline</b>, never P&amp;L.</div>'));
     return v;
   };
 
