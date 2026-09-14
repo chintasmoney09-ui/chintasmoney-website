@@ -1048,6 +1048,15 @@
     return { close: close, body: body };
   }
 
+  // Lightweight toast — non-blocking feedback for minor actions.
+  var _toastWrap = null;
+  function toast(msg, kind) {
+    if (!_toastWrap) { _toastWrap = el('<div class="toast-wrap"></div>'); document.body.appendChild(_toastWrap); }
+    var t = el('<div class="toast' + (kind ? " " + kind : "") + '">' + esc(msg) + '</div>');
+    _toastWrap.appendChild(t);
+    setTimeout(function () { t.classList.add("out"); setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 300); }, 2600);
+  }
+
   // ---- RISK CALCULATOR -----------------------------------------------------
   var calcSide = "long";
   VIEWS.calc = function () {
@@ -1340,12 +1349,12 @@
     share.querySelector("#scShare").addEventListener("click", function () {
       var text = "My ChintasMoney Discipline Score: " + st.discipline + "/100 — " + p.key + " · " + leagueOf(st.discipline).em + " " + leagueOf(st.discipline).n + " League. Top " + topPct + "% this week. Beat me 👉 chintasmoney.com";
       if (navigator.share) navigator.share({ title: "My Trader Report Card", text: text, url: "https://chintasmoney.com" }).catch(function () {});
-      else { try { navigator.clipboard.writeText(text); this.textContent = "✓ Copied!"; } catch (er) {} }
+      else { try { navigator.clipboard.writeText(text); this.textContent = "✓ Copied!"; toast("Card text copied — paste it anywhere 📋", "ok"); } catch (er) {} }
     });
     share.querySelector("#scChallenge").addEventListener("click", function () {
       var text = "I scored " + st.discipline + "/100 on discipline (Top " + topPct + "%). Think you're more disciplined? Prove it 👉 chintasmoney.com";
       if (navigator.share) navigator.share({ title: "Discipline challenge", text: text }).catch(function () {});
-      else { try { navigator.clipboard.writeText(text); this.textContent = "✓ Copied!"; } catch (er) {} }
+      else { try { navigator.clipboard.writeText(text); this.textContent = "✓ Copied!"; toast("Challenge copied — send it to a trader 🔥", "ok"); } catch (er) {} }
     });
     v.appendChild(share);
     v.appendChild(el('<p class="hint" style="text-align:center;margin-top:10px">Screenshot or tap Share. Post it, tag a trader, climb the league. 🔥</p>'));
@@ -1402,6 +1411,7 @@
       a.download = "chintasmoney-backup-" + new Date().toISOString().slice(0, 10) + ".json";
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+      toast("Backup downloaded ⬇", "ok");
     });
     var restore = el('<button class="btn btn-sm">⬆ Restore backup</button>');
     restore.addEventListener("click", function () {
