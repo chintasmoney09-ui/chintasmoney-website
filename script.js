@@ -158,4 +158,25 @@
     $("#segShort").addEventListener("click", function () { side = "short"; this.classList.add("active", "bear"); $("#segLong").classList.remove("active"); calc(); });
     calc();
   }
+
+  // ---- Cost of indiscipline (interactive) ----
+  var ccLoss = $("#ccLoss"), ccCount = $("#ccCount");
+  function ccInr(n){ return "₹" + Math.round(n).toLocaleString("en-IN"); }
+  function ccUpdate(){
+    if (!ccLoss || !ccCount) return;
+    var loss = parseFloat(ccLoss.value) || 0, cnt = parseFloat(ccCount.value) || 0;
+    var week = loss * cnt, month = week * 4.33, year = week * 52;
+    var lv = $("#ccLossV"), cv = $("#ccCountV");
+    if (lv) lv.textContent = ccInr(loss);
+    if (cv) cv.textContent = cnt;
+    var w = $("#ccWeek"), m = $("#ccMonth"), y = $("#ccYear");
+    if (w) w.textContent = ccInr(week);
+    if (m) m.textContent = ccInr(month);
+    if (y) y.textContent = ccInr(year);
+  }
+  if (ccLoss && ccCount){
+    ccLoss.addEventListener("input", ccUpdate);
+    ccCount.addEventListener("input", ccUpdate);
+    ccUpdate();
+  }
 })();

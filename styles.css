@@ -268,3 +268,43 @@ img{max-width:100%;display:block}
   .nav-close{display:block;position:absolute;top:16px;right:16px}
 }
 @media(max-width:560px){.bento{grid-template-columns:1fr}.col-2,.col-3,.col-4,.col-6{grid-column:span 1}}
+
+/* ===== Addictive-features additions ===== */
+/* Streak flames */
+.flames{display:flex;align-items:center;gap:3px;margin-top:14px;font-size:1.15rem}
+.flames .off{filter:grayscale(1);opacity:.35}
+.flames b{margin-left:8px;font-size:.95rem;color:var(--green);font-weight:800}
+
+/* Cost-of-indiscipline calculator */
+.costcalc{margin-top:22px;display:flex;flex-direction:column;gap:20px}
+.costcalc label{display:block;font-weight:600;color:var(--ink-soft);font-size:.92rem;position:relative}
+.costcalc .cc-val{float:right;color:var(--ink);font-weight:800;font-size:1rem}
+.costcalc input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;margin-top:12px;border-radius:6px;background:linear-gradient(90deg,var(--green),var(--gold));outline:none}
+.costcalc input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;border-radius:50%;background:#fff;border:3px solid var(--green);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.costcalc input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:3px solid var(--green);cursor:pointer}
+.costout{text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center;justify-content:center}
+.co-label{color:var(--ink-soft);font-size:.9rem}
+.co-big{font-size:3.2rem;font-weight:900;line-height:1;letter-spacing:-.02em;color:var(--gold);text-shadow:0 0 30px rgba(245,184,73,.25)}
+.co-sub{color:var(--ink-soft);font-size:.9rem;margin-bottom:8px}
+.co-split{display:flex;gap:14px;width:100%;margin:6px 0 10px}
+.co-split div{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px 8px}
+.co-split span{display:block;font-weight:800;font-size:1.15rem;color:var(--ink)}
+.co-split small{color:var(--ink-soft);font-size:.78rem}
+
+/* League + gamification */
+.league-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.league{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.league li{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.league li.you{border-color:rgba(34,224,138,.5);background:rgba(34,224,138,.07)}
+.league .rk{width:26px;height:26px;flex:none;display:grid;place-items:center;border-radius:8px;background:var(--bg-2);font-weight:800;font-size:.85rem}
+.league li:nth-child(1) .rk{background:linear-gradient(135deg,var(--gold),#e39b1f);color:#241800}
+.league .who{flex:1;font-weight:600}
+.league .pts{font-weight:900;font-size:1.05rem}
+.league .pts.g{color:var(--green)}
+.xpbar{height:12px;border-radius:8px;background:var(--bg);border:1px solid var(--line);overflow:hidden}
+.xpbar i{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,var(--green),var(--gold))}
+.badgegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.badge{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:12px 6px;border:1px solid var(--line);border-radius:14px;background:var(--bg);font-size:.72rem;font-weight:600;color:var(--ink-soft)}
+.badge b{font-size:1.5rem;line-height:1}
+.badge.locked{opacity:.4;filter:grayscale(.6)}
+@media(max-width:760px){.league-grid{grid-template-columns:1fr}}
