@@ -270,6 +270,10 @@ select option { background: var(--surface); }
 .confetti-wrap i{position:absolute;top:-12px;width:9px;height:14px;border-radius:2px;opacity:.95;animation:confFall linear forwards}
 @keyframes confFall{to{transform:translateY(105vh) rotate(720deg);opacity:.6}}
 
+/* Keyboard accessibility — clear focus rings for keyboard users only */
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.nav-item:focus-visible,.jrn-chip:focus-visible,.mk-chip:focus-visible,.check-gate:focus-within{outline:2px solid #22e08a;outline-offset:2px;border-radius:8px}
+.fab:focus-visible{outline:3px solid #fff;outline-offset:3px}
+
 /* Market quick-pick chips */
 .mk-quick{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .mk-chip{background:var(--bg,#0a0f1c);border:1px solid var(--line);color:var(--ink-soft,var(--ink));border-radius:999px;padding:7px 14px;font-size:.85rem;font-weight:600;cursor:pointer;transition:border-color .15s,background .15s,color .15s}

@@ -663,7 +663,7 @@
     var st = CM.stats(), eq = CM.equityCurve(), dt = CM.disciplineTrend(), wl = CM.winLoss();
     var v = el('<div></div>');
     v.appendChild(topbar("Analytics", "The charts your broker never shows you — all from your own trades.", [logBtn()]));
-    if (!st.count) { var e = el('<div class="card paywall"><div class="lock-ic">📊</div><h3>No charts yet</h3><p class="hint">Log a few trades and your analytics come alive.</p></div>'); v.appendChild(e); return v; }
+    if (!st.count) { var e = el('<div class="card paywall"><div class="lock-ic">📊</div><h3>No charts yet</h3><p class="hint">Log a few trades and your analytics come alive.</p></div>'); var eb = el('<button class="btn btn-primary" style="margin-top:8px">＋ Log a trade</button>'); eb.addEventListener("click", function () { go("log"); }); e.appendChild(eb); v.appendChild(e); return v; }
 
     var g = el('<div class="grid g4"></div>');
     g.appendChild(tile("Net P&L", money(st.totalPnl), "from your logs", st.totalPnl >= 0));
