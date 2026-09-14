@@ -649,6 +649,31 @@
     eCard.appendChild(el('<div>' + svgHBars(emo.map(function (x) { var bad = /revenge|fomo|fear|greed|overconf/i.test(x.label); return { label: x.label, value: bad ? -x.n : x.n, fmt: x.n + " trades" }; })) + '</div>'));
     eCard.appendChild(el('<p class="hint" style="margin:6px 0 0">Red = emotional states that usually cost you. Green = calm, planned trading.</p>'));
     v.appendChild(eCard);
+
+    // Emotion + exit-reason donuts (more visual breakdowns)
+    function donutCard(title, segs, center, sub, legend) {
+      var card = el('<div class="card"><div class="card-hd"><h3>' + title + '</h3></div><div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"></div></div>');
+      card.lastChild.appendChild(el(svgDonut(segs, { size: 150, center: center, sub: sub })));
+      var leg = el('<div style="display:grid;gap:6px">' + legend + '</div>');
+      card.lastChild.appendChild(leg);
+      return card;
+    }
+    var EMOC = { Calm: "#22e08a", FOMO: "#f5b849", Revenge: "#ff5a6a", Fear: "#19d3c5", Greed: "#a78bfa", Overconfident: "#fb7185" };
+    var emoSegs = emo.map(function (x) { return { value: x.n, color: EMOC[x.label] || "#8b5cf6" }; });
+    var emoLegend = emo.map(function (x) { return '<div style="display:flex;align-items:center;gap:8px;font-size:.86rem"><span style="width:11px;height:11px;border-radius:3px;background:' + (EMOC[x.label] || "#8b5cf6") + '"></span>' + esc(x.label) + ' <span class="muted">· ' + x.n + '</span></div>'; }).join("");
+    var calmN = emo.filter(function (x) { return /calm/i.test(x.label); }).reduce(function (a, x) { return a + x.n; }, 0);
+    var emoTot = emo.reduce(function (a, x) { return a + x.n; }, 0) || 1;
+    // exit-reason breakdown from trades
+    var exitCounts = {}; CM.load().trades.forEach(function (t) { var k = t.exit_reason || "Other"; exitCounts[k] = (exitCounts[k] || 0) + 1; });
+    var EXC = ["#22e08a", "#19d3c5", "#f5b849", "#a78bfa", "#ff5a6a", "#fb7185", "#8b5cf6"];
+    var exitArr = Object.keys(exitCounts).map(function (k, i) { return { label: k, n: exitCounts[k], color: EXC[i % EXC.length] }; }).sort(function (a, b) { return b.n - a.n; });
+    var exitTot = exitArr.reduce(function (a, x) { return a + x.n; }, 0) || 1;
+    var exitSegs = exitArr.map(function (x) { return { value: x.n, color: x.color }; });
+    var exitLegend = exitArr.map(function (x) { return '<div style="display:flex;align-items:center;gap:8px;font-size:.86rem"><span style="width:11px;height:11px;border-radius:3px;background:' + x.color + '"></span>' + esc(x.label) + ' <span class="muted">· ' + x.n + '</span></div>'; }).join("");
+    var donutRow = el('<div class="grid g2" style="margin-top:16px;align-items:start"></div>');
+    donutRow.appendChild(donutCard("Emotion mix", emoSegs, Math.round(calmN / emoTot * 100) + "%", "calm", emoLegend));
+    donutRow.appendChild(donutCard("Why you exit", exitSegs, String(st.count), "trades", exitLegend));
+    v.appendChild(donutRow);
     return v;
   };
 
