@@ -1532,5 +1532,11 @@
   window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); deferredInstall = e; showInstallBanner(); });
   window.addEventListener("appinstalled", function () { deferredInstall = null; var bar = document.querySelector(".install-banner"); if (bar) bar.remove(); });
 
+  // ---- Offline / online awareness ------------------------------------------
+  // The service worker serves the app shell offline; reassure the user their
+  // data is safe locally, and confirm when connectivity returns.
+  window.addEventListener("offline", function () { if (typeof toast === "function") toast("You're offline — your data is safe on this device 📴", "err"); });
+  window.addEventListener("online", function () { if (typeof toast === "function") toast("Back online ✓", "ok"); });
+
   render();
 })();
