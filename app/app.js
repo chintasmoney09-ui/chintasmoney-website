@@ -252,19 +252,29 @@
 
   var mkState = { sym: "NIFTY" };
   var SYMBOLS = [["NIFTY", 24800, 11], ["BANKNIFTY", 51200, 23], ["RELIANCE", 2980, 7], ["TCS", 3910, 31], ["TATAMOTORS", 985, 5], ["ZOMATO", 168, 13]];
+  // Real NSE symbols users can pick from (indices resolve to tracking ETFs via tvSymbolFor).
+  var POPULAR_SYMS = ["NIFTY", "BANKNIFTY", "FINNIFTY", "RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY", "SBIN",
+    "AXISBANK", "KOTAKBANK", "ITC", "LT", "BHARTIARTL", "HINDUNILVR", "MARUTI", "SUNPHARMA", "WIPRO", "HCLTECH",
+    "TECHM", "TATAMOTORS", "TATASTEEL", "JSWSTEEL", "ADANIENT", "ADANIPORTS", "BAJFINANCE", "BAJAJFINSV",
+    "ASIANPAINT", "TITAN", "ULTRACEMCO", "NESTLEIND", "POWERGRID", "NTPC", "ONGC", "COALINDIA", "HDFCLIFE",
+    "DRREDDY", "CIPLA", "DMART", "ZOMATO", "PAYTM", "IRCTC", "IDEA", "YESBANK", "PNB"];
+  function symOptions(sel) {
+    return POPULAR_SYMS.map(function (s) {
+      return '<option value="' + s + '"' + (sel && sel === s ? " selected" : "") + '>' + s + '</option>';
+    }).join("");
+  }
   VIEWS.markets = function () {
     var v = el('<div></div>');
     v.appendChild(topbar("Live Charts", "Real market data — candles, volume, indicators. Powered by TradingView."));
     var card = el('<div class="card"></div>');
-    var symRow = el('<div class="chart-toolbar"></div>');
-    Object.keys(TV_SYM).forEach(function (k) {
-      var b = el('<button class="chart-toggle' + (mkState.sym === k ? " on" : "") + '">' + k + '</button>');
-      b.addEventListener("click", function () { mkState.sym = k; go("markets"); render(); });
-      symRow.appendChild(b);
-    });
+    var symRow = el('<div class="chart-toolbar" style="align-items:center;gap:10px"><label class="fld" style="margin:0;min-width:220px"><span>Symbol</span><select id="mkSym">' + symOptions(mkState.sym) + '</select></label></div>');
+    var box = el('<div id="mkBox" style="margin-top:12px"></div>');
+    function mountMk() { box.innerHTML = ""; box.appendChild(tvAdvanced(tvSymbolFor(mkState.sym), 600)); }
+    symRow.querySelector("#mkSym").addEventListener("change", function () { mkState.sym = this.value; mountMk(); });
     card.appendChild(symRow);
-    card.appendChild(tvAdvanced(TV_SYM[mkState.sym] || "NSE:NIFTYBEES", 520));
-    card.appendChild(el('<p class="hint" style="margin-top:10px">Full candles, volume &amp; every indicator (RSI, MACD, MA, Bollinger…) — add them from the chart toolbar. Change the symbol to any NSE stock.</p>'));
+    card.appendChild(box);
+    mountMk();
+    card.appendChild(el('<p class="hint" style="margin-top:10px">Full candles, volume &amp; every indicator (RSI, MACD, MA, Bollinger…) — add them from the chart toolbar. Pick any NSE symbol above (indices show their tracking ETF).</p>'));
     v.appendChild(card);
     return v;
   };
@@ -378,7 +388,7 @@
     // 5. mini chart nudge
     var mc = el('<div class="card"></div>');
     mc.appendChild(el('<div class="card-hd"><h3>📈 NIFTY 50 · live</h3></div>'));
-    mc.appendChild(tvMini("NSE:NIFTYBEES", "NIFTY 50", 200));
+    mc.appendChild(tvMini("NSE:NIFTYBEES", "NIFTY 50", 340));
     feed.appendChild(mc);
     // 6. equity nudge
     var eq = CM.equityCurve();
@@ -455,7 +465,7 @@
     // live chart card
     var chc = el('<div class="card" style="margin-top:16px"></div>');
     chc.appendChild(el('<div class="card-hd"><h3>📈 NIFTY 50 · live</h3></div>'));
-    chc.appendChild(tvMini("NSE:NIFTYBEES", "NIFTY 50", 220));
+    chc.appendChild(tvMini("NSE:NIFTYBEES", "NIFTY 50", 340));
     var chb = el('<button class="btn btn-ghost btn-sm" style="margin-top:8px">Open full charts →</button>');
     chb.addEventListener("click", function () { go("markets"); });
     chc.appendChild(chb);
@@ -560,7 +570,7 @@
     v.appendChild(topbar("Log a Trade", "Honesty in = honesty out. This is between you and your data."));
     var c = el('<div class="card"></div>');
     var f =
-      '<div class="grid g2"><label class="fld"><span>Symbol</span><input id="sym" placeholder="NIFTY 24500 CE / RELIANCE" /></label>' +
+      '<div class="grid g2"><label class="fld"><span>Symbol</span><input id="sym" list="symList" placeholder="Type or pick — NIFTY, RELIANCE…" autocomplete="off" /><datalist id="symList">' + symOptions() + '</datalist></label>' +
       '<label class="fld"><span>Side</span><select id="side"><option>Buy</option><option>Sell</option></select></label></div>' +
       '<div class="grid g4"><label class="fld"><span>Qty</span><input id="qty" type="number" /></label>' +
       '<label class="fld"><span>Entry</span><input id="entry" type="number" /></label>' +
@@ -590,7 +600,7 @@
     function mountChart() {
       var sym = tvSymbolFor(c.querySelector("#sym").value);
       chartCard.querySelector("#chSym").textContent = sym;
-      var box = chartCard.querySelector("#chBox"); box.innerHTML = ""; box.appendChild(tvAdvanced(sym, 420));
+      var box = chartCard.querySelector("#chBox"); box.innerHTML = ""; box.appendChild(tvAdvanced(sym, 560));
     }
     var ct; c.querySelector("#sym").addEventListener("input", function () { clearTimeout(ct); ct = setTimeout(mountChart, 700); });
     mountChart();
@@ -841,7 +851,7 @@
       '<div style="font-size:.82rem;color:var(--muted);margin-bottom:6px">Live chart for <b style="color:var(--ink)">' + sym + '</b> · exit reason: ' + esc(t.exit_reason) + ' · felt: ' + esc(t.emotion) + '</div>' +
       '<div id="anBox"></div>' +
       '<p class="hint" style="margin-top:8px">Compare your entry/exit/stop against what the real market did. Would a disciplined trader have taken this?</p>';
-    dialog(esc(t.symbol) + " · analyse", body, function (b) { b.querySelector("#anBox").appendChild(tvAdvanced(sym, 420)); });
+    dialog(esc(t.symbol) + " · analyse", body, function (b) { b.querySelector("#anBox").appendChild(tvAdvanced(sym, 520)); });
   }
 
   // ---- MISTAKE INSIGHTS ----------------------------------------------------
