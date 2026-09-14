@@ -811,6 +811,9 @@
     });
     c.appendChild(save);
     c.appendChild(el('<p class="hint" style="margin-top:10px">Tip: leaving <b>Planned SL</b> empty counts as “traded without a stop” — because that’s the truth we\'re measuring.</p>'));
+    var preCheck = el('<button class="btn btn-ghost btn-sm" style="margin-top:6px">✅ Not sure? Run the Pre-Trade Check first</button>');
+    preCheck.addEventListener("click", function () { go("checklist"); });
+    c.appendChild(preCheck);
     v.appendChild(c);
 
     // live chart of the symbol being logged
@@ -1081,6 +1084,7 @@
         '<span class="badge b-navy">discipline ' + d + '</span>' +
       '</div>' +
       '<div style="font-size:.82rem;color:var(--muted);margin-bottom:6px">Live chart for <b style="color:var(--ink)">' + sym + '</b> · exit reason: ' + esc(t.exit_reason) + ' · felt: ' + esc(t.emotion) + '</div>' +
+      (t.note ? '<div style="font-size:.85rem;font-style:italic;color:var(--ink-soft,var(--ink));margin-bottom:8px">💬 ' + esc(t.note) + '</div>' : '') +
       '<div id="anBox"></div>' +
       '<p class="hint" style="margin-top:8px">Compare your entry/exit/stop against what the real market did. Would a disciplined trader have taken this?</p>';
     dialog(esc(t.symbol) + " · analyse", body, function (b) { b.querySelector("#anBox").appendChild(tvAdvanced(sym, 520)); });
