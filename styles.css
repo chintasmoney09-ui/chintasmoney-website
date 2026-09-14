@@ -52,9 +52,9 @@ img{max-width:100%;display:block}
 
 /* Header */
 .hdr{position:sticky;top:0;z-index:60;backdrop-filter:blur(14px);background:rgba(5,7,14,.7);border-bottom:1px solid var(--line)}
-.nav{display:flex;align-items:center;justify-content:space-between;height:66px;gap:16px}
-.brand{display:flex;align-items:center;gap:11px;font-weight:800;font-size:1.4rem;letter-spacing:-.02em}
-.brand img{height:50px;width:50px;background:#fff;border-radius:12px;padding:3px}
+.nav{display:flex;align-items:center;justify-content:space-between;height:88px;gap:16px}
+.brand{display:flex;align-items:center;gap:13px;font-weight:800;font-size:1.7rem;letter-spacing:-.02em}
+.brand img{height:68px;width:68px;background:#fff;border-radius:15px;padding:4px}
 .brand b{color:var(--green)}
 .nav-links{display:flex;align-items:center;gap:1.5rem}
 .nav-links a:not(.btn){color:var(--ink-soft);font-weight:500;font-size:.94rem}
@@ -227,7 +227,7 @@ img{max-width:100%;display:block}
   .bento{grid-template-columns:repeat(2,1fr)}
   .col-2,.col-3,.col-4,.col-6{grid-column:span 2}
   .step .arrow{display:none}
-  .nav-links{position:fixed;inset:66px 0 auto 0;flex-direction:column;align-items:stretch;background:var(--bg-2);border-bottom:1px solid var(--line);padding:14px 22px;gap:.3rem;transform:translateY(-130%);transition:.25s}
+  .nav-links{position:fixed;inset:88px 0 auto 0;flex-direction:column;align-items:stretch;background:var(--bg-2);border-bottom:1px solid var(--line);padding:14px 22px;gap:.3rem;transform:translateY(-130%);transition:.25s}
   .nav-links.open{transform:none}
   .nav-links .btn{width:100%;justify-content:center}
   .nav-toggle{display:flex}
