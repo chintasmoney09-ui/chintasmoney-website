@@ -75,6 +75,17 @@ img{max-width:100%;display:block}
 
 /* Ticker */
 .tv-ticker{border-block:1px solid var(--line);background:var(--bg-2);min-height:46px}
+/* What-we-do strip */
+.whatstrip{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 14px;
+  padding:11px 18px;text-align:center;font-size:.9rem;color:var(--ink-soft);
+  background:linear-gradient(90deg,rgba(34,224,138,.06),rgba(245,184,73,.05),rgba(34,224,138,.06));
+  border-bottom:1px solid var(--line)}
+.whatstrip b{color:var(--ink);font-weight:700}
+.whatstrip .sep{color:var(--green);font-weight:700}
+@media(max-width:560px){
+  .whatstrip{font-size:.82rem;gap:6px 10px;padding:10px 14px}
+  .whatstrip .sep{display:none}
+}
 .ticker{border-block:1px solid var(--line);background:var(--bg-2);overflow:hidden;white-space:nowrap}
 .ticker .track{display:inline-flex;gap:2.4rem;padding:.55rem 0;animation:scroll 32s linear infinite}
 .ticker .t{font-family:var(--mono);font-size:.82rem;color:var(--ink-soft)}
