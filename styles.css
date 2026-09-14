@@ -38,8 +38,43 @@ img{max-width:100%;display:block}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .up{color:var(--green)} .down{color:var(--red)} .muted{color:var(--muted)}
 .grad{background:linear-gradient(100deg,var(--green),var(--teal) 60%,var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent}
-.reveal{opacity:0;transform:translateY(18px);transition:opacity .7s ease,transform .7s ease}
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .7s cubic-bezier(.2,.7,.3,1),transform .7s cubic-bezier(.2,.7,.3,1)}
 .reveal.in{opacity:1;transform:none}
+
+/* ---- Site motion & effects ------------------------------------------- */
+/* Animated gradient headings */
+.grad{background:linear-gradient(100deg,var(--green),var(--teal) 40%,var(--violet) 70%,var(--green));background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:gradShift 8s ease-in-out infinite}
+@keyframes gradShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+
+/* Card hover lift + sheen sweep on interactive cards */
+.card{transition:transform .25s cubic-bezier(.2,.7,.3,1),box-shadow .25s ease,border-color .25s ease}
+a.card:hover,.bento .card:hover{transform:translateY(-5px);border-color:rgba(34,224,138,.4);box-shadow:0 16px 40px rgba(0,0,0,.35),0 0 0 1px rgba(34,224,138,.12)}
+a.card::after,.bento .card::after{content:"";position:absolute;top:0;left:-120%;width:60%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.07),transparent);transform:skewX(-18deg);transition:left .6s ease;pointer-events:none}
+a.card:hover::after,.bento .card:hover::after{left:140%}
+
+/* Primary button — sheen sweep + subtle pulse of the glow */
+.btn-primary{position:relative;overflow:hidden}
+.btn-primary::after{content:"";position:absolute;top:0;left:-140%;width:55%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);transition:left .55s ease}
+.btn-primary:hover::after{left:150%}
+.btn-lg.btn-primary{animation:ctaPulse 3.2s ease-in-out infinite}
+@keyframes ctaPulse{0%,100%{box-shadow:0 0 24px rgba(34,224,138,.22)}50%{box-shadow:0 0 40px rgba(34,224,138,.5)}}
+
+/* Staggered reveal for children of a grid/bento row */
+.bento .reveal:nth-child(2),.steps .reveal:nth-child(2),.plans .reveal:nth-child(2){transition-delay:.08s}
+.bento .reveal:nth-child(3),.steps .reveal:nth-child(3),.plans .reveal:nth-child(3){transition-delay:.16s}
+.bento .reveal:nth-child(4){transition-delay:.24s}
+.bento .reveal:nth-child(5){transition-delay:.32s}
+.bento .reveal:nth-child(6){transition-delay:.4s}
+
+/* Gentle float for hero art / mascot imagery */
+.float-slow{animation:floatY 6s ease-in-out infinite}
+@keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+
+@media(prefers-reduced-motion:reduce){
+  .grad,.btn-lg.btn-primary,.float-slow{animation:none}
+  .card,.btn-primary::after,a.card::after,.bento .card::after{transition:none}
+  a.card:hover,.bento .card:hover{transform:none}
+}
 
 /* Buttons */
 .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.72rem 1.15rem;border-radius:12px;font-weight:700;font-size:.95rem;border:1px solid transparent;cursor:pointer;transition:.18s}
