@@ -6,11 +6,30 @@
   // year
   var y = $("#year"); if (y) y.textContent = new Date().getFullYear();
 
-  // mobile nav
-  var tgl = $("#navToggle"), links = $("#navLinks");
+  // mobile nav drawer
+  var tgl = $("#navToggle"), links = $("#navLinks"),
+      closeBtn = $("#navClose"), backdrop = $("#navBackdrop");
+  if (backdrop) backdrop.removeAttribute("hidden");
+  function openNav() {
+    links.classList.add("open");
+    if (backdrop) backdrop.classList.add("open");
+    if (tgl) tgl.setAttribute("aria-expanded", "true");
+    document.body.style.overflow = "hidden";
+  }
+  function closeNav() {
+    links.classList.remove("open");
+    if (backdrop) backdrop.classList.remove("open");
+    if (tgl) tgl.setAttribute("aria-expanded", "false");
+    document.body.style.overflow = "";
+  }
   if (tgl && links) {
-    tgl.addEventListener("click", function () { links.classList.toggle("open"); });
-    links.addEventListener("click", function (e) { if (e.target.tagName === "A") links.classList.remove("open"); });
+    tgl.addEventListener("click", function () {
+      links.classList.contains("open") ? closeNav() : openNav();
+    });
+    links.addEventListener("click", function (e) { if (e.target.tagName === "A") closeNav(); });
+    if (closeBtn) closeBtn.addEventListener("click", closeNav);
+    if (backdrop) backdrop.addEventListener("click", closeNav);
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeNav(); });
   }
 
   // ticker (mock symbols; duplicated for seamless loop)
