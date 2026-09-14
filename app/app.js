@@ -1190,7 +1190,7 @@
     chat.forEach(function (m) { box.appendChild(bubble(m)); });
     c.appendChild(box);
     var sug = el('<div class="suggest"></div>');
-    ["Why is my discipline score low?", "What's my biggest mistake?", "Which setup should I drop?", "Am I overtrading?", "How do I stop revenge trading?"].forEach(function (q) { var b = el('<button>' + q + '</button>'); b.addEventListener("click", function () { ask(q, box); }); sug.appendChild(b); });
+    ["Why is my discipline score low?", "What's my biggest mistake?", "Am I improving this week?", "How's my win rate and R:R?", "Which setup should I drop?", "Am I overtrading?", "How do I stop revenge trading?"].forEach(function (q) { var b = el('<button>' + q + '</button>'); b.addEventListener("click", function () { ask(q, box); }); sug.appendChild(b); });
     c.appendChild(sug);
     var comp = el('<div class="composer"><input placeholder="Ask your coach…" /><button class="btn btn-primary">Ask</button></div>');
     var i = comp.querySelector("input"), b = comp.querySelector("button");
@@ -1207,7 +1207,18 @@
     if (/setup|drop|strategy/.test(lc)) { var sp = CM.setupPerformance(); var w = sp[sp.length - 1]; return { t: w ? "Your weakest setup is “" + w.setup + "” (" + w.winRate + "% win, " + money(w.pnl) + "). If it keeps bleeding, cut it and double down on “" + sp[0].setup + "”." : "Log more trades to compare setups.", ev: "setup P&L from your logs" }; }
     if (/overtrad/.test(lc)) return { t: st.overtradeDays ? "Yes — " + st.overtradeDays + " day(s) you took more than 3 trades. More trades ≠ more money; it usually means chasing." : "No — you're not overtrading. Good.", ev: st.overtradeDays + " overtrading days" };
     if (/revenge/.test(lc)) return { t: "Revenge trading is the account-killer. Rule: after any red trade, hands off the keyboard for 10 minutes. Set a hard daily loss limit and stop when you hit it. I'll track whether you actually followed it.", ev: null };
-    return { t: "I answer from your own trades: discipline score, mistakes, setups, overtrading, revenge. Try a suggestion above.", ev: null };
+    if (/stop.?loss|stop|no.?sl/.test(lc)) return { t: st.noSL ? "You've traded without a stop-loss " + st.noSL + " time(s) — each one costs 40 discipline points and risks your whole account. Decide the stop before you enter, every time. Not one exception." : "You set a stop on every trade so far — that's the single best habit you have. Protect it.", ev: st.noSL + " no-SL trades of " + st.count };
+    if (/win.?rate|winrate|profitable|r.?:?.?r|reward|ratio/.test(lc)) return { t: "Your win rate is " + st.winRate + "% and your risk:reward is " + (st.rr ? st.rr.toFixed(2) + "×" : "not enough data") + ". " + (st.rr && st.rr >= 1.5 ? "That R:R means you can be wrong often and still make money — protect it." : "A low R:R means even a good win rate leaks money. Aim to let winners run to at least 1.5× your risk.") , ev: st.winRate + "% win · " + (st.rr ? st.rr.toFixed(2) + "× R:R" : "R:R n/a") };
+    if (/week|improv|progress|better|getting|trend|doing/.test(lc)) {
+      var trs = CM.load().trades, now = Date.now(), DAY = 864e5;
+      function avgD(from, to) { var xs = trs.filter(function (t) { var tm = new Date(t.date).getTime(); return isFinite(tm) && tm >= from && tm < to; }); return xs.length ? { n: xs.length, avg: Math.round(xs.reduce(function (a, t) { return a + CM.tradeDiscipline(t); }, 0) / xs.length) } : { n: 0, avg: null }; }
+      var tw = avgD(now - 7 * DAY, now + DAY), lw = avgD(now - 14 * DAY, now - 7 * DAY);
+      if (!tw.n) return { t: "You haven't logged any trades in the last 7 days. Discipline is a habit — log even the trades you're not proud of. That's where the growth is.", ev: "0 trades this week" };
+      var line = "This week your average discipline is " + tw.avg + " across " + tw.n + " trade(s). ";
+      if (lw.avg == null) line += "Log another week and I'll show you the trend."; else if (tw.avg > lw.avg) line += "That's up from " + lw.avg + " last week — you're tightening up. Keep going."; else if (tw.avg < lw.avg) line += "That's down from " + lw.avg + " last week — something slipped. Check your no-SL and emotional exits."; else line += "Same as last week (" + lw.avg + ") — steady, but push for cleaner entries.";
+      return { t: line, ev: "this week " + tw.avg + (lw.avg != null ? " vs last week " + lw.avg : "") };
+    }
+    return { t: "I answer from your own trades: discipline score, mistakes, setups, overtrading, revenge, stop-losses, win rate and your weekly progress. Try a suggestion above.", ev: null };
   }
 
   // ---- BADGES & STREAKS ----------------------------------------------------
