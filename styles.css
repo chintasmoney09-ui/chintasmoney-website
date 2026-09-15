@@ -462,3 +462,57 @@ a.card:hover::after,.bento .card:hover::after{left:140%}
 .mv-px{color:var(--ink-soft);font-size:.88rem}
 .mv-pct{width:80px;text-align:right;font-weight:700;font-size:.88rem}
 @media(max-width:640px){ .movers-grid{grid-template-columns:1fr} }
+
+/* ============================================================
+   MOBILE APP-WIDGET LAYOUT (≤640px)
+   Turns the marketing scroll into compact, well-spaced widget
+   cards & sections — inspired by modern fintech app home screens.
+   ============================================================ */
+@media(max-width:640px){
+  /* 0. Compact sticky header — the giant logo shrinks to an app-bar size */
+  .nav{min-height:60px;padding-block:8px}
+  .brand{flex-direction:row;gap:8px}
+  .brand img{height:38px}
+  .brand-name{font-size:1rem}
+
+  /* 1. Tighten the whole page — no more giant dead space between sections */
+  .section{padding:22px 0}
+  .section[style*="padding-top:0"]{padding-top:0}
+  .band{background:transparent;border-block:0}
+  .container{padding-inline:calc(16px + env(safe-area-inset-left,0px)) calc(16px + env(safe-area-inset-right,0px))}
+
+  /* 2. Hero — compact, punchy, app-like */
+  .hero{padding:34px 0 18px}
+  .hero h1{font-size:clamp(2rem,8.5vw,2.5rem);line-height:1.08;margin:.7rem 0 .7rem}
+  .hero .lead{font-size:1rem;line-height:1.55}
+  .hero .sub{font-size:.86rem}
+  .hero-cta{gap:10px}
+
+  /* 3. Section headings — smaller, tighter rhythm */
+  .section h2{font-size:1.45rem;line-height:1.18;margin:.3rem 0 .1rem}
+  .section .sub{font-size:.9rem;line-height:1.5}
+  .eyebrow{font-size:.7rem;letter-spacing:.1em}
+  .center{margin-bottom:2px}
+
+  /* 4. Every card becomes a clean rounded widget with consistent breathing room */
+  .card{border-radius:18px;padding:16px;box-shadow:0 6px 18px rgba(0,0,0,.28)}
+  .bento{gap:12px}
+  .steps{gap:12px}
+
+  /* 5. Cap oversized imagery so widgets stay compact */
+  .mentor-art img{max-width:220px;margin-inline:auto}
+  .hero-shot{max-width:210px}
+  .mentor-grid{gap:16px}
+
+  /* 6. Trust bar → horizontal scroll pill row (like an app's chip strip) */
+  .trustbar{border-block:0}
+  .trust-row{flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;gap:8px;padding:6px 16px 10px;-webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-snap-type:x proximity}
+  .trust-row::-webkit-scrollbar{display:none}
+  .trust-i{flex:0 0 auto;scroll-snap-align:start;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:8px 13px;font-size:.78rem}
+
+  /* 7. CTA band — compact widget */
+  .cta-band{padding:26px 18px;border-radius:20px}
+
+  /* 8. Pricing / outcomes / league already stack; keep them tight */
+  .plans-4,.outcomes,.league-grid{gap:12px}
+}
