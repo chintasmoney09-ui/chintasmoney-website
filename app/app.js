@@ -137,13 +137,37 @@
   }
   function logBtn() { var b = el('<button class="btn btn-primary">＋ Log a trade</button>'); b.addEventListener("click", function () { go("log"); }); return b; }
 
+  // What each locked area actually gives you — so the paywall sells, not just blocks.
+  var AREA_SELL = {
+    insights: { em: "🔍", title: "Mistake Insights", tag: "See every leak in your trading — ranked.", feats: ["Your repeating mistakes, ranked by how often they bleed you", "The exact rupee cost of each bad habit", "A fix for your #1 leak, updated as you log"] },
+    coach: { em: "✦", title: "AI Discipline Coach", tag: "A calm, honest verdict on every trade.", feats: ["Ask anything about your own trading, answered from your data", "Two-line honest verdicts: what worked, what's killing your account", "Weekly progress, win-rate & R:R coaching"] },
+    badges: { em: "🏅", title: "Streaks & Badges", tag: "Turn discipline into a game you want to win.", feats: ["Earn badges for real discipline habits — not for winning", "A 12-week activity heatmap of your consistency", "Daily streaks that keep you logging"] },
+    leaderboard: { em: "🏆", title: "Discipline League", tag: "Climb from Bronze to Diamond vs traders like you.", feats: ["Ranked on discipline, never on luck or P&L", "Weekly promotion & relegation zones", "A shareable rank card to flex your consistency"] },
+    strategy: { em: "▦", title: "Setup Performance", tag: "Find the setups that actually pay.", feats: ["Win-rate & net P&L for every setup you trade", "Spot the strategy quietly bleeding your account", "R-multiples & time-of-day edge"] }
+  };
   function paywall(area) {
     var need = CM.FEATURE_MATRIX[area], plan = CM.PLANS[need];
+    var s = AREA_SELL[area] || { em: "🔒", title: area, tag: plan.blurb, feats: [] };
     var w = el('<div></div>');
-    w.appendChild(topbar("Locked", "Part of the " + plan.name + " plan"));
-    var c = el('<div class="card paywall"><div class="lock-ic">🔒</div><h3>Unlock ' + area + '</h3><p class="hint">' + plan.blurb + ' — <b>' + (plan.price ? "₹" + plan.price + "/mo" : "Free") + '</b></p></div>');
-    var b = el('<button class="btn btn-primary" style="margin-top:8px">Upgrade to ' + plan.name + '</button>'); b.addEventListener("click", function () { go("profile"); });
-    c.appendChild(b); w.appendChild(c); return w;
+    w.appendChild(topbar(s.title, "A " + plan.name + " feature"));
+    var priceTxt = plan.price ? "₹" + plan.price + "/mo" : "Free";
+    var c = el('<div class="card paywall-sell"></div>');
+    c.innerHTML =
+      '<div class="pw-hero"><div class="pw-em">' + s.em + '</div>' +
+        '<div class="pw-lock">🔒 locked</div>' +
+        '<h2 class="pw-title">Unlock ' + esc(s.title) + '</h2>' +
+        '<p class="pw-tag">' + esc(s.tag) + '</p></div>' +
+      '<div class="pw-feats">' + s.feats.map(function (f) { return '<div class="pw-feat"><span>✓</span> ' + esc(f) + '</div>'; }).join("") + '</div>' +
+      '<div class="pw-price"><b>' + priceTxt + '</b>' + (plan.price ? '<span> · 7-day trial · cancel anytime</span>' : '') + '</div>';
+    var b = el('<button class="btn btn-primary btn-lg" style="width:100%;justify-content:center;margin-top:14px">Upgrade to ' + plan.name + ' →</button>');
+    b.addEventListener("click", function () { go("profile"); render(); });
+    c.appendChild(b);
+    var comp = el('<button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:8px">See all plans</button>');
+    comp.addEventListener("click", function () { go("profile"); render(); });
+    c.appendChild(comp);
+    c.appendChild(el('<p class="hint" style="text-align:center;margin-top:12px">Join disciplined traders across India. Discipline over profit.</p>'));
+    w.appendChild(c);
+    return w;
   }
 
   function scoreColor(n) { return n >= 75 ? "var(--emerald)" : n >= 50 ? "var(--gold)" : "var(--red)"; }

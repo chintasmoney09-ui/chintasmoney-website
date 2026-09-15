@@ -406,3 +406,17 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 
 /* Today's mission card */
 .mission-card{border-color:rgba(245,184,73,.4);background:linear-gradient(180deg,rgba(245,184,73,.06),var(--bg-2))}
+
+/* Richer paywall — sells the upgrade instead of a bare lock */
+.paywall-sell{max-width:520px;margin:0 auto;text-align:left}
+.pw-hero{text-align:center;padding:6px 0 4px}
+.pw-hero .pw-em{font-size:2.6rem;line-height:1}
+.pw-hero .pw-lock{display:inline-block;margin:8px 0 4px;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);background:rgba(245,184,73,.14);border:1px solid rgba(245,184,73,.35);border-radius:999px;padding:3px 10px}
+.pw-title{margin:6px 0 2px;font-size:1.5rem}
+.pw-tag{color:var(--ink-soft);margin:0 auto;max-width:34ch}
+.pw-feats{display:flex;flex-direction:column;gap:10px;margin:16px 0 4px}
+.pw-feat{display:flex;gap:10px;align-items:flex-start;background:var(--bg-2,#0f0b1c);border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-size:.92rem;color:var(--ink)}
+.pw-feat span{color:var(--emerald);font-weight:800;flex:0 0 auto}
+.pw-price{text-align:center;margin-top:14px;font-size:1.05rem}
+.pw-price b{color:var(--emerald);font-size:1.25rem}
+.pw-price span{color:var(--muted);font-size:.85rem}
