@@ -514,7 +514,8 @@ a.card:hover::after,.bento .card:hover::after{left:140%}
 
   /* 9. Quick-action circle row (app-style shortcuts) */
   .quick-actions{padding:14px 0 4px}
-  .qa-head{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+  .qa-head{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 3px}
+  .qa-sub{font-size:.82rem;color:var(--ink-soft);line-height:1.4;margin:0 0 12px;max-width:40ch}
   .qa-row{display:flex;gap:14px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   .qa-row::-webkit-scrollbar{display:none}
   .qa-item{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:7px;width:66px;text-align:center}
