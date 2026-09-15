@@ -550,6 +550,18 @@
     var mission = missionOf(st, ms, e);
     var mcard = el('<div class="card mission-card"><div class="card-hd"><h3>🎯 Today\'s mission</h3>' + (e.loggedToday ? '<span class="badge b-green">on track</span>' : '<span class="badge b-yellow">pending</span>') + '</div><div style="font-size:1.05rem;font-weight:700;color:var(--ink)">' + esc(mission.text) + '</div><div class="hint" style="margin-top:4px">' + esc(mission.why) + '</div></div>');
     feed.appendChild(mcard);
+    // New-here demo video (lazy facade; set data-yt to a YouTube id to go live)
+    var vcard = el('<div class="card"><div class="card-hd"><h3>🎬 New here? Watch the 2-min demo</h3></div><div class="vc-frame" data-yt=""><div class="vc-play">▶</div><span class="vc-badge">2-min walkthrough</span></div></div>');
+    var vf = vcard.querySelector(".vc-frame");
+    vf.addEventListener("click", function () {
+      var id = (vf.getAttribute("data-yt") || "").trim();
+      if (!id) { window.location.href = "../index.html#howto"; return; }
+      var ifr = document.createElement("iframe");
+      ifr.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(id) + "?autoplay=1&rel=0&modestbranding=1&playsinline=1";
+      ifr.setAttribute("allow", "autoplay; encrypted-media; picture-in-picture"); ifr.setAttribute("allowfullscreen", "");
+      ifr.style.cssText = "width:100%;height:100%;border:0;display:block"; vf.innerHTML = ""; vf.appendChild(ifr);
+    });
+    feed.appendChild(vcard);
     // 1. Chintamani tip
     feed.appendChild(chintaCard());
     // 2. discipline snapshot

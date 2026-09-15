@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20260915l" />
+  <link rel="stylesheet" href="styles.css?v=20260915o" />
 </head>
 <body>
   <!-- Header -->
@@ -68,6 +68,18 @@
     </div>
   </section>
 
+  <!-- See it in action -->
+  <section class="section" id="howto" style="padding-top:0">
+    <div class="container">
+      <div class="center reveal"><span class="eyebrow">2-min demo</span><h2>See it <span class="grad">in action</span></h2><p class="sub">Watch a quick walkthrough before you pick a plan.</p></div>
+      <div class="video-wrap reveal" id="ytFacade" data-yt="" role="button" tabindex="0" aria-label="Play the ChintasMoney walkthrough">
+        <img class="video-poster" src="assets/app-shot.png" alt="ChintasMoney walkthrough preview" loading="lazy" />
+        <span class="video-play"><span>▶</span></span>
+        <span class="video-badge">▶ Watch the 2-min demo</span>
+      </div>
+    </div>
+  </section>
+
   <!-- FAQ -->
   <section class="section" id="faq" style="padding-top:0">
     <div class="container">
@@ -89,5 +101,22 @@
       </div>
     </div>
   </section>
+
+  <script>
+    (function () {
+      var f = document.getElementById("ytFacade"); if (!f) return;
+      function play() {
+        var id = (f.getAttribute("data-yt") || "").trim();
+        if (!id) { window.location.href = "app/index.html"; return; }
+        var ifr = document.createElement("iframe");
+        ifr.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(id) + "?autoplay=1&rel=0&modestbranding=1&playsinline=1";
+        ifr.setAttribute("title", "ChintasMoney walkthrough");
+        ifr.setAttribute("allow", "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture");
+        ifr.setAttribute("allowfullscreen", ""); f.innerHTML = ""; f.appendChild(ifr); f.style.cursor = "default";
+      }
+      f.addEventListener("click", play);
+      f.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); play(); } });
+    })();
+  </script>
 </body>
 </html>

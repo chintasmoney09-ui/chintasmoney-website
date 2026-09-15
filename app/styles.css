@@ -440,3 +440,12 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .pw-preview *{pointer-events:none!important}
 .pw-peek{position:absolute;left:0;right:0;bottom:0;text-align:center;padding:16px 10px 12px;font-size:.8rem;font-weight:700;
   color:var(--ink);background:linear-gradient(180deg,transparent,var(--bg) 85%)}
+
+/* Today-feed demo video card (lazy facade) */
+.vc-frame{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;cursor:pointer;
+  background:linear-gradient(135deg,var(--surface),var(--bg-2));border:1px solid var(--line-2)}
+.vc-frame .vc-play{position:absolute;top:calc(50% - 27px);left:calc(50% - 27px);width:54px;height:54px;border-radius:50%;
+  display:grid;place-items:center;font-size:1.4rem;color:#04120b;background:linear-gradient(135deg,var(--emerald),var(--teal));
+  box-shadow:0 8px 24px rgba(34,224,138,.5);padding-left:4px}
+.vc-frame .vc-badge{position:absolute;left:10px;bottom:10px;background:rgba(10,7,19,.7);border:1px solid var(--line);
+  border-radius:999px;padding:4px 10px;font-size:.74rem;font-weight:700;color:var(--ink)}
