@@ -51,7 +51,11 @@
       // "authed" or "error" → continue into the app
     }
     if (!CM.load().profile.onboarded) { renderOnboarding(); return; }
-    root.innerHTML = ""; root.appendChild(shell(route()));
+    var r = route();
+    root.innerHTML = ""; root.appendChild(shell(r));
+    // Keep the browser tab / history entry meaningful per view.
+    var navItem = NAV.filter(function (n) { return n.id === r; })[0];
+    document.title = (navItem ? navItem.label : "Dashboard") + " · ChintasMoney";
   }
 
   // ---- Auth screen (cloud mode) --------------------------------------------
