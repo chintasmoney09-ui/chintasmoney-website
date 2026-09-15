@@ -34,7 +34,7 @@ body{
 }
 a{color:inherit;text-decoration:none}
 img{max-width:100%;display:block}
-.container{width:100%;max-width:var(--maxw);margin:0 auto;padding-inline:22px}
+.container{width:100%;max-width:var(--maxw);margin:0 auto;padding-inline:calc(22px + env(safe-area-inset-left,0px)) calc(22px + env(safe-area-inset-right,0px))}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .up{color:var(--green)} .down{color:var(--red)} .muted{color:var(--muted)}
 .grad{background:linear-gradient(100deg,var(--green),var(--teal) 60%,var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent}
