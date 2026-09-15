@@ -509,4 +509,25 @@ a.card:hover::after,.bento .card:hover::after{left:140%}
 
   /* 8. Pricing / outcomes / league already stack; keep them tight */
   .plans-4,.outcomes,.league-grid{gap:12px}
+
+  /* 9. Quick-action circle row (app-style shortcuts) */
+  .quick-actions{padding:14px 0 4px}
+  .qa-head{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+  .qa-row{display:flex;gap:14px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .qa-row::-webkit-scrollbar{display:none}
+  .qa-item{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:7px;width:66px;text-align:center}
+  .qa-ic{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;font-size:1.5rem;
+    background:linear-gradient(180deg,var(--panel),var(--bg-2));border:1px solid var(--line);
+    box-shadow:0 6px 16px rgba(0,0,0,.32);transition:transform .15s ease,border-color .15s ease}
+  .qa-item:active .qa-ic{transform:scale(.94)}
+  .qa-item:hover .qa-ic{border-color:rgba(34,224,138,.5)}
+  .qa-lbl{font-size:.72rem;color:var(--ink-soft);line-height:1.15;font-weight:600}
+
+  /* 10. "More free tools" → horizontal scroll card carousel */
+  #tools .bento{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory;scrollbar-width:none}
+  #tools .bento::-webkit-scrollbar{display:none}
+  #tools .bento > *{flex:0 0 80%;scroll-snap-align:start}
 }
+/* mobile-only helper — hidden on desktop, shown as block on phones */
+.mobile-only{display:none}
+@media(max-width:640px){.mobile-only{display:block}}
