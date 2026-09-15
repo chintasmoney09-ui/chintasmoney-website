@@ -432,3 +432,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .side-upsell .su-feats{font-size:.78rem;color:var(--ink-soft);line-height:1.6}
 .side-upsell .su-cta{margin-top:10px;background:linear-gradient(90deg,var(--emerald),var(--teal));color:#04120b;
   font-weight:800;font-size:.82rem;text-align:center;border-radius:10px;padding:9px}
+
+/* Blurred live preview behind the paywall — shows the real feature */
+.pw-stage{position:relative;margin-bottom:18px;border-radius:16px;overflow:hidden;border:1px solid var(--line)}
+.pw-preview{max-height:340px;overflow:hidden;filter:blur(5px) saturate(1.1);opacity:.6;pointer-events:none;
+  transform:scale(.99);-webkit-mask:linear-gradient(#000 55%,transparent);mask:linear-gradient(#000 55%,transparent)}
+.pw-preview *{pointer-events:none!important}
+.pw-peek{position:absolute;left:0;right:0;bottom:0;text-align:center;padding:16px 10px 12px;font-size:.8rem;font-weight:700;
+  color:var(--ink);background:linear-gradient(180deg,transparent,var(--bg) 85%)}

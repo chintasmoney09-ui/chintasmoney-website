@@ -164,6 +164,19 @@
     var w = el('<div></div>');
     w.appendChild(topbar(s.title, "A " + plan.name + " feature"));
     var priceTxt = plan.price ? "₹" + plan.price + "/mo" : "Free";
+    // Blurred live preview of the REAL feature — a teaser, not a wall.
+    try {
+      if (VIEWS[area]) {
+        var prev = el('<div class="pw-preview" aria-hidden="true"></div>');
+        var pv = VIEWS[area]();
+        var tb0 = pv.querySelector && pv.querySelector(".topbar"); if (tb0) tb0.remove();
+        prev.appendChild(pv);
+        var stage = el('<div class="pw-stage"></div>');
+        stage.appendChild(prev);
+        stage.appendChild(el('<div class="pw-peek">👀 a peek at your real ' + esc(s.title) + '</div>'));
+        w.appendChild(stage);
+      }
+    } catch (e) {}
     var c = el('<div class="card paywall-sell"></div>');
     c.innerHTML =
       '<div class="pw-hero"><div class="pw-em">' + s.em + '</div>' +
