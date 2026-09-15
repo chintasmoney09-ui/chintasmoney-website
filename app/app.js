@@ -454,6 +454,16 @@
     return w;
   }
 
+  // Personalised daily mission: target the weakest habit first, else keep sharp.
+  function missionOf(st, ms, e) {
+    if (!st.count) return { text: "Log your first trade — honestly.", why: "You can't fix what you don't measure. Even a bad trade counts." };
+    if (st.noSL > 0) return { text: "Set a stop-loss on every trade today.", why: "You've traded without a stop " + st.noSL + " time(s). No stop = no trade." };
+    if (st.emotional > 0) return { text: "Trade calm — no revenge, no FOMO.", why: "Emotional exits have cost you before. After a loss, step away for 10 minutes." };
+    if (st.overtradeDays > 0) return { text: "Take only your A+ setups — quality over quantity.", why: "You've had overtrading days. Fewer, better trades beat more trades." };
+    if (!e.loggedToday) return { text: "Keep your streak alive — log today's trades.", why: "Consistency is the habit that compounds. Don't break the chain. 🔥" };
+    return { text: "Protect your edge — stick to your plan.", why: "Your discipline is strong (" + st.discipline + "). Today's job is simply not to slip." };
+  }
+
   function hiText() { var h = new Date().getHours(); return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening"; }
   function todayHero() {
     var s = CM.load(), st = CM.stats(), e = CM.engagement();
@@ -482,6 +492,10 @@
     v.appendChild(topbar("Today", "Your daily money mirror — a fresh look every time you open.", [logBtn()]));
     v.appendChild(todayHero());
     var feed = el('<div class="grid" style="max-width:680px;margin:0 auto"></div>');
+    // 0. Today's mission — a personalised daily discipline focus
+    var mission = missionOf(st, ms, e);
+    var mcard = el('<div class="card mission-card"><div class="card-hd"><h3>🎯 Today\'s mission</h3>' + (e.loggedToday ? '<span class="badge b-green">on track</span>' : '<span class="badge b-yellow">pending</span>') + '</div><div style="font-size:1.05rem;font-weight:700;color:var(--ink)">' + esc(mission.text) + '</div><div class="hint" style="margin-top:4px">' + esc(mission.why) + '</div></div>');
+    feed.appendChild(mcard);
     // 1. Chintamani tip
     feed.appendChild(chintaCard());
     // 2. discipline snapshot
