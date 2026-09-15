@@ -62,7 +62,7 @@ img { max-width: 100%; }
 .nav-item .ic { width: 20px; text-align: center; }
 .nav-item:hover { background: rgba(167,139,250,.1); color: #fff; }
 .nav-item.active { background: rgba(139,92,246,.22); color: #fff; border-color: rgba(167,139,250,.45); box-shadow: var(--glow); }
-.nav-item .lock { margin-left: auto; font-size: .7rem; color: var(--gold); }
+.nav-item .lock { margin-left: auto; font-size: .62rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--gold); background: rgba(245,184,73,.14); border: 1px solid rgba(245,184,73,.35); border-radius: 999px; padding: 2px 7px; }
 .nav-sep { height: 1px; background: rgba(255,255,255,.08); margin: 8px 4px; }
 .side-foot { margin-top: auto; padding: 10px 8px; }
 .plan-pill { display: inline-flex; align-items: center; gap: 6px; font-size: .72rem; font-weight: 700; color: #1b1436;

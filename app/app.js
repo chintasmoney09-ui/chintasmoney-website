@@ -101,7 +101,8 @@
     NAV.forEach(function (n) {
       if (n.sep) { side.appendChild(el('<div class="nav-sep"></div>')); if (n.group) side.appendChild(el('<div style="color:#6f83ab;font-size:.66rem;letter-spacing:.08em;padding:2px 10px 4px">' + n.group.toUpperCase() + '</div>')); return; }
       var locked = !CM.planAllows(s.profile.plan, n.id);
-      var a = el('<a class="nav-item' + (r === n.id ? " active" : "") + '" href="#/' + n.id + '"><span class="ic">' + n.ic + '</span><span>' + n.label + '</span>' + (locked ? '<span class="lock">🔒</span>' : '') + '</a>');
+      var needName = locked ? (CM.PLANS[CM.FEATURE_MATRIX[n.id]] || {}).name : "";
+      var a = el('<a class="nav-item' + (r === n.id ? " active" : "") + '" href="#/' + n.id + '"><span class="ic">' + n.ic + '</span><span>' + n.label + '</span>' + (locked ? '<span class="lock">✦ ' + esc(needName) + '</span>' : '') + '</a>');
       a.addEventListener("click", function () { mobileOpen = false; });
       side.appendChild(a);
     });
@@ -166,7 +167,7 @@
     var c = el('<div class="card paywall-sell"></div>');
     c.innerHTML =
       '<div class="pw-hero"><div class="pw-em">' + s.em + '</div>' +
-        '<div class="pw-lock">🔒 locked</div>' +
+        '<div class="pw-lock">✨ Preview · ' + esc(plan.name) + ' feature</div>' +
         '<h2 class="pw-title">Unlock ' + esc(s.title) + '</h2>' +
         '<p class="pw-tag">' + esc(s.tag) + '</p></div>' +
       '<div class="pw-feats">' + s.feats.map(function (f) { return '<div class="pw-feat"><span>✓</span> ' + esc(f) + '</div>'; }).join("") + '</div>' +
