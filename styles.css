@@ -733,3 +733,17 @@ a.card:hover::after,.bento .card:hover::after{left:140%}
     border-radius:12px;padding:12px;text-align:center;display:flex;flex-direction:column;gap:2px;position:relative;z-index:1}
   .prem-cta small{color:#04120b;opacity:.7;font-size:.72rem;font-weight:700}
 }
+
+/* Chintamani persona sell card (mobile) */
+@media(max-width:640px){
+  .chinta-sell{display:flex;gap:12px;align-items:center;padding:14px;border-radius:18px;text-decoration:none;
+    background:linear-gradient(135deg,rgba(245,184,73,.10),rgba(34,224,138,.10));border:1px solid rgba(245,184,73,.35);
+    box-shadow:0 8px 22px rgba(0,0,0,.3);transition:transform .16s ease}
+  .chinta-sell:active{transform:scale(.98)}
+  .chinta-sell .cs-face{width:62px;height:62px;border-radius:50%;object-fit:cover;flex:0 0 auto;
+    border:2px solid rgba(245,184,73,.5);background:var(--bg-2)}
+  .chinta-sell .cs-name{font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+  .chinta-sell .cs-quote{font-size:.86rem;color:var(--ink);line-height:1.45;margin:3px 0 6px;font-style:italic}
+  .chinta-sell .cs-quote b{color:var(--green);font-style:normal}
+  .chinta-sell .cs-cta{font-size:.82rem;font-weight:800;color:var(--green)}
+}
