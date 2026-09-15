@@ -300,12 +300,12 @@ a.card:hover::after,.bento .card:hover::after{left:140%}
   .bento{grid-template-columns:repeat(2,1fr)}
   .col-2,.col-3,.col-4,.col-6{grid-column:span 2}
   .step .arrow{display:none}
-  /* Mobile header: centered logo + hamburger only */
-  .nav{min-height:118px;padding-inline:20px}
-  .hdr .brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);gap:3px;max-width:72vw}
-  .hdr .brand img{height:88px}
-  .hdr .brand-name{font-size:1rem}
-  .nav-toggle{display:flex;margin-left:auto}
+  /* Mobile header: compact app-bar — logo + wordmark left, hamburger right */
+  .nav{min-height:58px;padding-block:8px}
+  .hdr .brand{position:static;transform:none;flex-direction:row;align-items:center;gap:9px;max-width:calc(100% - 60px)}
+  .hdr .brand img{height:36px;flex:0 0 auto}
+  .hdr .brand-name{font-size:1.02rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nav-toggle{display:flex;flex:0 0 auto}
   /* Right-side navigation drawer */
   .nav-links{position:fixed;top:0;right:0;height:100dvh;width:min(84vw,330px);
     flex-direction:column;align-items:stretch;justify-content:flex-start;gap:.35rem;
@@ -469,12 +469,6 @@ a.card:hover::after,.bento .card:hover::after{left:140%}
    cards & sections — inspired by modern fintech app home screens.
    ============================================================ */
 @media(max-width:640px){
-  /* 0. Compact sticky header — the giant logo shrinks to an app-bar size */
-  .nav{min-height:60px;padding-block:8px}
-  .brand{flex-direction:row;gap:8px}
-  .brand img{height:38px}
-  .brand-name{font-size:1rem}
-
   /* 1. Tighten the whole page — no more giant dead space between sections */
   .section{padding:22px 0}
   .section[style*="padding-top:0"]{padding-top:0}
