@@ -299,3 +299,22 @@
     }
   } catch (e) {}
 })();
+
+/* On mobile, sections moved off the home are reached via the app / pricing
+   page — repoint any in-page anchors that now point to hidden sections. */
+(function () {
+  try {
+    if (!window.matchMedia || !window.matchMedia("(max-width:640px)").matches) return;
+    var map = {
+      "#calc": "app/index.html#/calc",
+      "#charts": "app/index.html#/markets",
+      "#league": "app/index.html#/leaderboard",
+      "#pricing": "pricing.html",
+      "#faq": "pricing.html#faq"
+    };
+    document.querySelectorAll("a[href]").forEach(function (a) {
+      var h = a.getAttribute("href");
+      if (map[h]) a.setAttribute("href", map[h]);
+    });
+  } catch (e) {}
+})();
