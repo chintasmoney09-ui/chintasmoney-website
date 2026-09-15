@@ -575,3 +575,40 @@ a.card:hover::after,.bento .card:hover::after{left:140%}
     box-shadow:0 6px 18px rgba(34,224,138,.45);border:3px solid var(--bg)}
   .tab-cta{color:var(--green)}
 }
+
+/* ============================================================
+   MOBILE — addictive micro-interactions, shapes & guidance
+   ============================================================ */
+@media(max-width:640px){
+  /* Tactile press feedback on every tappable widget */
+  .card,.xchip,.qa-item,.plan,.promo-btn,.co-item{transition:transform .16s cubic-bezier(.2,.7,.3,1),box-shadow .2s ease,border-color .2s ease}
+  .card:active,.xchip:active,.qa-item:active,.plan:active,.co-item:active{transform:scale(.97)}
+
+  /* Cards pop + rise as they enter (reveal already fades; add spring scale) */
+  .reveal{transform:translateY(20px) scale(.98)}
+  .reveal.in{transform:none}
+
+  /* Decorative brand glow behind the app-home widget stack */
+  .quick-actions{position:relative}
+  .quick-actions::before{content:"";position:absolute;top:-30px;left:-40px;width:220px;height:220px;border-radius:50%;
+    background:radial-gradient(circle,rgba(34,224,138,.16),transparent 70%);filter:blur(8px);pointer-events:none;z-index:0}
+  .explore-cred{position:relative}
+  .explore-cred::after{content:"";position:absolute;top:40px;right:-50px;width:200px;height:200px;border-radius:50%;
+    background:radial-gradient(circle,rgba(124,139,255,.14),transparent 70%);filter:blur(8px);pointer-events:none;z-index:0}
+  .quick-actions .container,.explore-cred .container{position:relative;z-index:1}
+
+  /* Guiding 'start here' pulse on the first quick-action (report card) */
+  .qa-row .qa-item:first-child .qa-ic{position:relative}
+  .qa-row .qa-item:first-child .qa-ic::after{content:"";position:absolute;inset:-3px;border-radius:50%;
+    border:2px solid rgba(34,224,138,.55);animation:qaPulse 2.4s ease-out infinite}
+  @keyframes qaPulse{0%{transform:scale(1);opacity:.8}70%{transform:scale(1.35);opacity:0}100%{opacity:0}}
+
+  /* Chip icons in soft circles for a friendlier, app-like feel */
+  .xchip span{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:50%;
+    background:rgba(255,255,255,.05);border:1px solid var(--line)}
+
+  @media(prefers-reduced-motion:reduce){
+    .qa-row .qa-item:first-child .qa-ic::after{animation:none}
+    .card:active,.xchip:active,.qa-item:active,.plan:active{transform:none}
+  }
+}
