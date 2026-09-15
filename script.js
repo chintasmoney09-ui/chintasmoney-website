@@ -318,3 +318,24 @@
     });
   } catch (e) {}
 })();
+
+/* How-it-works video: lazy YouTube facade. Paste a video ID into
+   #ytFacade[data-yt] and it loads on click (no ID yet -> opens the app). */
+(function () {
+  var f = document.getElementById("ytFacade");
+  if (!f) return;
+  function play() {
+    var id = (f.getAttribute("data-yt") || "").trim();
+    if (!id) { window.location.href = "app/index.html"; return; }
+    var ifr = document.createElement("iframe");
+    ifr.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(id) + "?autoplay=1&rel=0&modestbranding=1&playsinline=1";
+    ifr.setAttribute("title", "ChintasMoney walkthrough");
+    ifr.setAttribute("allow", "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture");
+    ifr.setAttribute("allowfullscreen", "");
+    f.innerHTML = "";
+    f.appendChild(ifr);
+    f.style.cursor = "default";
+  }
+  f.addEventListener("click", play);
+  f.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); play(); } });
+})();
