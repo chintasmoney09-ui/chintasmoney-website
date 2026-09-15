@@ -105,6 +105,18 @@
       a.addEventListener("click", function () { mobileOpen = false; });
       side.appendChild(a);
     });
+    // Sidebar upsell — sells the upgrade (hidden for Diamond, the top plan)
+    if (s.profile.plan !== "diamond") {
+      var nextName = s.profile.plan === "free" ? "Plus" : "Platinum";
+      var nextPrice = s.profile.plan === "free" ? "₹199" : "₹499";
+      var up = el('<a class="side-upsell" href="#/profile">' +
+        '<span class="su-badge">💎 7-day trial free</span>' +
+        '<div class="su-title">Go ' + nextName + '</div>' +
+        '<div class="su-feats">✓ Unlimited logging<br>✓ AI Discipline Coach<br>✓ Deep analytics &amp; league</div>' +
+        '<div class="su-cta">Upgrade — from ' + nextPrice + '/mo →</div></a>');
+      up.addEventListener("click", function () { mobileOpen = false; });
+      side.appendChild(up);
+    }
     var foot = el('<div class="side-foot"><span class="plan-pill">● ' + CM.PLANS[s.profile.plan].name + ' plan</span>' +
       '<div class="side-legal"><a href="../learn.html">Learn</a> · <a href="../privacy.html">Privacy</a> · <a href="../terms.html">Terms</a> · <a href="../disclaimer.html">Disclaimer</a></div>' +
       '<div class="side-legal" style="margin-top:6px">Not investment advice · F&amp;O is risky.</div></div>');

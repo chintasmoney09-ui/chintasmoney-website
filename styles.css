@@ -691,3 +691,45 @@ a.card:hover::after,.bento .card:hover::after{left:140%}
     .intro-inner img{animation:none}.intro-inner::before{animation:none}
   }
 }
+
+/* ============================================================
+   Mobile SELL blocks — unlock showcase + premium greed teaser
+   ============================================================ */
+@media(max-width:640px){
+  .showcase{padding:14px 0 4px}
+  .show-row{display:flex;gap:12px;overflow-x:auto;padding:4px 2px 10px;scroll-snap-type:x mandatory;scrollbar-width:none}
+  .show-row::-webkit-scrollbar{display:none}
+  .show-card{flex:0 0 76%;scroll-snap-align:start;display:flex;flex-direction:column;gap:8px;
+    background:linear-gradient(180deg,var(--panel),var(--bg-2));border:1px solid var(--line);border-radius:18px;
+    padding:16px;box-shadow:0 8px 22px rgba(0,0,0,.3);transition:transform .16s ease,border-color .2s}
+  .show-card:active{transform:scale(.97)}
+  .show-card .sc-t{font-weight:800;font-size:1.05rem;color:var(--ink)}
+  .show-card .sc-d{font-size:.85rem;color:var(--ink-soft);line-height:1.4}
+  .sc-gauge{width:96px;height:96px;margin:2px auto 2px}
+  .sc-fig{height:70px;width:100%}
+  .sc-bars{display:flex;align-items:flex-end;gap:8px;height:70px}
+  .sc-bars i{flex:1;border-radius:6px 6px 0 0;background:linear-gradient(180deg,#22e08a,#12b877)}
+  .sc-rank{display:flex;gap:10px;align-items:center;justify-content:center;font-size:2rem;height:70px}
+  .sc-coach{display:flex;align-items:center;height:70px;font-style:italic;color:var(--ink-soft);font-size:.9rem;
+    background:rgba(124,139,255,.08);border:1px solid rgba(124,139,255,.25);border-radius:12px;padding:8px 10px}
+  .sc-score{background:linear-gradient(180deg,rgba(34,224,138,.10),var(--bg-2));border-color:rgba(34,224,138,.35)}
+
+  /* Premium greed teaser */
+  .prem-card{position:relative;display:block;overflow:hidden;border-radius:20px;padding:18px;
+    background:linear-gradient(135deg,rgba(34,224,138,.16),rgba(124,139,255,.16));border:1px solid rgba(34,224,138,.4);
+    box-shadow:0 12px 30px rgba(0,0,0,.4);transition:transform .16s ease}
+  .prem-card:active{transform:scale(.98)}
+  .prem-glow{position:absolute;top:-40px;right:-40px;width:180px;height:180px;border-radius:50%;
+    background:radial-gradient(circle,rgba(34,224,138,.35),transparent 70%);filter:blur(6px);pointer-events:none}
+  .prem-top{display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1}
+  .prem-badge{font-size:.72rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#04120b;
+    background:var(--gold);border-radius:999px;padding:4px 10px}
+  .prem-price{font-size:1.35rem;font-weight:800;color:#fff}
+  .prem-price small{font-size:.8rem;color:var(--ink-soft);font-weight:600}
+  .prem-title{font-size:1.25rem;font-weight:800;color:#fff;margin:10px 0 8px;position:relative;z-index:1}
+  .prem-feats{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;position:relative;z-index:1}
+  .prem-feats span{font-size:.85rem;color:var(--ink);font-weight:600}
+  .prem-cta{margin-top:14px;background:linear-gradient(90deg,var(--green),var(--teal));color:#04120b;font-weight:800;
+    border-radius:12px;padding:12px;text-align:center;display:flex;flex-direction:column;gap:2px;position:relative;z-index:1}
+  .prem-cta small{color:#04120b;opacity:.7;font-size:.72rem;font-weight:700}
+}

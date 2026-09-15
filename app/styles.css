@@ -420,3 +420,15 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .pw-price{text-align:center;margin-top:14px;font-size:1.05rem}
 .pw-price b{color:var(--emerald);font-size:1.25rem}
 .pw-price span{color:var(--muted);font-size:.85rem}
+
+/* Sidebar upsell card — sells the upgrade from inside the app */
+.side-upsell{display:block;margin:12px 8px 4px;padding:13px 14px;border-radius:16px;text-decoration:none;
+  background:linear-gradient(140deg,rgba(34,224,138,.18),rgba(139,92,246,.18));
+  border:1px solid rgba(34,224,138,.4);box-shadow:0 8px 22px rgba(0,0,0,.35);transition:transform .16s ease,box-shadow .2s}
+.side-upsell:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(34,224,138,.28)}
+.side-upsell .su-badge{display:inline-block;font-size:.64rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+  color:#04120b;background:var(--gold);border-radius:999px;padding:3px 9px}
+.side-upsell .su-title{font-size:1.05rem;font-weight:800;color:#fff;margin:8px 0 6px}
+.side-upsell .su-feats{font-size:.78rem;color:var(--ink-soft);line-height:1.6}
+.side-upsell .su-cta{margin-top:10px;background:linear-gradient(90deg,var(--emerald),var(--teal));color:#04120b;
+  font-weight:800;font-size:.82rem;text-align:center;border-radius:10px;padding:9px}
