@@ -612,3 +612,9 @@ a.card:hover::after,.bento .card:hover::after{left:140%}
     .card:active,.xchip:active,.qa-item:active,.plan:active{transform:none}
   }
 }
+
+/* Mobile: keep the home tight — supplementary/decorative sections move
+   off the mobile home (still on desktop; features promoted via chips). */
+@media(max-width:640px){
+  .hide-mobile,#snapshot,#movers{display:none!important}
+}
