@@ -272,3 +272,30 @@
     if (window.__cmSetChartLoader) window.__cmSetChartLoader(mountMkt);
   }
 })();
+
+/* Intro logo splash (once per session) + scroll-shrink header logo */
+(function () {
+  // Smoothly shrink the big centered logo as the page scrolls.
+  var hdr = document.querySelector(".hdr");
+  if (hdr) {
+    var onScroll = function () { hdr.classList.toggle("scrolled", (window.scrollY || window.pageYOffset) > 40); };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+  }
+  // One-time entry splash: the logo eases in, then reveals the site.
+  try {
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!reduce && !sessionStorage.getItem("cm.introSeen")) {
+      var ov = document.createElement("div");
+      ov.className = "intro";
+      ov.innerHTML = '<div class="intro-inner"><img src="assets/logo-tile.png" alt="ChintasMoney" /><div class="intro-name">Chinta\'s <span>🤑</span> <b>Money</b></div></div>';
+      document.body.appendChild(ov);
+      document.body.style.overflow = "hidden";
+      requestAnimationFrame(function () { ov.classList.add("run"); });
+      var done = function () { ov.classList.add("out"); document.body.style.overflow = ""; setTimeout(function () { if (ov.parentNode) ov.parentNode.removeChild(ov); }, 550); };
+      setTimeout(done, 1500);
+      ov.addEventListener("click", done);
+      sessionStorage.setItem("cm.introSeen", "1");
+    }
+  } catch (e) {}
+})();

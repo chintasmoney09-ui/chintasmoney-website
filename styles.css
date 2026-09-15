@@ -646,3 +646,48 @@ a.card:hover::after,.bento .card:hover::after{left:140%}
   .step .num,.step-n{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;
     background:linear-gradient(135deg,var(--green),var(--teal));color:#04120b;font-weight:800}
 }
+
+/* ============================================================
+   Intro splash + scroll-shrink logo + more swipe rows
+   ============================================================ */
+/* One-time entry splash — logo eases in with a sweeping ring */
+.intro{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:
+  radial-gradient(600px 400px at 50% 40%,rgba(34,224,138,.10),transparent 70%),var(--bg);
+  transition:opacity .5s ease}
+.intro.out{opacity:0;pointer-events:none}
+.intro-inner{position:relative;display:flex;flex-direction:column;align-items:center;gap:14px;
+  transform:scale(.82);opacity:0;transition:transform .8s cubic-bezier(.2,.85,.25,1),opacity .7s ease}
+.intro.run .intro-inner{transform:scale(1);opacity:1}
+.intro-inner img{height:118px;border-radius:26px;filter:drop-shadow(0 14px 44px rgba(34,224,138,.45));animation:introFloat 2.2s ease-in-out infinite}
+.intro-name{font-size:1.4rem;font-weight:800;letter-spacing:-.02em}
+.intro-name b{color:var(--green)}
+.intro-inner::before{content:"";position:absolute;top:14px;width:180px;height:180px;border-radius:50%;
+  border:2px solid rgba(34,224,138,.35);animation:introRing 1.5s ease-out infinite}
+@keyframes introFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+@keyframes introRing{0%{transform:scale(.55);opacity:.85}100%{transform:scale(1.5);opacity:0}}
+
+@media(max-width:640px){
+  /* Smoothly shrink the big centered logo as the page scrolls */
+  .hdr .brand img{transition:height .35s cubic-bezier(.2,.7,.3,1)}
+  .hdr .nav{transition:min-height .35s ease,padding .35s ease}
+  .hdr.scrolled .nav{min-height:52px;padding-block:6px}
+  .hdr.scrolled .brand img{height:34px}
+  .hdr.scrolled .brand-name{font-size:.98rem}
+
+  /* More swipeable rows, with varied card sizes for rhythm */
+  #how .steps,#who .bento,#features .bento,.outcomes,.quotes{display:flex;grid-template-columns:none;gap:12px;
+    overflow-x:auto;padding:4px 2px 10px;scroll-snap-type:x mandatory;scrollbar-width:none}
+  #how .steps::-webkit-scrollbar,#who .bento::-webkit-scrollbar,#features .bento::-webkit-scrollbar,.outcomes::-webkit-scrollbar,.quotes::-webkit-scrollbar{display:none}
+  #how .steps>*{flex:0 0 80%;scroll-snap-align:center}
+  #who .bento>*{flex:0 0 78%;scroll-snap-align:start}
+  #features .bento>*{flex:0 0 82%;scroll-snap-align:start}
+  .outcomes>*{flex:0 0 60%;scroll-snap-align:start}
+  .quotes>*{flex:0 0 84%;scroll-snap-align:start}
+  /* swipe hint under sections that now slide */
+  #how .center::after,#who .center::after{content:"‹ swipe ›";display:block;margin-top:8px;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+  @media(prefers-reduced-motion:reduce){
+    .hdr .brand img,.hdr .nav{transition:none}
+    .intro-inner img{animation:none}.intro-inner::before{animation:none}
+  }
+}
