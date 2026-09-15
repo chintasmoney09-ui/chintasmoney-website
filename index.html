@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20260915b" />
+  <link rel="stylesheet" href="styles.css?v=20260915c" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -126,6 +126,36 @@
         <a class="qa-item" href="app/index.html#/markets"><span class="qa-ic">📈</span><span class="qa-lbl">live charts</span></a>
         <a class="qa-item" href="app/index.html#/checklist"><span class="qa-ic">✅</span><span class="qa-lbl">pre-trade</span></a>
         <a class="qa-item" href="app/index.html#/badges"><span class="qa-ic">🎁</span><span class="qa-lbl">rewards</span></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Explore (mobile app-style chip grid) -->
+  <section class="explore-cred mobile-only" aria-label="Explore">
+    <div class="container">
+      <div class="qa-head" style="display:flex;justify-content:space-between;align-items:center">explore chintasmoney <a href="app/index.html" style="color:var(--green);font-size:.72rem;letter-spacing:0;text-transform:none">open app ›</a></div>
+      <div class="chip-grid">
+        <a class="xchip" href="app/index.html#/home"><span>◎</span> report card</a>
+        <a class="xchip" href="app/index.html#/calc"><span>🧮</span> risk calc</a>
+        <a class="xchip" href="app/index.html#/markets"><span>📈</span> live charts</a>
+        <a class="xchip" href="app/index.html#/checklist"><span>✅</span> pre-trade</a>
+        <a class="xchip" href="app/index.html#/dreams"><span>💭</span> dream planner</a>
+        <a class="xchip" href="app/index.html#/leaderboard"><span>🏆</span> league</a>
+        <a class="xchip" href="app/index.html#/badges"><span>🎁</span> rewards</a>
+        <a class="xchip" href="learn.html"><span>📚</span> learn</a>
+        <a class="xchip" href="#pricing"><span>💎</span> pricing</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Progress promo (mobile) -->
+  <section class="mobile-only" aria-label="Get started" style="padding:6px 0 4px">
+    <div class="container">
+      <div class="promo-card">
+        <div class="promo-title">unlock your Discipline Score</div>
+        <div class="promo-sub">log 3 trades to see your trader personality &amp; biggest leak</div>
+        <div class="promo-track"><i></i><i></i><i></i></div>
+        <a href="app/index.html" class="promo-btn">Start now — it's free</a>
       </div>
     </div>
   </section>
@@ -548,6 +578,15 @@
     <p class="disclaimer">© <span id="year"></span> ChintasMoney · Discipline over profit. ChintasMoney is a trading self-awareness &amp; journaling tool. It gives <b>no</b> buy/sell calls, tips, or investment advice and makes no return claims, and is not a SEBI-registered adviser. F&amp;O trading is risky and most traders lose money. All tools are educational, not advice. See our <a href="/disclaimer.html" style="color:var(--ink-soft);text-decoration:underline">Risk Disclaimer</a>.</p>
   </div></footer>
 
-  <script src="script.js?v=20260915b"></script>
+  <!-- Mobile bottom tab bar (app-style) -->
+  <nav class="tabbar mobile-only" aria-label="Primary">
+    <a href="#top" class="tab"><span class="tab-ic">🏠</span><span>home</span></a>
+    <a href="#charts" class="tab"><span class="tab-ic">📈</span><span>charts</span></a>
+    <a href="app/index.html" class="tab tab-cta"><span class="tab-ic">₹</span><span>get score</span></a>
+    <a href="#pricing" class="tab"><span class="tab-ic">💎</span><span>plans</span></a>
+    <a href="app/index.html#/badges" class="tab"><span class="tab-ic">🎁</span><span>rewards</span></a>
+  </nav>
+
+  <script src="script.js?v=20260915c"></script>
 </body>
 </html>
