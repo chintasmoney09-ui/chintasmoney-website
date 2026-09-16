@@ -18,8 +18,9 @@ window.CM_CONFIG = {
   // Subscription prices in paise (₹199 = 19900). Editable anytime.
   planPrices: { plus: 19900, pro: 49900 },
 
-  // Optional Google sign-in (enable the Google provider in Supabase Auth first)
-  enableGoogle: true,
+  // Optional Google sign-in. Keep false until you enable the Google provider in
+  // Supabase → Authentication → Providers → Google, then flip this to true.
+  enableGoogle: false,
 
   // false = app works offline and sign-in is optional (a "Sign in to sync"
   // button appears). true = users must log in before using the app.
