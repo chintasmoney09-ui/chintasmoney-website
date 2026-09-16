@@ -542,3 +542,10 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .tok-pack-p { font-size: 1.5rem; font-weight: 800; color: var(--emerald); margin: 2px 0; }
 .tok-sub { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
   margin-top: 18px; padding: 16px; border-radius: 14px; border: 1px solid rgba(34,224,138,.30); background: rgba(34,224,138,.06); }
+
+/* Technical indicators — legend + stat cards */
+.ind-wrap { margin-top: 10px; }
+.ind-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .78rem; font-weight: 700; margin-bottom: 10px; }
+.ind-stats { gap: 10px; }
+.ind-card { text-align: center; padding: 12px 10px; border-radius: 12px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); }
+.ind-card .ind-v { font-size: 1.3rem; font-weight: 800; color: var(--ink); line-height: 1.15; margin: 2px 0; }

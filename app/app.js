@@ -1646,6 +1646,62 @@
     return wrap;
   }
 
+  // ---- Technical indicators (computed client-side from candles) ------------
+  function _sma(candles, period) {
+    var out = [], sum = 0;
+    for (var i = 0; i < candles.length; i++) {
+      sum += candles[i].close; if (i >= period) sum -= candles[i - period].close;
+      if (i >= period - 1) out.push({ time: candles[i].time, value: sum / period });
+    }
+    return out;
+  }
+  function _bollinger(candles, period, mult) {
+    var up = [], lo = [];
+    for (var i = period - 1; i < candles.length; i++) {
+      var m = 0, j; for (j = i - period + 1; j <= i; j++) m += candles[j].close; m /= period;
+      var v = 0; for (j = i - period + 1; j <= i; j++) { var d = candles[j].close - m; v += d * d; }
+      var sd = Math.sqrt(v / period);
+      up.push({ time: candles[i].time, value: m + mult * sd }); lo.push({ time: candles[i].time, value: m - mult * sd });
+    }
+    return { upper: up, lower: lo };
+  }
+  function _rsi(candles, period) {
+    if (candles.length < period + 1) return null;
+    var gains = 0, losses = 0, i;
+    for (i = 1; i <= period; i++) { var ch = candles[i].close - candles[i - 1].close; if (ch >= 0) gains += ch; else losses -= ch; }
+    var ag = gains / period, al = losses / period;
+    for (i = period + 1; i < candles.length; i++) { var c2 = candles[i].close - candles[i - 1].close; ag = (ag * (period - 1) + (c2 > 0 ? c2 : 0)) / period; al = (al * (period - 1) + (c2 < 0 ? -c2 : 0)) / period; }
+    if (al === 0) return 100;
+    return 100 - 100 / (1 + ag / al);
+  }
+  function addIndicators(chart, cs, box, userSym) {
+    if (!cs || cs.length < 25) return;
+    function lineOpts(color, style) { return { color: color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, lineStyle: style || 0 }; }
+    try {
+      chart.addLineSeries(lineOpts("#a78bfa")).setData(_sma(cs, 20));
+      chart.addLineSeries(lineOpts("#f5b849")).setData(_sma(cs, 50));
+      var bb = _bollinger(cs, 20, 2);
+      chart.addLineSeries(lineOpts("rgba(25,211,197,.55)", 2)).setData(bb.upper);
+      chart.addLineSeries(lineOpts("rgba(25,211,197,.55)", 2)).setData(bb.lower);
+    } catch (e) {}
+    var last = cs[cs.length - 1].close;
+    var m20 = _sma(cs, 20), m50 = _sma(cs, 50);
+    var lm20 = m20.length ? m20[m20.length - 1].value : null, lm50 = m50.length ? m50[m50.length - 1].value : null;
+    var rsi = _rsi(cs, 14);
+    var trend = (lm20 && lm50) ? (lm20 > lm50 && last > lm20 ? "Uptrend ↑" : lm20 < lm50 && last < lm20 ? "Downtrend ↓" : "Sideways →") : "—";
+    var tColor = /Up/.test(trend) ? "var(--emerald)" : /Down/.test(trend) ? "var(--red)" : "var(--muted)";
+    var rsiZone = rsi == null ? "—" : rsi >= 70 ? "Overbought" : rsi <= 30 ? "Oversold" : "Neutral";
+    var rColor = rsiZone === "Overbought" ? "var(--red)" : rsiZone === "Oversold" ? "var(--emerald)" : "var(--ink)";
+    var wrap = el('<div class="ind-wrap">' +
+      '<div class="ind-legend"><span class="ind-chip" style="color:#a78bfa">━ MA 20</span><span class="ind-chip" style="color:#f5b849">━ MA 50</span><span class="ind-chip" style="color:#19d3c5">┅ Bollinger (20,2)</span></div>' +
+      '<div class="grid g3 ind-stats">' +
+      '<div class="ind-card"><div class="hint">RSI (14)</div><div class="ind-v" style="color:' + rColor + '">' + (rsi == null ? "—" : Math.round(rsi)) + '</div><div class="hint">' + rsiZone + '</div></div>' +
+      '<div class="ind-card"><div class="hint">Trend</div><div class="ind-v" style="color:' + tColor + '">' + trend + '</div><div class="hint">MA20 vs MA50</div></div>' +
+      '<div class="ind-card"><div class="hint">Last price</div><div class="ind-v">₹' + Math.round(last).toLocaleString("en-IN") + '</div><div class="hint">' + esc((userSym || "").toUpperCase()) + '</div></div>' +
+      '</div></div>');
+    box.parentNode ? box.parentNode.insertBefore(wrap, box.nextSibling) : box.appendChild(wrap);
+  }
+
   // Map a user's symbol to a Yahoo symbol our /api/candles endpoint can fetch.
   function yfSymbolFor(sym) {
     sym = (sym || "").trim().toUpperCase().replace(/^(NSE|BSE|BINANCE|OANDA|TVC|NASDAQ|NYMEX|FX_IDC):/, "");
@@ -1701,6 +1757,7 @@
       var series = chart.addCandlestickSeries({ upColor: "#22e08a", downColor: "#ff5a6a", borderVisible: false, wickUpColor: "#22e08a", wickDownColor: "#ff5a6a" });
       series.setData(data.candles.map(function (c) { return { time: c.time, open: c.open, high: c.high, low: c.low, close: c.close }; }));
       chart.timeScale().fitContent();
+      addIndicators(chart, data.candles, box, userSym);
       var lines = {};
       function setLine(key, v, color, title) {
         var n = parseFloat(v);
