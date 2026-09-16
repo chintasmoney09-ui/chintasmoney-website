@@ -5,15 +5,15 @@
  * offline (data in the browser) exactly as before.
  * ---------------------------------------------------------------------------*/
 window.CM_CONFIG = {
-  // Flip to true ONLY after supabaseUrl + supabaseAnonKey below are filled in.
-  cloud: false,
+  // Cloud sync is ON. The keys below are the public browser keys (safe to ship).
+  cloud: true,
 
   // From Supabase → Project Settings → API
-  supabaseUrl: "",         // e.g. https://abcdefgh.supabase.co
-  supabaseAnonKey: "",     // the long public "anon"/"publishable" key (safe in the browser)
+  supabaseUrl: "https://voycwperlvcozshjambo.supabase.co",
+  supabaseAnonKey: "sb_publishable_gOYAKgseiCmhO8hW8v5G5w_4S2PFWsa", // public "publishable" key — safe in the browser
 
   // From Razorpay → Settings → API Keys (use the Key ID, NOT the secret)
-  razorpayKeyId: "",       // e.g. rzp_live_XXXXXXXX or rzp_test_XXXXXXXX
+  razorpayKeyId: "",       // e.g. rzp_live_XXXXXXXX or rzp_test_XXXXXXXX (payments not set up yet)
 
   // Subscription prices in paise (₹199 = 19900). Editable anytime.
   planPrices: { plus: 19900, pro: 49900 },
