@@ -21,7 +21,7 @@ window.CM_CONFIG = {
   // One-tap social sign-in. Turn a provider on ONLY after you enable it in
   // Supabase → Authentication → Providers (each needs OAuth credentials).
   // Users who sign in this way are recorded in your Supabase user base too.
-  authProviders: { google: true, microsoft: false },
+  authProviders: { google: true },
   enableGoogle: false, // (legacy flag, superseded by authProviders)
 
   // true = one clean sign-in when the app opens, then you're in.
