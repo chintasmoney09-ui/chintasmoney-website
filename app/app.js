@@ -73,7 +73,10 @@
   window.addEventListener("hashchange", render);
 
   window.__cmRender = render;
+  var _liveTimers = [];
   function render() {
+    // Stop any live-chart polling from the previous view before re-rendering.
+    _liveTimers.forEach(function (id) { clearInterval(id); }); _liveTimers = [];
     // Cloud auth gate (only when backend is enabled in config.js)
     if (window.CM_CONFIG && window.CM_CONFIG.cloud) {
       var cs = window.CMCloud ? window.CMCloud.state : "loading";
@@ -804,6 +807,25 @@
           '<div style="text-align:right"><div style="font-size:1.6rem;font-weight:800;color:' + scoreColor(thisW.avg) + '">' + thisW.avg + '</div>' +
           '<div style="font-size:.82rem;font-weight:700;color:' + tColor + '">' + tArrow + ' ' + esc(trend) + '</div></div></div>'));
       }
+
+      // What discipline is worth: project the profit upside of trading your
+      // worst trades with the same behaviour you already show on your best.
+      var disc = scored.filter(function (x) { return x.d >= 75; });
+      var undisc = scored.filter(function (x) { return x.d < 50; });
+      if (undisc.length && disc.length) {
+        var discAvg = disc.reduce(function (a, x) { return a + x.p; }, 0) / disc.length;
+        var undiscAvg = undisc.reduce(function (a, x) { return a + x.p; }, 0) / undisc.length;
+        var upside = (discAvg - undiscAvg) * undisc.length;
+        if (upside > 0) {
+          c.appendChild(el('<div class="card upside-card" style="margin-top:14px">' +
+            '<div class="card-hd"><h3>💰 What discipline is worth to you</h3></div>' +
+            '<div class="upside-big">+' + money(upside) + '</div>' +
+            '<p class="hint" style="margin:2px 0 12px">If your <b>' + undisc.length + '</b> undisciplined trade' + (undisc.length === 1 ? "" : "s") + ' had matched the behaviour of your <b>disciplined</b> ones, you\'d be about <b class="pos">' + money(upside) + '</b> better off.</p>' +
+            '<div class="grid g2"><div class="card" style="padding:12px"><div class="hint">Disciplined trades avg</div><div class="mono pos" style="font-weight:800">' + money(discAvg) + '</div></div>' +
+            '<div class="card" style="padding:12px"><div class="hint">Undisciplined trades avg</div><div class="mono neg" style="font-weight:800">' + money(undiscAvg) + '</div></div></div>' +
+            '<p class="hint" style="margin-top:10px">The behaviour you need is the one you already show on your best trades — set a stop, exit on plan, stay calm. Do that every time and this gap becomes yours.</p></div>'));
+        }
+      }
     }
 
     c.appendChild(el('<h3 style="margin:16px 0 6px">Top mistakes to fix</h3>'));
@@ -1155,7 +1177,7 @@
     function mountChart() {
       var sym = (c.querySelector("#sym").value || "").trim() || "NIFTY";
       chartCard.querySelector("#chSym").textContent = sym.toUpperCase();
-      liveTradeChart(chartCard.querySelector("#chBox"), sym, currentLevels(), 360);
+      liveTradeChart(chartCard.querySelector("#chBox"), sym, currentLevels(), 360, true);
     }
     function refreshLevels() { var box = chartCard.querySelector("#chBox"); if (box && box._cmSetLevels) box._cmSetLevels(currentLevels()); }
     ["#entry", "#exit", "#sl", "#side", "#qty"].forEach(function (id) {
@@ -1608,7 +1630,7 @@
   // Live candlestick chart (our own data) with the trade's Entry/Stop/Target/Exit
   // drawn as price lines. Falls back to the self-contained ladder if anything fails,
   // so it never leaves an empty/broken chart.
-  function liveTradeChart(box, userSym, levels, h) {
+  function liveTradeChart(box, userSym, levels, h, live) {
     h = h || 320; box.innerHTML = "";
     var host = el('<div style="height:' + h + 'px;width:100%"></div>'); box.appendChild(host);
     var done = false;
@@ -1640,6 +1662,15 @@
       box._cmSetLevels = function (lv) { lv = lv || {}; setLine("entry", lv.entry, "#7aa2ff", "Entry"); setLine("sl", lv.sl, "#ff5a6a", "Stop"); setLine("target", lv.target, "#22e08a", "Target"); setLine("exit", lv.exit, "#f5b849", "Exit"); };
       box._cmSetLevels(levels);
       new ResizeObserver(function () { try { chart.applyOptions({ width: host.clientWidth }); } catch (e) {} }).observe(host);
+      // Live: refresh prices periodically so the chart moves with the market.
+      if (live) {
+        var timer = setInterval(function () {
+          fetch("/api/candles?symbol=" + encodeURIComponent(ysym) + "&range=3mo").then(function (r) { return r.json(); }).then(function (d) {
+            if (d && d.candles && d.candles.length > 2) series.setData(d.candles.map(function (c) { return { time: c.time, open: c.open, high: c.high, low: c.low, close: c.close }; }));
+          }).catch(function () {});
+        }, 45000);
+        _liveTimers.push(timer);
+      }
     }).catch(fallback);
   }
 

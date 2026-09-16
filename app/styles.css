@@ -518,3 +518,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .rp-row span { text-align: right; color: var(--muted); }
 .rp-row.pos b, .rp-row.pos span { color: var(--emerald); }
 .rp-row.neg b { color: var(--red); }
+
+/* Report: "what discipline is worth" profit-potential card */
+.upside-card { border: 1px solid rgba(34,224,138,.30); background: linear-gradient(180deg, rgba(34,224,138,.08), rgba(34,224,138,.02)); }
+.upside-big { font-size: 2rem; font-weight: 800; color: var(--emerald); line-height: 1.1; margin: 2px 0; }
