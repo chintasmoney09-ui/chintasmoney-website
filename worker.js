@@ -76,6 +76,32 @@ async function handleQuotes() {
   return jsonRes({ quotes: results, at: Date.now() });
 }
 
+// OHLC candles for a symbol, fetched server-side from Yahoo (works for NSE
+// indices ^NSEI/^NSEBANK, ^BSESN, and .NS stocks) so charts don't depend on
+// TradingView's gated embeds. Powers the live trade-preview chart.
+async function handleCandles(url) {
+  const raw = (url.searchParams.get("symbol") || "").trim();
+  if (!raw || raw.length > 24 || !/^[\^A-Za-z0-9.\-=]+$/.test(raw)) return jsonRes({ error: "bad symbol" }, 30);
+  const range = /^(1d|5d|1mo|3mo|6mo|1y)$/.test(url.searchParams.get("range") || "") ? url.searchParams.get("range") : "3mo";
+  const interval = range === "1d" || range === "5d" ? "15m" : "1d";
+  try {
+    const y = "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(raw) +
+      "?interval=" + interval + "&range=" + range;
+    const r = await fetch(y, { headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json" } });
+    if (!r.ok) return jsonRes({ error: "fetch failed" }, 30);
+    const j = await r.json();
+    const res = j && j.chart && j.chart.result && j.chart.result[0];
+    const ts = res && res.timestamp, q = res && res.indicators && res.indicators.quote && res.indicators.quote[0];
+    if (!ts || !q) return jsonRes({ error: "no data" }, 30);
+    const candles = [];
+    for (let i = 0; i < ts.length; i++) {
+      if (q.open[i] == null || q.close[i] == null) continue;
+      candles.push({ time: ts[i], open: q.open[i], high: q.high[i], low: q.low[i], close: q.close[i] });
+    }
+    return jsonRes({ symbol: raw, candles: candles, at: Date.now() }, 120);
+  } catch (e) { return jsonRes({ error: "error" }, 30); }
+}
+
 async function handleMovers() {
   const all = (await Promise.all(MOVERS.map(function (m) {
     return oneQuote({ y: m[0], name: m[1] });
@@ -91,11 +117,13 @@ async function handleMovers() {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (url.pathname === "/api/quotes" || url.pathname === "/api/movers") {
+    if (url.pathname === "/api/quotes" || url.pathname === "/api/movers" || url.pathname === "/api/candles") {
       const cache = caches.default;
       let res = await cache.match(request);
       if (!res) {
-        res = url.pathname === "/api/movers" ? await handleMovers() : await handleQuotes();
+        res = url.pathname === "/api/movers" ? await handleMovers()
+            : url.pathname === "/api/candles" ? await handleCandles(url)
+            : await handleQuotes();
         ctx.waitUntil(cache.put(request, res.clone()));
       }
       return res;

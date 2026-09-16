@@ -1141,14 +1141,23 @@
     c.appendChild(preCheck);
     v.appendChild(c);
 
-    // live chart of the symbol being logged
-    var chartCard = el('<div class="card" style="margin-top:16px"><div class="card-hd"><h3>📈 Live chart</h3><span class="hint mono" id="chSym" style="flex:1"></span><button class="btn btn-sm" id="chFull" title="Full screen — rotate your phone">⛶</button></div><div id="chBox"></div><p class="hint" style="margin-top:8px">Analyse the real market for this symbol as you log. Tap ⛶ and rotate your phone for a big view.</p></div>');
+    // Live market chart of the symbol being logged, with YOUR entry / stop / exit
+    // drawn right on it — a live preview of what the trade looks like.
+    var chartCard = el('<div class="card" style="margin-top:16px"><div class="card-hd"><h3>📈 Live chart · your trade drawn on it</h3><span class="hint mono" id="chSym" style="flex:1"></span><button class="btn btn-sm" id="chFull" title="Full screen">⛶</button></div><div id="chBox"></div><p class="hint" style="margin-top:8px">Real market candles for this symbol, with your <b style="color:#7aa2ff">entry</b>, <b style="color:#ff5a6a">stop-loss</b> and <b style="color:#f5b849">exit</b> as live lines — updates as you type.</p></div>');
     v.appendChild(chartCard);
-    function mountChart() {
-      var sym = tvSymbolFor(c.querySelector("#sym").value);
-      chartCard.querySelector("#chSym").textContent = sym;
-      var box = chartCard.querySelector("#chBox"); box.innerHTML = ""; box.appendChild(tvChart(sym, 560, false));
+    function currentLevels() {
+      return { entry: c.querySelector("#entry").value, sl: c.querySelector("#sl").value,
+        exit: c.querySelector("#exit").value, side: c.querySelector("#side").value, qty: c.querySelector("#qty").value };
     }
+    function mountChart() {
+      var sym = (c.querySelector("#sym").value || "").trim() || "NIFTY";
+      chartCard.querySelector("#chSym").textContent = sym.toUpperCase();
+      liveTradeChart(chartCard.querySelector("#chBox"), sym, currentLevels(), 360);
+    }
+    function refreshLevels() { var box = chartCard.querySelector("#chBox"); if (box && box._cmSetLevels) box._cmSetLevels(currentLevels()); }
+    ["#entry", "#exit", "#sl", "#side", "#qty"].forEach(function (id) {
+      c.querySelector(id).addEventListener("input", refreshLevels); c.querySelector(id).addEventListener("change", refreshLevels);
+    });
     chartCard.querySelector("#chFull").addEventListener("click", function () { goFullscreen(chartCard.querySelector("#chBox")); });
     function syncLot() {
       var symEl = c.querySelector("#sym"), qtyEl = c.querySelector("#qty"), hint = c.querySelector("#lotHint");
@@ -1518,6 +1527,119 @@
     out.push(cur); return out;
   }
 
+  // ---- Trade preview ladder (self-contained, always works) -----------------
+  // Draws Entry / Stop-loss / Target / Exit on a price scale with the risk (red)
+  // and reward (green) zones, plus the outcome — so a trader can *see* what the
+  // trade would do. No external data needed, so it never fails like an embed.
+  function tradeLadder(o) {
+    function nz(v) { v = parseFloat(v); return isFinite(v) ? v : null; }
+    var entry = nz(o.entry), sl = nz(o.sl), target = nz(o.target), exit = nz(o.exit);
+    var qty = Math.abs(nz(o.qty) || 0) || 1, isLong = !/sell/i.test(o.side || "Buy");
+    if (entry == null) return null;
+    var marks = [{ v: entry, label: "Entry", color: "#7aa2ff" }];
+    if (sl != null) marks.push({ v: sl, label: "Stop-loss", color: "#ff5a6a" });
+    if (target != null) marks.push({ v: target, label: "Target", color: "#22e08a" });
+    if (exit != null) marks.push({ v: exit, label: "Exit", color: "#f5b849" });
+    if (marks.length < 2) return null;
+    var vals = marks.map(function (m) { return m.v; });
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    var span = (hi - lo) || Math.abs(entry) * 0.02 || 1; lo -= span * 0.2; hi += span * 0.2;
+    var W = 340, H = 180, top = 14, bot = 14, RX = W - 150;
+    function y(v) { return top + (hi - v) / (hi - lo) * (H - top - bot); }
+    function money(n) { return (n < 0 ? "-₹" : "₹") + Math.abs(Math.round(n)).toLocaleString("en-IN"); }
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="' + H + '" preserveAspectRatio="none" style="display:block;overflow:visible">';
+    // risk zone entry <-> stop
+    if (sl != null) { var y1 = Math.min(y(entry), y(sl)), y2 = Math.max(y(entry), y(sl)); s += '<rect x="10" y="' + y1 + '" width="' + (RX - 10) + '" height="' + (y2 - y1) + '" fill="rgba(255,90,106,.14)"/>'; }
+    // reward zone entry <-> target
+    if (target != null) { var g1 = Math.min(y(entry), y(target)), g2 = Math.max(y(entry), y(target)); s += '<rect x="10" y="' + g1 + '" width="' + (RX - 10) + '" height="' + (g2 - g1) + '" fill="rgba(34,224,138,.14)"/>'; }
+    marks.forEach(function (m) {
+      var yy = y(m.v);
+      s += '<line x1="10" y1="' + yy + '" x2="' + RX + '" y2="' + yy + '" stroke="' + m.color + '" stroke-width="2" stroke-dasharray="' + (m.label === "Entry" ? "0" : "5 4") + '"/>';
+      s += '<circle cx="10" cy="' + yy + '" r="3.5" fill="' + m.color + '"/>';
+      s += '<text x="' + (RX + 8) + '" y="' + (yy + 4) + '" fill="' + m.color + '" font-size="12" font-weight="700">' + m.label + ' ' + m.v + '</text>';
+    });
+    s += '</svg>';
+    // Outcome numbers
+    var riskPer = sl != null ? Math.abs(entry - sl) : null;
+    var rewPer = target != null ? (isLong ? target - entry : entry - target) : (exit != null ? (isLong ? exit - entry : entry - exit) : null);
+    var rr = (riskPer && rewPer != null && riskPer > 0) ? Math.abs(rewPer) / riskPer : null;
+    var pnl = exit != null ? (isLong ? exit - entry : entry - exit) * qty : null;
+    var chips = '<div class="tl-chips">';
+    if (riskPer != null) chips += '<span class="tl-chip"><b class="neg">' + money(riskPer * qty) + '</b> at risk</span>';
+    if (rr != null) chips += '<span class="tl-chip"><b class="' + (rr >= 2 ? "pos" : rr >= 1 ? "" : "neg") + '">1:' + rr.toFixed(2) + '</b> R:R</span>';
+    if (pnl != null) chips += '<span class="tl-chip"><b class="' + (pnl >= 0 ? "pos" : "neg") + '">' + money(pnl) + '</b> outcome</span>';
+    if (sl == null) chips += '<span class="tl-chip"><b class="neg">no stop-loss</b></span>';
+    chips += '</div>';
+    var wrap = el('<div class="tl-wrap"><div class="tl-svg">' + s + '</div>' + chips + '</div>');
+    return wrap;
+  }
+
+  // Map a user's symbol to a Yahoo symbol our /api/candles endpoint can fetch.
+  function yfSymbolFor(sym) {
+    sym = (sym || "").trim().toUpperCase().replace(/^(NSE|BSE|BINANCE|OANDA|TVC|NASDAQ|NYMEX|FX_IDC):/, "");
+    var map = { NIFTY: "^NSEI", "NIFTY 50": "^NSEI", NIFTY50: "^NSEI", BANKNIFTY: "^NSEBANK", "BANK NIFTY": "^NSEBANK",
+      FINNIFTY: "^CNXFIN", SENSEX: "^BSESN", NIFTYBEES: "^NSEI", BANKBEES: "^NSEBANK", BTCUSDT: "BTC-USD", ETHUSDT: "ETH-USD",
+      XAUUSD: "GC=F", USOIL: "CL=F", SPX: "^GSPC", NDX: "^NDX", DJI: "^DJI" };
+    if (map[sym]) return map[sym];
+    if (/BANKNIFTY/.test(sym)) return "^NSEBANK";
+    if (/NIFTY/.test(sym)) return "^NSEI";
+    if (/SENSEX/.test(sym)) return "^BSESN";
+    if (/^BTC/.test(sym)) return "BTC-USD";
+    if (/^ETH/.test(sym)) return "ETH-USD";
+    if (/XAU|GOLD/.test(sym)) return "GC=F";
+    var first = sym.split(/\s+/)[0].replace(/[^A-Z0-9&.\-=^]/g, "");
+    return first ? first + ".NS" : "^NSEI";
+  }
+  // Lazy-load TradingView's free lightweight-charts library (once).
+  var _lwcPromise = null;
+  function loadLWC() {
+    if (window.LightweightCharts) return Promise.resolve();
+    if (_lwcPromise) return _lwcPromise;
+    _lwcPromise = new Promise(function (res, rej) {
+      var s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js";
+      s.onload = res; s.onerror = rej; document.head.appendChild(s);
+    });
+    return _lwcPromise;
+  }
+  // Live candlestick chart (our own data) with the trade's Entry/Stop/Target/Exit
+  // drawn as price lines. Falls back to the self-contained ladder if anything fails,
+  // so it never leaves an empty/broken chart.
+  function liveTradeChart(box, userSym, levels, h) {
+    h = h || 320; box.innerHTML = "";
+    var host = el('<div style="height:' + h + 'px;width:100%"></div>'); box.appendChild(host);
+    var done = false;
+    function fallback() { if (done) return; done = true; box.innerHTML = ""; var l = tradeLadder(levels || {}); box.appendChild(l || el('<p class="hint">Live chart unavailable right now.</p>')); }
+    var ysym = yfSymbolFor(userSym);
+    Promise.all([
+      loadLWC(),
+      fetch("/api/candles?symbol=" + encodeURIComponent(ysym) + "&range=3mo").then(function (r) { return r.json(); }).catch(function () { return null; })
+    ]).then(function (a) {
+      var data = a[1];
+      if (done || !window.LightweightCharts || !data || !data.candles || data.candles.length < 3) { fallback(); return; }
+      done = true;
+      var chart = LightweightCharts.createChart(host, {
+        height: h, autoSize: true,
+        layout: { background: { color: "transparent" }, textColor: "#8a83a6", fontFamily: "inherit" },
+        grid: { vertLines: { color: "rgba(255,255,255,.05)" }, horzLines: { color: "rgba(255,255,255,.05)" } },
+        timeScale: { borderColor: "rgba(255,255,255,.1)" }, rightPriceScale: { borderColor: "rgba(255,255,255,.1)" },
+        crosshair: { mode: 0 }
+      });
+      var series = chart.addCandlestickSeries({ upColor: "#22e08a", downColor: "#ff5a6a", borderVisible: false, wickUpColor: "#22e08a", wickDownColor: "#ff5a6a" });
+      series.setData(data.candles.map(function (c) { return { time: c.time, open: c.open, high: c.high, low: c.low, close: c.close }; }));
+      chart.timeScale().fitContent();
+      var lines = {};
+      function setLine(key, v, color, title) {
+        var n = parseFloat(v);
+        if (lines[key]) { try { series.removePriceLine(lines[key]); } catch (e) {} lines[key] = null; }
+        if (isFinite(n)) lines[key] = series.createPriceLine({ price: n, color: color, lineWidth: 2, lineStyle: 2, axisLabelVisible: true, title: title });
+      }
+      box._cmSetLevels = function (lv) { lv = lv || {}; setLine("entry", lv.entry, "#7aa2ff", "Entry"); setLine("sl", lv.sl, "#ff5a6a", "Stop"); setLine("target", lv.target, "#22e08a", "Target"); setLine("exit", lv.exit, "#f5b849", "Exit"); };
+      box._cmSetLevels(levels);
+      new ResizeObserver(function () { try { chart.applyOptions({ width: host.clientWidth }); } catch (e) {} }).observe(host);
+    }).catch(fallback);
+  }
+
   // ---- Analyse a trade on the real TradingView chart -----------------------
   function analyseTrade(t) {
     var sym = tvSymbolFor(t.symbol), p = CM.pnl(t), d = CM.tradeDiscipline(t);
@@ -1535,7 +1657,10 @@
       (t.note ? '<div style="font-size:.85rem;font-style:italic;color:var(--ink-soft,var(--ink));margin-bottom:8px">💬 ' + esc(t.note) + '</div>' : '') +
       '<div id="anBox"></div>' +
       '<p class="hint" style="margin-top:8px">Compare your entry/exit/stop against what the real market did. Would a disciplined trader have taken this?</p>';
-    dialog(esc(t.symbol) + " · analyse", body, function (b) { b.querySelector("#anBox").appendChild(tvAdvanced(sym, 520)); });
+    dialog(esc(t.symbol) + " · analyse", body, function (b) {
+      liveTradeChart(b.querySelector("#anBox"), t.symbol,
+        { entry: t.entry, sl: t.plannedSL, exit: t.exit, target: t.target, side: t.side, qty: t.qty }, 460);
+    });
   }
 
   // ---- MISTAKE INSIGHTS ----------------------------------------------------

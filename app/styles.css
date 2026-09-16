@@ -492,3 +492,10 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .oauth-btn svg { flex-shrink: 0; }
 .auth-or { display: flex; align-items: center; gap: 12px; margin: 16px 0 12px; color: var(--muted); font-size: .8rem; }
 .auth-or::before, .auth-or::after { content: ""; flex: 1; height: 1px; background: rgba(255,255,255,.12); }
+
+/* Trade preview ladder (fallback when live candles can't load) */
+.tl-wrap { margin-top: 4px; }
+.tl-svg { background: rgba(255,255,255,.02); border: 1px solid rgba(255,255,255,.06); border-radius: 12px; padding: 8px 6px; }
+.tl-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.tl-chip { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: 999px; padding: 5px 11px; font-size: .8rem; color: var(--muted); }
+.tl-chip b { color: var(--ink); }
