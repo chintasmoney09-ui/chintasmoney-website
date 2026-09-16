@@ -38,12 +38,47 @@
     var orig = CM.save;
     CM.save = function () { orig.apply(CM, arguments); schedulePush(); };
   }
+  // Merge two app states so signing in never destroys data logged on another
+  // device or while offline. Trades & dreams are unioned by id (never dropped);
+  // for single-value fields (profile, plan) the remote copy wins, since that's
+  // the account's source of truth, but a paid plan is never downgraded.
+  function mergeStates(remote, local) {
+    if (!remote || typeof remote !== "object") return local;
+    if (!local || typeof local !== "object") return remote;
+    function unionById(a, b) {
+      var out = [], seen = {};
+      (a || []).concat(b || []).forEach(function (it) {
+        if (!it) return;
+        var k = it.id || JSON.stringify(it);
+        if (seen[k]) return; seen[k] = 1; out.push(it);
+      });
+      return out;
+    }
+    var merged = Object.assign({}, local, remote);
+    merged.trades = unionById(remote.trades, local.trades);
+    merged.dreams = unionById(remote.dreams, local.dreams);
+    // Keep the higher plan so an offline change can't silently downgrade a payer.
+    var rank = { free: 0, plus: 1, platinum: 2, pro: 2, diamond: 3 };
+    var rp = (remote.profile && remote.profile.plan) || "free";
+    var lp = (local.profile && local.profile.plan) || "free";
+    merged.profile = Object.assign({}, local.profile, remote.profile);
+    merged.profile.plan = (rank[lp] > rank[rp] ? lp : rp);
+    // Onboarding is sticky — once done anywhere, it's done.
+    merged.profile.onboarded = !!((remote.profile && remote.profile.onboarded) || (local.profile && local.profile.onboarded));
+    return merged;
+  }
+
   function pull() {
+    var localBefore = window.CM.load();
     return Cloud.client.from("user_state").select("data").eq("user_id", Cloud.user.id).maybeSingle()
       .then(function (r) {
-        if (r && r.data && r.data.data) { window.CM.hydrate(r.data.data); }
-        else { // first login → seed a fresh row from current local state
-          return Cloud.client.from("user_state").upsert({ user_id: Cloud.user.id, data: window.CM.load(), updated_at: new Date().toISOString() });
+        if (r && r.data && r.data.data) {
+          var merged = mergeStates(r.data.data, localBefore);
+          window.CM.hydrate(merged);
+          // Push the merged result back so the account row reflects the union.
+          return Cloud.client.from("user_state").upsert({ user_id: Cloud.user.id, data: merged, updated_at: new Date().toISOString() });
+        } else { // first login → seed a fresh row from current local state
+          return Cloud.client.from("user_state").upsert({ user_id: Cloud.user.id, data: localBefore, updated_at: new Date().toISOString() });
         }
       });
   }
