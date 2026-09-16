@@ -77,7 +77,7 @@
     var wrap = el('<div class="onb"></div>'), c = el('<div class="onb-card"></div>');
     c.appendChild(el('<div class="brand" style="padding:0 0 6px"><span class="brand-badge brand-logo-chip"><img src="assets/logo-icon.png" alt=""/></span><div><b style="color:var(--ink)">ChintasMoney</b><small style="color:var(--muted)">TRADER REPORT CARD</small></div></div>'));
     c.appendChild(el('<h2 style="margin:12px 0 4px">' + (authMode === "login" ? "Welcome back" : "Create your account") + '</h2>'));
-    c.appendChild(el('<p class="hint">' + (authMode === "login" ? "Log in to sync your trades, streaks &amp; dreams across devices." : "Sign up free — your data is saved to your account.") + '</p>'));
+    c.appendChild(el('<p class="hint">' + (authMode === "login" ? "Welcome back — your private journal is waiting. 🔒 Only you can ever see it." : "Free &amp; private. Your journal is saved to your own account — 🔒 only you can ever see it, never shared.") + '</p>'));
     var em = el('<label class="fld"><span>Email</span><input id="aEmail" type="email" placeholder="you@example.com"/></label>');
     var pw = el('<label class="fld"><span>Password</span><input id="aPass" type="password" placeholder="••••••••"/></label>');
     c.appendChild(em); c.appendChild(pw);
@@ -143,7 +143,7 @@
         acct.querySelector(".sa-out").addEventListener("click", function () { window.CMCloud.signOut(); });
         side.appendChild(acct);
       } else {
-        var signin = el('<button class="side-signin">👤 Sign in / Sign up</button>');
+        var signin = el('<button class="side-signin">🔒 Save my data · private</button>');
         signin.addEventListener("click", function () { mobileOpen = false; openAuth(); });
         side.appendChild(signin);
       }
@@ -1666,12 +1666,12 @@
     var reset = el('<button class="btn btn-ghost" style="margin-top:20px">↺ Reset demo data</button>'); reset.addEventListener("click", function () { if (confirm("Reset all local data?")) { CM.reset(); go("home"); render(); } });
     v.appendChild(reset);
     if (window.CMCloud && window.CMCloud.state === "authed") {
-      v.appendChild(el('<div class="hint" style="margin-top:12px">Signed in as <b>' + esc((window.CMCloud.user && window.CMCloud.user.email) || "") + '</b> · synced to cloud ☁️</div>'));
+      v.appendChild(el('<div class="hint" style="margin-top:12px">Signed in as <b>' + esc((window.CMCloud.user && window.CMCloud.user.email) || "") + '</b> · 🔒 private &amp; backed up — only you can see this</div>'));
       var so = el('<button class="btn btn-ghost btn-sm" style="margin-top:6px">Sign out</button>'); so.addEventListener("click", function () { window.CMCloud.signOut(); });
       v.appendChild(so);
     } else if (window.CM_CONFIG && window.CM_CONFIG.cloud && window.CMCloud && window.CMCloud.state === "anon") {
-      v.appendChild(el('<div class="hint" style="margin-top:12px">Your data is saved on <b>this device only</b>. Sign in to back it up and sync across devices ☁️</div>'));
-      var si = el('<button class="btn btn-primary btn-sm" style="margin-top:6px">Sign in to sync</button>'); si.addEventListener("click", function () { openAuth(); });
+      v.appendChild(el('<div class="hint" style="margin-top:12px">Right now your journal lives on <b>this device only</b> — clear your browser and it\'s gone. Create a <b>free private account</b> to keep it safe and open it on any device. 🔒 Only you can ever see it — never shared, never public.</div>'));
+      var si = el('<button class="btn btn-primary btn-sm" style="margin-top:6px">🔒 Save my data · private</button>'); si.addEventListener("click", function () { openAuth(); });
       v.appendChild(si);
     }
     v.appendChild(el('<div class="disclaimer"><b>Important:</b> ChintasMoney is a trading self-awareness &amp; journaling tool. It does <b>not</b> give buy/sell calls, tips, or investment advice, and makes no return claims. Trading in F&O is risky and most traders lose money. Your data stays on your device in this MVP.</div>'));
