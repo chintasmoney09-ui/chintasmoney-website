@@ -563,3 +563,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .side-tokens.low { background: rgba(245,184,73,.16); }
 .side-tokens.empty { background: rgba(255,90,106,.12); border-color: rgba(255,90,106,.35); }
 .side-tokens.empty b, .side-tokens.empty .st-cta { color: var(--red); }
+
+/* Out-of-tokens purchase popup */
+.buy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+.buy-grid .pk { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 6px; }
+.buy-grid .pk b { font-size: 1.1rem; color: var(--gold); }
+.buy-grid .pk span { font-size: .8rem; color: var(--muted); }
+.buy-plans { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.buy-plans .btn { justify-content: center; }

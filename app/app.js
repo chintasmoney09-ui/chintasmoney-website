@@ -1911,8 +1911,23 @@
       (t.preCheck ? '<div class="rp-row ' + (t.preCheck.failed && t.preCheck.failed.length ? "neg" : "pos") + '"><b>Pre-trade readiness</b><span>You scored <b>' + t.preCheck.score + '/100</b> before entering' + (t.preCheck.failed && t.preCheck.failed.length ? ' · you skipped: ' + esc(t.preCheck.failed.join("; ")) : ' · every check passed') + '</span></div>' : '') +
       (t.note ? '<div class="rp-row"><b>Your note</b><span>💬 ' + esc(t.note) + '</span></div>' : '') + '</div>';
   }
+  // Full purchase popup — token packs + the two plans, buyable in one tap.
+  function purchaseDialog(reason) {
+    var packs = TOKEN_PACKS.map(function (p) { return '<button class="btn pk" data-n="' + p[0] + '" data-p="' + p[1] + '"><b>' + p[0] + '</b> tokens<span>₹' + p[1] + '</span></button>'; }).join("");
+    var body = '<p class="hint">' + (reason || "Top up to keep analysing your trades.") + '</p>' +
+      '<div class="buy-grid">' + packs + '</div>' +
+      '<div class="buy-plans">' +
+        '<button class="btn btn-primary" data-plan="699">📈 Active Trader — ₹699/mo · <b>unlimited</b></button>' +
+        '<button class="btn" data-plan="2000">👑 Desk — ₹2,000/mo · for 60+ trades</button>' +
+      '</div>' +
+      '<p class="hint" style="text-align:center;margin-top:12px">1 token = 1 deep Trade Replay. Educational behaviour analysis of your <b>own past trades</b> only — no tips, no advice.</p>';
+    dialog("You're out of analyses 🎟️", body, function (b, close) {
+      b.querySelectorAll(".pk").forEach(function (btn) { btn.addEventListener("click", function () { close(); buyTokens(+btn.getAttribute("data-n"), +btn.getAttribute("data-p")); }); });
+      b.querySelectorAll("[data-plan]").forEach(function (btn) { btn.addEventListener("click", function () { close(); buyTokens(0, +btn.getAttribute("data-plan")); }); });
+    });
+  }
   function buyTokensPrompt() {
-    dialog("You've used your free analyses", '<p class="hint">Every account gets <b>' + CM.FREE_TOKENS + ' free Trade Replays</b> — that\'s all used up. Top up analysis tokens to keep going.</p><div style="display:flex;gap:10px;margin-top:16px"><button class="btn btn-primary" id="tGo">Get tokens →</button></div>', function (b, close) { b.querySelector("#tGo").addEventListener("click", function () { close(); go("tokens"); render(); }); });
+    purchaseDialog("Every account gets " + CM.FREE_TOKENS + " free Trade Replays — that's all used up. Choose a top-up or go unlimited to keep going.");
   }
   function openReplay(t) {
     var ts = CM.tokenState();
