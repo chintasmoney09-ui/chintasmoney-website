@@ -1946,7 +1946,7 @@
   };
 
   // ---- ANALYSIS TOKENS (buy / balance) ------------------------------------
-  var TOKEN_PACKS = [[20, 49], [60, 99], [150, 199]];
+  var TOKEN_PACKS = [[10, 99], [30, 249], [100, 699]];
   function buyTokens(n, price) {
     // Real charge needs Razorpay (Profile → payments). Until then, tell the user.
     if (window.CMCloud && window.CM_CONFIG && window.CM_CONFIG.razorpayKeyId && window.CMCloud.checkoutTokens) {
@@ -1971,8 +1971,11 @@
       card.appendChild(buy); packs.appendChild(card);
     });
     c.appendChild(packs);
-    c.appendChild(el('<div class="tok-sub"><div><div style="font-weight:800">📈 Active Trader — ₹2,000 / month</div><p class="hint" style="margin:4px 0 0">For 60+ trades a month: unlimited Trade Replays, full behaviour reports and Excel export. Amateur → Pro → Advanced, one flat price.</p></div><button class="btn btn-primary" id="tSub">Go unlimited</button></div>'));
-    c.querySelector("#tSub").addEventListener("click", function () { buyTokens(0, 2000); });
+    c.appendChild(el('<h3 style="margin:18px 0 8px">Or go unlimited</h3>'));
+    c.appendChild(el('<div class="tok-sub"><div><div style="font-weight:800">📈 Active Trader — ₹699 / month</div><p class="hint" style="margin:4px 0 0">Unlimited Trade Replays, full behaviour reports and Excel export. Best value once you analyse more than ~10 trades a month.</p></div><button class="btn btn-primary" id="tSub">Go unlimited · ₹699</button></div>'));
+    c.querySelector("#tSub").addEventListener("click", function () { buyTokens(0, 699); });
+    c.appendChild(el('<div class="tok-sub" style="border-color:rgba(167,139,250,.35);background:rgba(167,139,250,.07)"><div><div style="font-weight:800">👑 Desk — ₹2,000 / month</div><p class="hint" style="margin:4px 0 0">For 60+ trades a month: everything in Active Trader, plus priority processing, multi-year history, every market, and a monthly 1:1 discipline review.</p></div><button class="btn" id="tDesk">Go Desk · ₹2,000</button></div>'));
+    c.querySelector("#tDesk").addEventListener("click", function () { buyTokens(0, 2000); });
     c.appendChild(el('<p class="hint" style="margin-top:14px">1 token = one deep analysis (Trade Replay of one past trade). Free daily tokens reset each day; purchased tokens stay until used.</p>'));
     v.appendChild(c);
     return v;
