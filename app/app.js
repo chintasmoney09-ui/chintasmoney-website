@@ -436,6 +436,17 @@
       return '<option value="' + s + '"' + (sel && sel === s ? " selected" : "") + '>' + s + '</option>';
     }).join("");
   }
+  // Symbol suggestions led by the symbols the user has actually traded (with
+  // trade counts), then the popular list — so the picker reflects their history.
+  function tradedSymOptions() {
+    var tr = CM.load().trades.filter(function (t) { return !/^s\d+$/.test(t.id || ""); });
+    var counts = {};
+    tr.forEach(function (t) { var s = (t.symbol || "").toUpperCase().trim(); if (s) counts[s] = (counts[s] || 0) + 1; });
+    var mine = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; });
+    var out = mine.map(function (s) { return '<option value="' + esc(s) + '">' + counts[s] + ' trade' + (counts[s] > 1 ? "s" : "") + '</option>'; }).join("");
+    out += POPULAR_SYMS.filter(function (s) { return !counts[s]; }).map(function (s) { return '<option value="' + s + '"></option>'; }).join("");
+    return out;
+  }
   // F&O lot sizes (SEBI revises these periodically — reasonable current defaults).
   function lotFor(s) {
     s = (s || "").toUpperCase();
@@ -853,6 +864,21 @@
     a.download = "chintasmoney-report.csv"; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
   }
+  // Full trade journal → CSV (opens in Excel/Sheets): one row per trade.
+  function downloadJournalCSV() {
+    var tr = CM.load().trades.filter(function (t) { return !/^s\d+$/.test(t.id || ""); });
+    var head = ["Date", "Symbol", "Side", "Qty", "Entry", "Exit", "Planned SL", "Setup", "Exit reason", "Emotion", "P&L", "Discipline", "Note"];
+    var rows = [head];
+    tr.forEach(function (t) {
+      rows.push([new Date(t.date).toISOString().slice(0, 10), t.symbol, t.side, t.qty, t.entry, t.exit,
+        (t.plannedSL == null ? "no SL" : t.plannedSL), t.setup, t.exit_reason, t.emotion,
+        Math.round(CM.pnl(t)), CM.tradeDiscipline(t), (t.note || "").replace(/\n/g, " ")]);
+    });
+    var csv = rows.map(function (r) { return r.map(function (x) { var s = String(x == null ? "" : x); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }).join(","); }).join("\n");
+    var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+    a.download = "chintasmoney-journal.csv"; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  }
 
   // ---- HOME / Report Card --------------------------------------------------
   VIEWS.home = function () {
@@ -1017,6 +1043,14 @@
       '<text x="50%" y="45%" text-anchor="middle" font-size="' + (size * 0.26) + '" font-weight="800" fill="var(--ink)">' + score + '</text>' +
       '<text x="50%" y="62%" text-anchor="middle" font-size="' + (size * 0.085) + '" font-weight="700" fill="' + color + '">' + verdict + '</text></svg>';
   }
+  // Pre-Trade Check snapshot → carried into the next logged trade so the report
+  // can show intended behaviour (what you said) vs actual (what you did).
+  function savePendingPreCheck(o) { try { localStorage.setItem("cm.preCheck", JSON.stringify(o)); } catch (e) {} }
+  function takePendingPreCheck() {
+    try { var r = localStorage.getItem("cm.preCheck"); if (!r) return null; localStorage.removeItem("cm.preCheck");
+      var o = JSON.parse(r); if (o && (Date.now() - (o.at || 0)) < 3 * 3600 * 1000) return o; } catch (e) {}
+    return null;
+  }
   VIEWS.checklist = function () {
     var v = el('<div></div>');
     v.appendChild(topbar("Should I take this trade?", "Run the gate before you click. Green means go — everything else means wait."));
@@ -1033,7 +1067,12 @@
     c.appendChild(gauge); c.appendChild(verdictMsg); c.appendChild(list);
     var actions = el('<div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap"></div>');
     var logIt = el('<button class="btn btn-primary" id="ckLog" disabled>Log this trade →</button>');
-    logIt.addEventListener("click", function () { go("log"); });
+    logIt.addEventListener("click", function () {
+      var score = 0, passed = [], failed = [];
+      CHECK_GATES.forEach(function (g) { var on = c.querySelector("#ck_" + g.id).checked; if (on) { score += g.w; passed.push(g.q); } else failed.push(g.q); });
+      savePendingPreCheck({ score: score, passed: passed, failed: failed, at: Date.now() });
+      go("log");
+    });
     var reset = el('<button class="btn btn-ghost" id="ckReset">Reset</button>');
     reset.addEventListener("click", function () { list.querySelectorAll("input").forEach(function (i) { i.checked = false; }); update(); });
     actions.appendChild(logIt); actions.appendChild(reset);
@@ -1065,7 +1104,7 @@
     v.appendChild(topbar("Log a Trade", "Honesty in = honesty out. This is between you and your data."));
     var c = el('<div class="card"></div>');
     var f =
-      '<div class="grid g2"><label class="fld"><span>Symbol</span><input id="sym" list="symList" placeholder="Type or pick — NIFTY, RELIANCE…" autocomplete="off" /><datalist id="symList">' + symOptions() + '</datalist></label>' +
+      '<div class="grid g2"><label class="fld"><span>Symbol <small class="muted" style="font-weight:400">— your symbols first</small></span><input id="sym" list="symList" placeholder="Type or pick — NIFTY, RELIANCE…" autocomplete="off" /><datalist id="symList">' + tradedSymOptions() + '</datalist></label>' +
       '<label class="fld"><span>Side</span><select id="side"><option>Buy</option><option>Sell</option></select></label></div>' +
       '<div class="grid g4"><label class="fld"><span>Qty <small id="lotHint" class="muted" style="font-weight:400"></small></span><input id="qty" type="number" /></label>' +
       '<label class="fld"><span>Entry</span><input id="entry" type="number" /></label>' +
@@ -1140,7 +1179,7 @@
         entry: +c.querySelector("#entry").value || 0, exit: +c.querySelector("#exit").value || 0,
         plannedSL: slv === "" ? null : +slv, target: null, setup: c.querySelector("#setup").value,
         exit_reason: c.querySelector("#xr").value, emotion: c.querySelector("#emo").value,
-        note: (c.querySelector("#note").value || "").trim().slice(0, 500), date: new Date().toISOString() });
+        note: (c.querySelector("#note").value || "").trim().slice(0, 500), preCheck: takePendingPreCheck(), date: new Date().toISOString() });
       // Instant honest feedback on the trade just logged (reinforces the loop).
       var d = CM.tradeDiscipline(saved), p = CM.pnl(saved);
       var verdict = d >= 75 ? "Disciplined trade 👏" : d >= 50 ? "Some leaks to plug" : "Undisciplined — this is what costs money";
@@ -1211,7 +1250,7 @@
   VIEWS.trades = function () {
     var s = CM.load(), st = CM.stats();
     var v = el('<div></div>');
-    var exp = el('<button class="btn btn-sm">⬇ Export CSV</button>'); exp.addEventListener("click", exportCSV);
+    var exp = el('<button class="btn btn-sm">⬇ Download (Excel)</button>'); exp.addEventListener("click", downloadJournalCSV);
     var imp = el('<button class="btn btn-sm">⬆ Import CSV</button>'); imp.addEventListener("click", importCSV);
     v.appendChild(topbar("Trade Journal", st.count + " trades logged", [exp, imp, logBtn()]));
     var limit = CM.PLANS[s.profile.plan].limits.history;
@@ -1412,7 +1451,7 @@
     var c = el('<div class="card"></div>');
     c.innerHTML =
       '<div class="grid g2" style="margin-bottom:12px">' +
-        '<label class="fld"><span>Symbol</span><input id="kSym" list="symList" placeholder="NIFTY, RELIANCE, Gold…" value="' + esc(preSym) + '" autocomplete="off"/><datalist id="symList">' + symOptions() + '</datalist></label>' +
+        '<label class="fld"><span>Symbol</span><input id="kSym" list="symList" placeholder="NIFTY, RELIANCE, Gold…" value="' + esc(preSym) + '" autocomplete="off"/><datalist id="symList">' + tradedSymOptions() + '</datalist></label>' +
         '<div class="fld"><span>Direction</span><div style="display:flex;gap:8px"><button class="btn btn-sm" id="kLong" style="flex:1">▲ Long / Buy</button><button class="btn btn-sm" id="kShort" style="flex:1">▼ Short / Sell</button></div></div></div>' +
       '<div class="grid g3">' +
         '<label class="fld"><span>Account capital (₹)</span><input id="kCap" type="number" value="100000"/></label>' +
@@ -1742,6 +1781,7 @@
       '<div class="rp-row"><b>Stop-loss</b><span>' + (CM.hasSL(t) ? "Set at ₹" + t.plannedSL : "Not set — you traded without a stop") + '</span></div>' +
       '<div class="rp-row"><b>Why you exited</b><span>' + esc(t.exit_reason || "—") + '</span></div>' +
       '<div class="rp-row"><b>How you felt</b><span>' + esc(t.emotion || "—") + '</span></div>' +
+      (t.preCheck ? '<div class="rp-row ' + (t.preCheck.failed && t.preCheck.failed.length ? "neg" : "pos") + '"><b>Pre-trade readiness</b><span>You scored <b>' + t.preCheck.score + '/100</b> before entering' + (t.preCheck.failed && t.preCheck.failed.length ? ' · you skipped: ' + esc(t.preCheck.failed.join("; ")) : ' · every check passed') + '</span></div>' : '') +
       (t.note ? '<div class="rp-row"><b>Your note</b><span>💬 ' + esc(t.note) + '</span></div>' : '') + '</div>';
   }
   function buyTokensPrompt() {
