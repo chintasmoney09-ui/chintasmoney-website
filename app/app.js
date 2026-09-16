@@ -70,14 +70,16 @@
   function isAuthed() { return window.CMCloud && window.CMCloud.state === "authed"; }
   function needsSignIn() { return window.CM_CONFIG && window.CM_CONFIG.cloud && !isAuthed(); }
   // Ask the user to sign in first, then run fn(). If sign-in isn't needed, run now.
-  function signInThen(fn) { if (needsSignIn()) { pendingAction = fn; openAuth(); } else { fn(); } }
-  function openAuth() { showAuth = true; render(); }
+  function signInThen(fn) { if (needsSignIn()) { pendingAction = fn; openAuth("signup"); } else { fn(); } }
+  function openAuth(mode) { if (mode) authMode = mode; showAuth = true; render(); }
+  function sessDismissed(k) { try { return sessionStorage.getItem(k) === "1"; } catch (e) { return false; } }
+  function sessDismiss(k) { try { sessionStorage.setItem(k, "1"); } catch (e) {} }
   function renderAuth() {
     root.innerHTML = "";
     var wrap = el('<div class="onb"></div>'), c = el('<div class="onb-card"></div>');
     c.appendChild(el('<div class="brand" style="padding:0 0 6px"><span class="brand-badge brand-logo-chip"><img src="assets/logo-icon.png" alt=""/></span><div><b style="color:var(--ink)">ChintasMoney</b><small style="color:var(--muted)">TRADER REPORT CARD</small></div></div>'));
     c.appendChild(el('<h2 style="margin:12px 0 4px">' + (authMode === "login" ? "Welcome back" : "Create your account") + '</h2>'));
-    c.appendChild(el('<p class="hint">' + (authMode === "login" ? "Welcome back — your private journal is waiting. 🔒 Only you can ever see it." : "Free &amp; private. Your journal is saved to your own account — 🔒 only you can ever see it, never shared.") + '</p>'));
+    c.appendChild(el('<p class="hint">' + (authMode === "login" ? "Welcome back — your journal is waiting. Only you can see it." : "It\'s free. Create your account so you never lose your journal. Only you can ever see it.") + '</p>'));
     var em = el('<label class="fld"><span>Email</span><input id="aEmail" type="email" placeholder="you@example.com"/></label>');
     var pw = el('<label class="fld"><span>Password</span><input id="aPass" type="password" placeholder="••••••••"/></label>');
     c.appendChild(em); c.appendChild(pw);
@@ -143,8 +145,8 @@
         acct.querySelector(".sa-out").addEventListener("click", function () { window.CMCloud.signOut(); });
         side.appendChild(acct);
       } else {
-        var signin = el('<button class="side-signin">🔒 Save my data · private</button>');
-        signin.addEventListener("click", function () { mobileOpen = false; openAuth(); });
+        var signin = el('<button class="side-signin">Create free account</button>');
+        signin.addEventListener("click", function () { mobileOpen = false; openAuth("signup"); });
         side.appendChild(signin);
       }
     }
@@ -581,6 +583,21 @@
     var mission = missionOf(st, ms, e);
     var mcard = el('<div class="card mission-card"><div class="card-hd"><h3>🎯 Today\'s mission</h3>' + (e.loggedToday ? '<span class="badge b-green">on track</span>' : '<span class="badge b-yellow">pending</span>') + '</div><div style="font-size:1.05rem;font-weight:700;color:var(--ink)">' + esc(mission.text) + '</div><div class="hint" style="margin-top:4px">' + esc(mission.why) + '</div></div>');
     feed.appendChild(mcard);
+    // Organic account nudge — only after the user has put in real work (2+ own trades),
+    // never up front, and dismissible for the session so it never nags.
+    if (needsSignIn() && !sessDismissed("cm.acctNudge")) {
+      var ownN = s.trades.filter(function (t) { return !/^s\d+$/.test(t.id || ""); }).length;
+      if (ownN >= 2) {
+        var nudge = el('<div class="card acct-nudge"><div class="an-emoji">🪄</div>' +
+          '<div class="an-body"><div class="an-title">You\'ve logged ' + ownN + ' trades — nice work.</div>' +
+          '<div class="hint">Create a free account so you never lose them. Open your journal on any phone or laptop. Only you can ever see it.</div>' +
+          '<div class="an-row"><button class="btn btn-primary btn-sm an-go">Create free account</button>' +
+          '<button class="btn btn-ghost btn-sm an-later">Maybe later</button></div></div></div>');
+        nudge.querySelector(".an-go").addEventListener("click", function () { openAuth("signup"); });
+        nudge.querySelector(".an-later").addEventListener("click", function () { sessDismiss("cm.acctNudge"); render(); });
+        feed.appendChild(nudge);
+      }
+    }
     // New-here demo video (lazy facade; set data-yt to a YouTube id to go live)
     var vcard = el('<div class="card"><div class="card-hd"><h3>🎬 New here? Watch the 2-min demo</h3></div><div class="vc-frame" data-yt=""><div class="vc-play">▶</div><span class="vc-badge">2-min walkthrough</span></div></div>');
     var vf = vcard.querySelector(".vc-frame");
@@ -1666,12 +1683,12 @@
     var reset = el('<button class="btn btn-ghost" style="margin-top:20px">↺ Reset demo data</button>'); reset.addEventListener("click", function () { if (confirm("Reset all local data?")) { CM.reset(); go("home"); render(); } });
     v.appendChild(reset);
     if (window.CMCloud && window.CMCloud.state === "authed") {
-      v.appendChild(el('<div class="hint" style="margin-top:12px">Signed in as <b>' + esc((window.CMCloud.user && window.CMCloud.user.email) || "") + '</b> · 🔒 private &amp; backed up — only you can see this</div>'));
+      v.appendChild(el('<div class="hint" style="margin-top:12px">Signed in as <b>' + esc((window.CMCloud.user && window.CMCloud.user.email) || "") + '</b> · your journal is saved and safe — only you can see it.</div>'));
       var so = el('<button class="btn btn-ghost btn-sm" style="margin-top:6px">Sign out</button>'); so.addEventListener("click", function () { window.CMCloud.signOut(); });
       v.appendChild(so);
     } else if (window.CM_CONFIG && window.CM_CONFIG.cloud && window.CMCloud && window.CMCloud.state === "anon") {
-      v.appendChild(el('<div class="hint" style="margin-top:12px">Right now your journal lives on <b>this device only</b> — clear your browser and it\'s gone. Create a <b>free private account</b> to keep it safe and open it on any device. 🔒 Only you can ever see it — never shared, never public.</div>'));
-      var si = el('<button class="btn btn-primary btn-sm" style="margin-top:6px">🔒 Save my data · private</button>'); si.addEventListener("click", function () { openAuth(); });
+      v.appendChild(el('<div class="hint" style="margin-top:12px">Right now your journal is only saved <b>on this device</b>. Create a free account so you never lose it — and open it on any phone or laptop. Only you can ever see your journal.</div>'));
+      var si = el('<button class="btn btn-primary btn-sm" style="margin-top:6px">Create free account</button>'); si.addEventListener("click", function () { openAuth("signup"); });
       v.appendChild(si);
     }
     v.appendChild(el('<div class="disclaimer"><b>Important:</b> ChintasMoney is a trading self-awareness &amp; journaling tool. It does <b>not</b> give buy/sell calls, tips, or investment advice, and makes no return claims. Trading in F&O is risky and most traders lose money. Your data stays on your device in this MVP.</div>'));
