@@ -185,6 +185,15 @@
       up.addEventListener("click", function () { mobileOpen = false; });
       side.appendChild(up);
     }
+    // Analysis-token counter — visible in every section so people always see
+    // how many analyses they have left (and can top up).
+    var tks = CM.tokenState();
+    var tpill = el('<a class="side-tokens' + (tks.total <= 0 ? " empty" : tks.total <= 2 ? " low" : "") + '" href="#/tokens">' +
+      '<span>🎟️ <b>' + tks.total + '</b> analys' + (tks.total === 1 ? "is" : "es") + ' left</span>' +
+      '<span class="st-cta">' + (tks.total <= 0 ? "Top up →" : "Get more →") + '</span></a>');
+    tpill.addEventListener("click", function () { mobileOpen = false; });
+    side.appendChild(tpill);
+
     // Account row — always visible so people can sign in early and buy under an account.
     if (window.CM_CONFIG && window.CM_CONFIG.cloud) {
       if (isAuthed()) {

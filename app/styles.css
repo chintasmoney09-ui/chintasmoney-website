@@ -553,3 +553,13 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 /* Report: latest-trade candlestick snapshot */
 .snap-box { min-height: 40px; }
 .snap-nums { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+/* Persistent analysis-token counter in the sidebar */
+.side-tokens { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 8px 2px;
+  padding: 9px 12px; border-radius: 12px; text-decoration: none; font-size: .82rem; font-weight: 700;
+  color: var(--ink); background: rgba(245,184,73,.10); border: 1px solid rgba(245,184,73,.30); }
+.side-tokens b { color: var(--gold); }
+.side-tokens .st-cta { color: var(--gold); font-weight: 800; font-size: .76rem; }
+.side-tokens.low { background: rgba(245,184,73,.16); }
+.side-tokens.empty { background: rgba(255,90,106,.12); border-color: rgba(255,90,106,.35); }
+.side-tokens.empty b, .side-tokens.empty .st-cta { color: var(--red); }
