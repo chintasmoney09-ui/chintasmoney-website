@@ -59,11 +59,18 @@
     // Keep the browser tab / history entry meaningful per view.
     var navItem = NAV.filter(function (n) { return n.id === r; })[0];
     document.title = (navItem ? navItem.label : "Dashboard") + " · ChintasMoney";
+    // Resume an action the user started before signing in (e.g. a purchase).
+    if (pendingAction && isAuthed()) { var f = pendingAction; pendingAction = null; setTimeout(f, 60); }
   }
 
   // ---- Auth screen (cloud mode) --------------------------------------------
   var authMode = "login";
   var showAuth = false; // set when an optional-auth user asks to sign in
+  var pendingAction = null; // run this once the user finishes signing in (e.g. resume a purchase)
+  function isAuthed() { return window.CMCloud && window.CMCloud.state === "authed"; }
+  function needsSignIn() { return window.CM_CONFIG && window.CM_CONFIG.cloud && !isAuthed(); }
+  // Ask the user to sign in first, then run fn(). If sign-in isn't needed, run now.
+  function signInThen(fn) { if (needsSignIn()) { pendingAction = fn; openAuth(); } else { fn(); } }
   function openAuth() { showAuth = true; render(); }
   function renderAuth() {
     root.innerHTML = "";
@@ -129,6 +136,19 @@
       up.addEventListener("click", function () { mobileOpen = false; });
       side.appendChild(up);
     }
+    // Account row — always visible so people can sign in early and buy under an account.
+    if (window.CM_CONFIG && window.CM_CONFIG.cloud) {
+      if (isAuthed()) {
+        var acct = el('<div class="side-acct"><span class="sa-dot">☁️</span><span class="sa-email">' + esc((window.CMCloud.user && window.CMCloud.user.email) || "") + '</span><button class="sa-out">Sign out</button></div>');
+        acct.querySelector(".sa-out").addEventListener("click", function () { window.CMCloud.signOut(); });
+        side.appendChild(acct);
+      } else {
+        var signin = el('<button class="side-signin">👤 Sign in / Sign up</button>');
+        signin.addEventListener("click", function () { mobileOpen = false; openAuth(); });
+        side.appendChild(signin);
+      }
+    }
+
     var foot = el('<div class="side-foot"><span class="plan-pill">● ' + CM.PLANS[s.profile.plan].name + ' plan</span>' +
       '<div class="side-legal"><a href="../learn.html">Learn</a> · <a href="../privacy.html">Privacy</a> · <a href="../terms.html">Terms</a> · <a href="../disclaimer.html">Disclaimer</a></div>' +
       '<div class="side-legal" style="margin-top:6px">Not investment advice · F&amp;O is risky.</div></div>');
@@ -1602,8 +1622,10 @@
       var b = el('<button class="btn ' + (cur ? "" : "btn-primary") + '"' + (cur ? " disabled" : "") + '>' + label + '</button>');
       b.addEventListener("click", function () {
         if (cur) return;
-        if (payMode) { window.CMCloud.checkout(id, function () { render(); }); }
-        else { CM.setProfile({ plan: id }); render(); }
+        if (payMode) {
+          // A real purchase must be tied to an account — sign in first, then check out.
+          signInThen(function () { window.CMCloud.checkout(id, function () { render(); }); });
+        } else { CM.setProfile({ plan: id }); render(); }
       });
       card.appendChild(b); plans.appendChild(card);
     });

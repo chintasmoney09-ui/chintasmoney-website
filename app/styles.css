@@ -449,3 +449,18 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   box-shadow:0 8px 24px rgba(34,224,138,.5);padding-left:4px}
 .vc-frame .vc-badge{position:absolute;left:10px;bottom:10px;background:rgba(10,7,19,.7);border:1px solid var(--line);
   border-radius:999px;padding:4px 10px;font-size:.74rem;font-weight:700;color:var(--ink)}
+
+/* Sidebar account / sign-in (always visible when cloud is on) */
+.side-signin { margin: 6px 8px 2px; display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 11px 12px; border-radius: 12px; border: 0; cursor: pointer; width: calc(100% - 16px);
+  font-weight: 800; font-size: .92rem; color: #04120b;
+  background: linear-gradient(90deg, var(--emerald), var(--teal)); box-shadow: 0 8px 20px rgba(34,224,138,.25); }
+.side-signin:hover { filter: brightness(1.05); }
+.side-acct { margin: 6px 8px 2px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 9px 11px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); }
+.side-acct .sa-dot { font-size: .95rem; }
+.side-acct .sa-email { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: .8rem; font-weight: 700; color: var(--ink); }
+.side-acct .sa-out { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: .74rem;
+  font-weight: 700; text-decoration: underline; padding: 0; }
+.side-acct .sa-out:hover { color: var(--red); }
