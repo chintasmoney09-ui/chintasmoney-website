@@ -275,6 +275,25 @@
     addDream: function (d) { d.id = uid("dm"); (load().dreams = load().dreams || []).unshift(d); save(); return d; },
     deleteDream: function (id) { var s = load(); s.dreams = (s.dreams || []).filter(function (d) { return d.id !== id; }); save(); },
     setProfile: function (patch) { Object.assign(load().profile, patch); save(); },
+    // Analysis tokens: everyone gets FREE_PER_DAY free replays a day; purchased
+    // tokens (profile.tokens) are spent after the free ones run out.
+    FREE_TOKENS_PER_DAY: 2,
+    tokenState: function () {
+      var p = load().profile, today = new Date().toDateString();
+      if (p.tokenDay !== today) { p.tokenDay = today; p.freeUsedToday = 0; save(); }
+      var free = Math.max(0, this.FREE_TOKENS_PER_DAY - (p.freeUsedToday || 0));
+      var bal = p.tokens || 0;
+      return { freeLeft: free, freeLimit: this.FREE_TOKENS_PER_DAY, balance: bal, total: free + bal, canUse: (free + bal) > 0 };
+    },
+    useToken: function () {
+      var p = load().profile, today = new Date().toDateString();
+      if (p.tokenDay !== today) { p.tokenDay = today; p.freeUsedToday = 0; }
+      var free = Math.max(0, this.FREE_TOKENS_PER_DAY - (p.freeUsedToday || 0));
+      if (free > 0) { p.freeUsedToday = (p.freeUsedToday || 0) + 1; save(); return true; }
+      if ((p.tokens || 0) > 0) { p.tokens = p.tokens - 1; save(); return true; }
+      return false;
+    },
+    addTokens: function (n) { var p = load().profile; p.tokens = (p.tokens || 0) + (+n || 0); save(); return p.tokens; },
     // Free-plan monthly logging quota (paid plans are unlimited).
     quota: function () {
       var s = load(), plan = PLANS[s.profile.plan] || PLANS.free;

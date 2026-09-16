@@ -34,6 +34,7 @@
     { id: "leaderboard", label: "Leaderboard", ic: "🏆" },
     { id: "card", label: "Shareable Card", ic: "↗" },
     { sep: true },
+    { id: "tokens", label: "Analysis Tokens", ic: "🎟️" },
     { id: "profile", label: "Profile & Plan", ic: "☰" }
   ];
 
@@ -56,6 +57,7 @@
     badges: "Earn streaks and badges for disciplined habits — keep your streak alive.",
     leaderboard: "See how your discipline ranks against other traders. We reward discipline, never profit.",
     card: "Create a shareable card of your discipline score to post or send to friends.",
+    tokens: "1 token = 1 deep Trade Replay. You get 2 free every day; top up or subscribe for more.",
     profile: "Your account, plan and data — manage your subscription and keep your journal safe."
   };
   function helpDismissed(id) { try { return localStorage.getItem("cm.help." + id) === "1"; } catch (e) { return false; } }
@@ -1742,7 +1744,13 @@
       '<div class="rp-row"><b>How you felt</b><span>' + esc(t.emotion || "—") + '</span></div>' +
       (t.note ? '<div class="rp-row"><b>Your note</b><span>💬 ' + esc(t.note) + '</span></div>' : '') + '</div>';
   }
+  function buyTokensPrompt() {
+    dialog("You've used today's free analyses", '<p class="hint">You get <b>' + CM.FREE_TOKENS_PER_DAY + ' free Trade Replays a day</b>. Come back tomorrow for more, or top up analysis tokens to keep going now.</p><div style="display:flex;gap:10px;margin-top:16px"><button class="btn btn-primary" id="tGo">Get tokens →</button></div>', function (b, close) { b.querySelector("#tGo").addEventListener("click", function () { close(); go("tokens"); render(); }); });
+  }
   function openReplay(t) {
+    var ts = CM.tokenState();
+    if (!ts.canUse) { buyTokensPrompt(); return; }
+    CM.useToken();
     var levels = { entry: t.entry, sl: t.plannedSL, exit: t.exit, target: t.target, side: t.side, qty: t.qty };
     var body = '<div id="rpChart"></div><div id="rpOut" style="margin-top:12px"><p class="hint">Loading the real market for ' + esc(t.symbol) + '…</p></div>';
     dialog(esc(t.symbol) + " · trade replay", body, function (b) {
@@ -1765,7 +1773,9 @@
     var c = el('<div class="card"></div>');
     if (!trades.length) { c.appendChild(el('<p class="hint">Log a trade first — then replay it here to see exactly what the market did after your entry.</p>')); v.appendChild(c); return v; }
     c.appendChild(el('<div class="legal-note">📘 <b>Educational behaviour tool.</b> Trade Replay analyses <b>only your own past trades</b> on historical market data — to understand your behaviour. It is <b>not</b> investment advice, gives <b>no</b> tips, calls or future predictions, and is <b>not</b> SEBI-registered advice. No future trade is ever suggested.</div>'));
-    c.appendChild(el('<p class="hint" style="margin:0 0 12px">Pick a trade to replay on the real market chart of its dates, with your entry, stop and exit drawn on it.</p>'));
+    var ts0 = CM.tokenState();
+    c.appendChild(el('<div class="tok-status"><span>🎟️ <b>' + ts0.total + '</b> analyses left <span class="hint">(' + ts0.freeLeft + ' free today' + (ts0.balance ? ' + ' + ts0.balance + ' tokens' : '') + ')</span></span><a href="#/tokens" class="tok-get">Get more →</a></div>'));
+    c.appendChild(el('<p class="hint" style="margin:0 0 12px">Pick a trade to replay on the real market chart of its dates, with your entry, stop and exit drawn on it. Each replay uses 1 analysis.</p>'));
     var listEl = el('<div class="replay-list"></div>');
     trades.slice(0, 60).forEach(function (t) {
       var p = CM.pnl(t), d = CM.tradeDiscipline(t);
@@ -1774,6 +1784,39 @@
       listEl.appendChild(row);
     });
     c.appendChild(listEl); v.appendChild(c);
+    return v;
+  };
+
+  // ---- ANALYSIS TOKENS (buy / balance) ------------------------------------
+  var TOKEN_PACKS = [[20, 49], [60, 99], [150, 199]];
+  function buyTokens(n, price) {
+    // Real charge needs Razorpay (Profile → payments). Until then, tell the user.
+    if (window.CMCloud && window.CM_CONFIG && window.CM_CONFIG.razorpayKeyId && window.CMCloud.checkoutTokens) {
+      window.CMCloud.checkoutTokens(n, price, function () { CM.addTokens(n); toast("Added " + n + " tokens ✓", "ok"); render(); });
+    } else {
+      dialog("Token top-ups open at launch", '<p class="hint">Buying <b>' + n + ' tokens for ₹' + price + '</b> switches on the moment card payments are enabled. For now you get <b>' + CM.FREE_TOKENS_PER_DAY + ' free analyses every day</b>.</p>', function (b, close) { });
+    }
+  }
+  VIEWS.tokens = function () {
+    var v = el('<div></div>');
+    v.appendChild(topbar("Analysis Tokens", "1 token = 1 deep Trade Replay. 2 free every day — top up or subscribe for more."));
+    var ts = CM.tokenState();
+    var c = el('<div class="card"></div>');
+    c.appendChild(el('<div class="legal-note">🎟️ Tokens unlock <b>behaviour analysis of your own past trades</b> only — educational, not advice, no tips, no future calls.</div>'));
+    c.appendChild(el('<div class="tok-balance"><div><div class="hint">Analyses you can run now</div><div class="tok-big">' + ts.total + '</div></div><div class="tok-split"><span>' + ts.freeLeft + ' / ' + ts.freeLimit + ' free today</span><span>' + ts.balance + ' purchased tokens</span></div></div>'));
+    c.appendChild(el('<h3 style="margin:18px 0 8px">Top up tokens</h3>'));
+    var packs = el('<div class="grid g3"></div>');
+    TOKEN_PACKS.forEach(function (p) {
+      var card = el('<div class="card tok-pack-card" style="text-align:center;padding:16px"><div class="tok-pack-n">' + p[0] + ' tokens</div><div class="tok-pack-p">₹' + p[1] + '</div><div class="hint">₹' + (p[1] / p[0]).toFixed(1) + ' / analysis</div></div>');
+      var buy = el('<button class="btn btn-primary btn-sm" style="margin-top:10px;width:100%">Top up</button>');
+      buy.addEventListener("click", function () { buyTokens(p[0], p[1]); });
+      card.appendChild(buy); packs.appendChild(card);
+    });
+    c.appendChild(packs);
+    c.appendChild(el('<div class="tok-sub"><div><div style="font-weight:800">📈 Active Trader — ₹2,000 / month</div><p class="hint" style="margin:4px 0 0">For 60+ trades a month: unlimited Trade Replays, full behaviour reports and Excel export. Amateur → Pro → Advanced, one flat price.</p></div><button class="btn btn-primary" id="tSub">Go unlimited</button></div>'));
+    c.querySelector("#tSub").addEventListener("click", function () { buyTokens(0, 2000); });
+    c.appendChild(el('<p class="hint" style="margin-top:14px">1 token = one deep analysis (Trade Replay of one past trade). Free daily tokens reset each day; purchased tokens stay until used.</p>'));
+    v.appendChild(c);
     return v;
   };
 

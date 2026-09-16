@@ -527,3 +527,18 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .legal-note { font-size: .82rem; line-height: 1.5; color: var(--muted); background: rgba(122,162,255,.07);
   border: 1px solid rgba(122,162,255,.22); border-radius: 12px; padding: 10px 13px; margin: 0 0 14px; }
 .legal-note b { color: var(--ink); }
+
+/* Analysis tokens */
+.tok-status { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  padding: 10px 13px; border-radius: 12px; margin: 0 0 12px; background: rgba(245,184,73,.08); border: 1px solid rgba(245,184,73,.28); }
+.tok-status b { color: var(--gold); }
+.tok-get, .tok-get:hover { color: var(--gold); font-weight: 800; text-decoration: none; }
+.tok-balance { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+  padding: 16px; border-radius: 14px; background: linear-gradient(120deg, rgba(245,184,73,.12), rgba(139,92,246,.10)); border: 1px solid rgba(245,184,73,.25); }
+.tok-big { font-size: 2.2rem; font-weight: 800; color: var(--gold); line-height: 1; }
+.tok-split { display: flex; flex-direction: column; gap: 4px; text-align: right; font-size: .82rem; color: var(--muted); }
+.tok-pack-card { border: 1px solid rgba(255,255,255,.08); }
+.tok-pack-n { font-weight: 800; font-size: 1.05rem; }
+.tok-pack-p { font-size: 1.5rem; font-weight: 800; color: var(--emerald); margin: 2px 0; }
+.tok-sub { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+  margin-top: 18px; padding: 16px; border-radius: 14px; border: 1px solid rgba(34,224,138,.30); background: rgba(34,224,138,.06); }
