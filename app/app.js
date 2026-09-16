@@ -1683,11 +1683,11 @@
     var reset = el('<button class="btn btn-ghost" style="margin-top:20px">↺ Reset demo data</button>'); reset.addEventListener("click", function () { if (confirm("Reset all local data?")) { CM.reset(); go("home"); render(); } });
     v.appendChild(reset);
     if (window.CMCloud && window.CMCloud.state === "authed") {
-      v.appendChild(el('<div class="hint" style="margin-top:12px">Signed in as <b>' + esc((window.CMCloud.user && window.CMCloud.user.email) || "") + '</b>. Your journal is saved to your account and private to you.</div>'));
+      v.appendChild(el('<div class="hint" style="margin-top:12px">Signed in as <b>' + esc((window.CMCloud.user && window.CMCloud.user.email) || "") + '</b>. Your journal is saved to your account.</div>'));
       var so = el('<button class="btn btn-ghost btn-sm" style="margin-top:6px">Sign out</button>'); so.addEventListener("click", function () { window.CMCloud.signOut(); });
       v.appendChild(so);
     } else if (window.CM_CONFIG && window.CM_CONFIG.cloud && window.CMCloud && window.CMCloud.state === "anon") {
-      v.appendChild(el('<div class="hint" style="margin-top:12px">Create a free account to securely save your journal and access it across your devices. Your data stays private to you.</div>'));
+      v.appendChild(el('<div class="hint" style="margin-top:12px">Create a free account to securely save your journal and access it across your devices.</div>'));
       var si = el('<button class="btn btn-primary btn-sm" style="margin-top:6px">Create free account</button>'); si.addEventListener("click", function () { openAuth("signup"); });
       v.appendChild(si);
     }

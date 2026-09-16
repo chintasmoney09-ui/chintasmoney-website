@@ -22,7 +22,7 @@ window.CM_CONFIG = {
   // Supabase → Authentication → Providers → Google, then flip this to true.
   enableGoogle: false,
 
-  // false = app works offline and sign-in is optional (a "Sign in to sync"
-  // button appears). true = users must log in before using the app.
-  requireAuth: false
+  // true = one clean sign-in when the app opens, then you're in.
+  // false = app works offline and sign-in is optional.
+  requireAuth: true
 };
