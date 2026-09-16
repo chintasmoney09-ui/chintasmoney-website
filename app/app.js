@@ -500,19 +500,42 @@
   // document.currentScript), so it silently falls back to AAPL. The iframe
   // always shows the symbol we ask for and updates when we swap it.
   function tvChart(sym, h, mini) {
-    var params = [
-      "symbol=" + encodeURIComponent(sym), "interval=D", "theme=dark", "style=1",
-      "timezone=Asia/Kolkata", "locale=in", "withdateranges=1", "hideideas=1",
-      "symboledit=0", "saveimage=0",
-      "hidesidetoolbar=" + (mini ? "1" : "0"), "hidetoptoolbar=" + (mini ? "1" : "0")
-    ].join("&");
+    // Use TradingView's current, supported "Advanced Chart" widget. We load it
+    // inside an iframe via srcdoc so the widget script has its own document
+    // context (document.currentScript works) and reliably renders the symbol we
+    // pass — the old s.tradingview.com/widgetembed endpoint is deprecated and now
+    // shows "symbol only available on TradingView" for most symbols.
+    var cfg = {
+      autosize: true,
+      symbol: sym,
+      interval: "D",
+      timezone: "Asia/Kolkata",
+      theme: "dark",
+      style: "1",
+      locale: "in",
+      withdateranges: true,
+      allow_symbol_change: false,
+      hide_side_toolbar: !!mini,
+      hide_top_toolbar: !!mini,
+      hide_legend: !!mini,
+      support_host: "https://www.tradingview.com"
+    };
+    var srcdoc =
+      '<!DOCTYPE html><html><head><meta charset="utf-8">' +
+      '<style>html,body{height:100%;margin:0;padding:0;background:#0b1533;overflow:hidden}' +
+      '.tradingview-widget-container,.tradingview-widget-container__widget{height:100%;width:100%}</style></head><body>' +
+      '<div class="tradingview-widget-container">' +
+      '<div class="tradingview-widget-container__widget"></div>' +
+      '<script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>' +
+      JSON.stringify(cfg) +
+      '<\/script></div></body></html>';
     var wrap = el('<div class="tv-frame" style="height:' + (h || 480) + 'px"></div>');
     var ifr = document.createElement("iframe");
-    ifr.src = "https://s.tradingview.com/widgetembed/?" + params;
+    ifr.srcdoc = srcdoc;
     ifr.setAttribute("frameborder", "0");
-    ifr.setAttribute("allowtransparency", "true");
     ifr.setAttribute("scrolling", "no");
     ifr.setAttribute("allowfullscreen", "");
+    ifr.setAttribute("loading", "lazy");
     ifr.style.cssText = "width:100%;height:100%;border:0;display:block";
     var cap = el('<div style="text-align:right"><a href="https://www.tradingview.com/symbols/' + encodeURIComponent(sym).replace("%3A", "-") + '/" rel="noopener nofollow" target="_blank" style="color:#8a83a6;font-size:.7rem;text-decoration:none">Live data by TradingView</a></div>');
     wrap.appendChild(ifr);
