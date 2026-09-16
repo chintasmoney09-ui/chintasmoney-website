@@ -1191,8 +1191,14 @@
         '<div style="text-align:center;font-weight:800;font-size:1.05rem;color:' + scoreColor(d) + '">' + verdict + '</div>' +
         '<p class="hint" style="text-align:center;margin:6px 0 0">P&amp;L on this trade: <b class="' + (p >= 0 ? "pos" : "neg") + '">' + money(p) + '</b></p>' +
         (msgs.length ? '<ul class="hint" style="margin:12px 0 0;padding-left:18px">' + msgs.map(function (m) { return '<li>' + m + '</li>'; }).join("") + '</ul>' : '<p class="hint" style="text-align:center;margin-top:10px">Stop set, exited on plan, stayed calm. Keep it up.</p>') +
-        '<div style="display:flex;gap:10px;margin-top:18px"><button class="btn btn-primary" id="tvReport">See my report card →</button><button class="btn btn-ghost" id="tvAnother">Log another</button></div>';
+        '<div class="card-hd" style="margin-top:16px"><h3 style="font-size:.95rem">📈 Your trade — entry, stop &amp; exit</h3></div>' +
+        '<div id="savedViz"></div>' +
+        '<div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap"><button class="btn btn-primary" id="tvReplay">🎬 Replay on real market →</button><button class="btn btn-ghost btn-sm" id="tvReport">Report card</button><button class="btn btn-ghost btn-sm" id="tvAnother">Log another</button></div>';
       dialog("Trade saved · discipline " + d + "/100", body, function (b, close) {
+        var lad = tradeLadder({ entry: saved.entry, sl: saved.plannedSL, exit: saved.exit, target: saved.target, side: saved.side, qty: saved.qty });
+        if (lad) b.querySelector("#savedViz").appendChild(lad);
+        else b.querySelector("#savedViz").appendChild(el('<p class="hint">Add an entry, stop and exit to see the trade drawn out.</p>'));
+        b.querySelector("#tvReplay").addEventListener("click", function () { close(); openReplay(saved); });
         b.querySelector("#tvReport").addEventListener("click", function () { close(); go("home"); render(); });
         b.querySelector("#tvAnother").addEventListener("click", function () { close(); go("log"); render(); });
       });
