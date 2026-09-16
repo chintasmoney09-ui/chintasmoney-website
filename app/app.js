@@ -1679,7 +1679,8 @@
   // so it never leaves an empty/broken chart.
   function liveTradeChart(box, userSym, levels, h, live) {
     h = h || 320; box.innerHTML = "";
-    var host = el('<div style="height:' + h + 'px;width:100%"></div>'); box.appendChild(host);
+    box.style.overflow = "hidden"; box.style.borderRadius = "12px";
+    var host = el('<div style="height:' + h + 'px;width:100%;max-width:100%;overflow:hidden;border-radius:12px;border:1px solid rgba(255,255,255,.06)"></div>'); box.appendChild(host);
     var done = false;
     function fallback() { if (done) return; done = true; box.innerHTML = ""; var l = tradeLadder(levels || {}); box.appendChild(l || el('<p class="hint">Live chart unavailable right now.</p>')); }
     var ysym = yfSymbolFor(userSym);
@@ -1757,6 +1758,10 @@
     var fwd = candles.slice(i0, i0 + 30); if (!fwd.length) return null;
     var maxH = Math.max.apply(null, fwd.map(function (c) { return c.high; }));
     var minL = Math.min.apply(null, fwd.map(function (c) { return c.low; }));
+    // Guard: if the logged entry is on a totally different scale than the real
+    // market (e.g. a demo trade at ₹100 vs NIFTY ~₹23,000), the comparison is
+    // meaningless — flag it instead of showing absurd numbers.
+    if (entry < minL * 0.4 || entry > maxH * 2.5) return { scaleMismatch: true, refLo: minL, refHi: maxH };
     var stopHit = sl != null && (isLong ? minL <= sl : maxH >= sl);
     var targetHit = target != null && (isLong ? maxH >= target : minL <= target);
     var bestExit = isLong ? maxH : minL, worst = isLong ? minL : maxH;
@@ -1766,6 +1771,10 @@
       actualPnl: actualPnl, bestPnl: bestPnl, left: Math.max(0, bestPnl - actualPnl), days: fwd.length };
   }
   function replayPanel(a, t) {
+    if (a.scaleMismatch) {
+      return '<div class="rp-panel"><h4>Can\'t compare to the market</h4>' +
+        '<div class="rp-row neg"><b>Prices don\'t match this symbol</b><span>Your logged entry (₹' + t.entry + ') is far from ' + esc(t.symbol) + '\'s real range (₹' + Math.round(a.refLo) + '–₹' + Math.round(a.refHi) + ') for these dates. Log the <b>actual traded prices</b> to see the market comparison.</span></div></div>';
+    }
     var isLong = !/sell/i.test(t.side || "Buy"), rows = [];
     if (t.plannedSL != null) rows.push(a.stopHit
       ? ["Your stop-loss would have been hit", "The market reached your stop — good you had one to cap the loss.", "neg"]
@@ -1777,7 +1786,7 @@
     rows.push(["Best exit the market offered", "₹" + Math.round(a.bestExit) + " (" + money(a.bestPnl) + "). You exited at ₹" + t.exit + " (" + money(a.actualPnl) + ").", a.left > 0 ? "" : "pos"]);
     if (a.actualPnl < 0 && a.bestPnl > 0) rows.push(["This loss could have been a profit", "The market moved in your favour to ₹" + Math.round(a.bestExit) + " — a " + money(a.bestPnl) + " was there. Your exit &amp; behaviour turned it into " + money(a.actualPnl) + ". That gap is behaviour, not the market.", "neg"]);
     if (a.left > 0) rows.push(["Left on the table", money(a.left) + " — you exited before the best price the market gave.", ""]);
-    return '<div class="rp-panel"><h4>What actually happened <span class="hint" style="font-weight:400">· ' + a.days + ' trading days after entry</span></h4>' +
+    return '<div class="rp-panel"><h4>What actually happened <span class="hint" style="font-weight:400">· ' + a.days + ' trading day' + (a.days === 1 ? "" : "s") + ' after entry</span></h4>' +
       rows.map(function (r) { return '<div class="rp-row ' + r[2] + '"><b>' + r[0] + '</b><span>' + r[1] + '</span></div>'; }).join("") + '</div>';
   }
   function behaviourPanel(t) {
