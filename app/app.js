@@ -1728,6 +1728,7 @@
       ? ["Target reached", "The market hit your target — the plan worked.", "pos"]
       : ["Target not reached", "The market didn't reach your target in this window.", ""]);
     rows.push(["Best exit the market offered", "₹" + Math.round(a.bestExit) + " (" + money(a.bestPnl) + "). You exited at ₹" + t.exit + " (" + money(a.actualPnl) + ").", a.left > 0 ? "" : "pos"]);
+    if (a.actualPnl < 0 && a.bestPnl > 0) rows.push(["This loss could have been a profit", "The market moved in your favour to ₹" + Math.round(a.bestExit) + " — a " + money(a.bestPnl) + " was there. Your exit &amp; behaviour turned it into " + money(a.actualPnl) + ". That gap is behaviour, not the market.", "neg"]);
     if (a.left > 0) rows.push(["Left on the table", money(a.left) + " — you exited before the best price the market gave.", ""]);
     return '<div class="rp-panel"><h4>What actually happened <span class="hint" style="font-weight:400">· ' + a.days + ' trading days after entry</span></h4>' +
       rows.map(function (r) { return '<div class="rp-row ' + r[2] + '"><b>' + r[0] + '</b><span>' + r[1] + '</span></div>'; }).join("") + '</div>';
@@ -1763,6 +1764,7 @@
     var trades = CM.load().trades.filter(function (t) { return !/^s\d+$/.test(t.id || ""); });
     var c = el('<div class="card"></div>');
     if (!trades.length) { c.appendChild(el('<p class="hint">Log a trade first — then replay it here to see exactly what the market did after your entry.</p>')); v.appendChild(c); return v; }
+    c.appendChild(el('<div class="legal-note">📘 <b>Educational behaviour tool.</b> Trade Replay analyses <b>only your own past trades</b> on historical market data — to understand your behaviour. It is <b>not</b> investment advice, gives <b>no</b> tips, calls or future predictions, and is <b>not</b> SEBI-registered advice. No future trade is ever suggested.</div>'));
     c.appendChild(el('<p class="hint" style="margin:0 0 12px">Pick a trade to replay on the real market chart of its dates, with your entry, stop and exit drawn on it.</p>'));
     var listEl = el('<div class="replay-list"></div>');
     trades.slice(0, 60).forEach(function (t) {
