@@ -86,7 +86,13 @@
   // ---- auth API ------------------------------------------------------------
   Cloud.signUp = function (email, pass) { return Cloud.client.auth.signUp({ email: email, password: pass }); };
   Cloud.signIn = function (email, pass) { return Cloud.client.auth.signInWithPassword({ email: email, password: pass }); };
-  Cloud.signInGoogle = function () { return Cloud.client.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.href } }); };
+  Cloud.signInGoogle = function () { return Cloud.signInOAuth("google"); };
+  // One-tap social sign-in. The provider (Google, Microsoft/azure, etc.) must be
+  // enabled in Supabase → Authentication → Providers. New users are recorded in
+  // the Supabase user base automatically, exactly like email sign-ups.
+  Cloud.signInOAuth = function (provider) {
+    return Cloud.client.auth.signInWithOAuth({ provider: provider, options: { redirectTo: location.href } });
+  };
   Cloud.signOut = function () { return Cloud.client.auth.signOut().then(function () { location.reload(); }); };
 
   // ---- Razorpay checkout ---------------------------------------------------

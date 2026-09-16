@@ -481,3 +481,14 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .sec-guide .sg-x { border: 0; background: none; color: var(--muted); cursor: pointer;
   font-size: .8rem; padding: 2px 4px; border-radius: 6px; flex-shrink: 0; }
 .sec-guide .sg-x:hover { color: var(--ink); background: rgba(255,255,255,.06); }
+
+/* Professional social sign-in buttons */
+.oauth-col { display: flex; flex-direction: column; gap: 10px; margin: 4px 0 2px; }
+.oauth-btn { display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 11px 14px; border-radius: 12px; cursor: pointer;
+  background: #ffffff; color: #1f1f1f; border: 1px solid #dadce0;
+  font-weight: 600; font-size: .94rem; font-family: inherit; transition: box-shadow .15s, background .15s; }
+.oauth-btn:hover { background: #f7f8fa; box-shadow: 0 1px 4px rgba(0,0,0,.18); }
+.oauth-btn svg { flex-shrink: 0; }
+.auth-or { display: flex; align-items: center; gap: 12px; margin: 16px 0 12px; color: var(--muted); font-size: .8rem; }
+.auth-or::before, .auth-or::after { content: ""; flex: 1; height: 1px; background: rgba(255,255,255,.12); }

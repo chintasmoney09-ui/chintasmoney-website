@@ -109,10 +109,28 @@
     c.appendChild(el('<div class="brand" style="padding:0 0 6px"><span class="brand-badge brand-logo-chip"><img src="assets/logo-icon.png" alt=""/></span><div><b style="color:var(--ink)">ChintasMoney</b><small style="color:var(--muted)">TRADER REPORT CARD</small></div></div>'));
     c.appendChild(el('<h2 style="margin:12px 0 4px">' + (authMode === "login" ? "Welcome back" : "Create your account") + '</h2>'));
     c.appendChild(el('<p class="hint">' + (authMode === "login" ? "Sign in to access your trading journal." : "Create a free account to save your journal and access it on any device.") + '</p>'));
+    var msg = el('<p class="hint" id="aMsg" style="min-height:1.1em;color:var(--red)"></p>');
+    // Social sign-in (one tap). New users are recorded in your user base automatically.
+    var GOOGLE_SVG = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.28-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
+    var MS_SVG = '<svg width="16" height="16" viewBox="0 0 23 23" aria-hidden="true"><path fill="#f35325" d="M1 1h10v10H1z"/><path fill="#81bc06" d="M12 1h10v10H12z"/><path fill="#05a6f0" d="M1 12h10v10H1z"/><path fill="#ffba08" d="M12 12h10v10H12z"/></svg>';
+    var P = window.CM_CONFIG.authProviders || {};
+    var providers = el('<div class="oauth-col"></div>');
+    function providerBtn(id, label, svg) {
+      var btn = el('<button class="oauth-btn">' + svg + '<span>' + label + '</span></button>');
+      btn.addEventListener("click", function () {
+        msg.style.color = "var(--muted)"; msg.textContent = "Redirecting…";
+        CMCloud.signInOAuth(id).then(function (r) { if (r && r.error) { msg.style.color = "var(--red)"; msg.textContent = r.error.message; } })
+          .catch(function () { msg.style.color = "var(--red)"; msg.textContent = "Could not start sign-in."; });
+      });
+      return btn;
+    }
+    if (P.google) providers.appendChild(providerBtn("google", "Continue with Google", GOOGLE_SVG));
+    if (P.microsoft) providers.appendChild(providerBtn("azure", "Continue with Microsoft", MS_SVG));
+    if (providers.children.length) { c.appendChild(providers); c.appendChild(el('<div class="auth-or"><span>or continue with email</span></div>')); }
     var em = el('<label class="fld"><span>Email</span><input id="aEmail" type="email" placeholder="you@example.com"/></label>');
     var pw = el('<label class="fld"><span>Password</span><input id="aPass" type="password" placeholder="••••••••"/></label>');
     c.appendChild(em); c.appendChild(pw);
-    var msg = el('<p class="hint" id="aMsg" style="min-height:1.1em;color:var(--red)"></p>'); c.appendChild(msg);
+    c.appendChild(msg);
     var go = el('<button class="btn btn-primary" style="width:100%">' + (authMode === "login" ? "Log in" : "Sign up") + '</button>');
     go.addEventListener("click", function () {
       var email = c.querySelector("#aEmail").value.trim(), pass = c.querySelector("#aPass").value;
@@ -126,11 +144,6 @@
       }).catch(function (e) { go.disabled = false; go.textContent = "Try again"; msg.textContent = "Something went wrong."; });
     });
     c.appendChild(go);
-    if (window.CM_CONFIG.enableGoogle) {
-      var gg = el('<button class="btn" style="width:100%;margin-top:8px">Continue with Google</button>');
-      gg.addEventListener("click", function () { CMCloud.signInGoogle(); });
-      c.appendChild(gg);
-    }
     var toggle = el('<p class="hint" style="text-align:center;margin-top:14px;cursor:pointer">' + (authMode === "login" ? "New here? <b style=\"color:var(--violet)\">Create an account</b>" : "Already have an account? <b style=\"color:var(--violet)\">Log in</b>") + '</p>');
     toggle.addEventListener("click", function () { authMode = authMode === "login" ? "signup" : "login"; renderAuth(); });
     c.appendChild(toggle);
