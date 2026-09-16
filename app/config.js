@@ -19,5 +19,9 @@ window.CM_CONFIG = {
   planPrices: { plus: 19900, pro: 49900 },
 
   // Optional Google sign-in (enable the Google provider in Supabase Auth first)
-  enableGoogle: true
+  enableGoogle: true,
+
+  // false = app works offline and sign-in is optional (a "Sign in to sync"
+  // button appears). true = users must log in before using the app.
+  requireAuth: false
 };

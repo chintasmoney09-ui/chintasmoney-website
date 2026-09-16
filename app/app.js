@@ -46,9 +46,12 @@
     // Cloud auth gate (only when backend is enabled in config.js)
     if (window.CM_CONFIG && window.CM_CONFIG.cloud) {
       var cs = window.CMCloud ? window.CMCloud.state : "loading";
-      if (cs === "loading" || cs === "off") { root.innerHTML = '<div class="onb"><div class="onb-card" style="text-align:center"><div style="font-size:1.6rem">₹</div><p class="hint">Loading your account…</p></div></div>'; return; }
-      if (cs === "anon") { renderAuth(); return; }
-      // "authed" or "error" → continue into the app
+      var mustAuth = window.CM_CONFIG.requireAuth;
+      // While the backend is still loading we only block if sign-in is required;
+      // optional-auth users get straight into the offline app.
+      if ((cs === "loading" || cs === "off") && mustAuth) { root.innerHTML = '<div class="onb"><div class="onb-card" style="text-align:center"><div style="font-size:1.6rem">₹</div><p class="hint">Loading your account…</p></div></div>'; return; }
+      if (cs === "anon" && (mustAuth || showAuth)) { renderAuth(); return; }
+      // otherwise → continue into the app (offline is fine)
     }
     if (!CM.load().profile.onboarded) { renderOnboarding(); return; }
     var r = route();
@@ -60,6 +63,8 @@
 
   // ---- Auth screen (cloud mode) --------------------------------------------
   var authMode = "login";
+  var showAuth = false; // set when an optional-auth user asks to sign in
+  function openAuth() { showAuth = true; render(); }
   function renderAuth() {
     root.innerHTML = "";
     var wrap = el('<div class="onb"></div>'), c = el('<div class="onb-card"></div>');
@@ -91,6 +96,12 @@
     var toggle = el('<p class="hint" style="text-align:center;margin-top:14px;cursor:pointer">' + (authMode === "login" ? "New here? <b style=\"color:var(--violet)\">Create an account</b>" : "Already have an account? <b style=\"color:var(--violet)\">Log in</b>") + '</p>');
     toggle.addEventListener("click", function () { authMode = authMode === "login" ? "signup" : "login"; renderAuth(); });
     c.appendChild(toggle);
+    // Optional sign-in: let the user skip straight into the offline app.
+    if (!window.CM_CONFIG.requireAuth) {
+      var skip = el('<p class="hint" style="text-align:center;margin-top:6px;cursor:pointer;color:var(--muted)">← Use offline for now</p>');
+      skip.addEventListener("click", function () { showAuth = false; render(); });
+      c.appendChild(skip);
+    }
     wrap.appendChild(c); root.appendChild(wrap);
   }
 
@@ -1636,6 +1647,10 @@
       v.appendChild(el('<div class="hint" style="margin-top:12px">Signed in as <b>' + esc((window.CMCloud.user && window.CMCloud.user.email) || "") + '</b> · synced to cloud ☁️</div>'));
       var so = el('<button class="btn btn-ghost btn-sm" style="margin-top:6px">Sign out</button>'); so.addEventListener("click", function () { window.CMCloud.signOut(); });
       v.appendChild(so);
+    } else if (window.CM_CONFIG && window.CM_CONFIG.cloud && window.CMCloud && window.CMCloud.state === "anon") {
+      v.appendChild(el('<div class="hint" style="margin-top:12px">Your data is saved on <b>this device only</b>. Sign in to back it up and sync across devices ☁️</div>'));
+      var si = el('<button class="btn btn-primary btn-sm" style="margin-top:6px">Sign in to sync</button>'); si.addEventListener("click", function () { openAuth(); });
+      v.appendChild(si);
     }
     v.appendChild(el('<div class="disclaimer"><b>Important:</b> ChintasMoney is a trading self-awareness &amp; journaling tool. It does <b>not</b> give buy/sell calls, tips, or investment advice, and makes no return claims. Trading in F&O is risky and most traders lose money. Your data stays on your device in this MVP.</div>'));
     return v;
