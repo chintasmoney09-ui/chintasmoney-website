@@ -25,6 +25,7 @@
     { id: "calc", label: "Risk Calculator", ic: "🧮" },
     { id: "dreams", label: "Dream Planner", ic: "💭" },
     { sep: true, group: "Understand yourself" },
+    { id: "replay", label: "Trade Replay", ic: "🎬" },
     { id: "insights", label: "Mistake Insights", ic: "🔍" },
     { id: "strategy", label: "Setup Performance", ic: "▦" },
     { id: "coach", label: "Discipline Coach", ic: "✦" },
@@ -48,6 +49,7 @@
     report: "A clean summary of your trading you can download, print or save as a PDF to share.",
     calc: "Work out how much to buy and where to put your stop — before you risk real money. Then log it in one tap.",
     dreams: "Set a money goal (a bike, a trip) and see how disciplined trading gets you there.",
+    replay: "Replay any trade on the real market for its actual dates — see what would have happened, and whether you exited too early or too late.",
     insights: "Your repeating mistakes, ranked by how often they cost you — so you know exactly what to fix first.",
     strategy: "See which of your setups actually make money, and which quietly bleed your account.",
     coach: "Ask the AI coach about your own trading and get an honest, data-based verdict.",
@@ -230,7 +232,8 @@
     coach: { em: "✦", title: "AI Discipline Coach", tag: "A calm, honest verdict on every trade.", feats: ["Ask anything about your own trading, answered from your data", "Two-line honest verdicts: what worked, what's killing your account", "Weekly progress, win-rate & R:R coaching"] },
     badges: { em: "🏅", title: "Streaks & Badges", tag: "Turn discipline into a game you want to win.", feats: ["Earn badges for real discipline habits — not for winning", "A 12-week activity heatmap of your consistency", "Daily streaks that keep you logging"] },
     leaderboard: { em: "🏆", title: "Discipline League", tag: "Climb from Bronze to Diamond vs traders like you.", feats: ["Ranked on discipline, never on luck or P&L", "Weekly promotion & relegation zones", "A shareable rank card to flex your consistency"] },
-    strategy: { em: "▦", title: "Setup Performance", tag: "Find the setups that actually pay.", feats: ["Win-rate & net P&L for every setup you trade", "Spot the strategy quietly bleeding your account", "R-multiples & time-of-day edge"] }
+    strategy: { em: "▦", title: "Setup Performance", tag: "Find the setups that actually pay.", feats: ["Win-rate & net P&L for every setup you trade", "Spot the strategy quietly bleeding your account", "R-multiples & time-of-day edge"] },
+    replay: { em: "🎬", title: "Trade Replay", tag: "Replay any trade on the real market — see what would have happened.", feats: ["Your entry, stop & exit drawn on the actual market for that trade's dates", "Did the market hit your stop or target? How much did you leave on the table?", "Your behaviour & emotion vs what the market really did — the honest verdict"] }
   };
   function paywall(area) {
     var need = CM.FEATURE_MATRIX[area], plan = CM.PLANS[need];
@@ -1662,6 +1665,84 @@
         { entry: t.entry, sl: t.plannedSL, exit: t.exit, target: t.target, side: t.side, qty: t.qty }, 460);
     });
   }
+
+  // ---- TRADE REPLAY (premium) ---------------------------------------------
+  // What would have actually happened: read the real candles after the entry
+  // date and check the market against the trader's plan.
+  function analyzeReplay(candles, t) {
+    var entry = +t.entry, sl = (t.plannedSL == null ? null : +t.plannedSL), target = (t.target ? +t.target : null),
+        exit = +t.exit, qty = Math.abs(+t.qty || 0) || 1, isLong = !/sell/i.test(t.side || "Buy");
+    if (!isFinite(entry) || !candles.length) return null;
+    var ed = new Date(t.date).getTime() / 1000;
+    var i0 = 0; while (i0 < candles.length && candles[i0].time < ed - 86400) i0++;
+    if (i0 >= candles.length) i0 = Math.max(0, candles.length - 20);
+    var fwd = candles.slice(i0, i0 + 30); if (!fwd.length) return null;
+    var maxH = Math.max.apply(null, fwd.map(function (c) { return c.high; }));
+    var minL = Math.min.apply(null, fwd.map(function (c) { return c.low; }));
+    var stopHit = sl != null && (isLong ? minL <= sl : maxH >= sl);
+    var targetHit = target != null && (isLong ? maxH >= target : minL <= target);
+    var bestExit = isLong ? maxH : minL, worst = isLong ? minL : maxH;
+    var actualPnl = (isLong ? exit - entry : entry - exit) * qty;
+    var bestPnl = (isLong ? bestExit - entry : entry - bestExit) * qty;
+    return { stopHit: stopHit, targetHit: targetHit, bestExit: bestExit, worst: worst,
+      actualPnl: actualPnl, bestPnl: bestPnl, left: Math.max(0, bestPnl - actualPnl), days: fwd.length };
+  }
+  function replayPanel(a, t) {
+    var isLong = !/sell/i.test(t.side || "Buy"), rows = [];
+    if (t.plannedSL != null) rows.push(a.stopHit
+      ? ["Your stop-loss would have been hit", "The market reached your stop — good you had one to cap the loss.", "neg"]
+      : ["Your stop-loss held", "The market never touched your stop in the days after entry.", "pos"]);
+    else rows.push(["You had no stop-loss", "The market moved to ₹" + Math.round(a.worst) + " against you — with no stop, that was your full exposure.", "neg"]);
+    if (t.target) rows.push(a.targetHit
+      ? ["Target reached", "The market hit your target — the plan worked.", "pos"]
+      : ["Target not reached", "The market didn't reach your target in this window.", ""]);
+    rows.push(["Best exit the market offered", "₹" + Math.round(a.bestExit) + " (" + money(a.bestPnl) + "). You exited at ₹" + t.exit + " (" + money(a.actualPnl) + ").", a.left > 0 ? "" : "pos"]);
+    if (a.left > 0) rows.push(["Left on the table", money(a.left) + " — you exited before the best price the market gave.", ""]);
+    return '<div class="rp-panel"><h4>What actually happened <span class="hint" style="font-weight:400">· ' + a.days + ' trading days after entry</span></h4>' +
+      rows.map(function (r) { return '<div class="rp-row ' + r[2] + '"><b>' + r[0] + '</b><span>' + r[1] + '</span></div>'; }).join("") + '</div>';
+  }
+  function behaviourPanel(t) {
+    var d = CM.tradeDiscipline(t);
+    return '<div class="rp-panel"><h4>Your behaviour on this trade</h4>' +
+      '<div class="rp-row"><b>Discipline</b><span style="color:' + scoreColor(d) + '">' + d + '/100 · ' + scoreLabel(d) + '</span></div>' +
+      '<div class="rp-row"><b>Stop-loss</b><span>' + (CM.hasSL(t) ? "Set at ₹" + t.plannedSL : "Not set — you traded without a stop") + '</span></div>' +
+      '<div class="rp-row"><b>Why you exited</b><span>' + esc(t.exit_reason || "—") + '</span></div>' +
+      '<div class="rp-row"><b>How you felt</b><span>' + esc(t.emotion || "—") + '</span></div>' +
+      (t.note ? '<div class="rp-row"><b>Your note</b><span>💬 ' + esc(t.note) + '</span></div>' : '') + '</div>';
+  }
+  function openReplay(t) {
+    var levels = { entry: t.entry, sl: t.plannedSL, exit: t.exit, target: t.target, side: t.side, qty: t.qty };
+    var body = '<div id="rpChart"></div><div id="rpOut" style="margin-top:12px"><p class="hint">Loading the real market for ' + esc(t.symbol) + '…</p></div>';
+    dialog(esc(t.symbol) + " · trade replay", body, function (b) {
+      liveTradeChart(b.querySelector("#rpChart"), t.symbol, levels, 380);
+      var ysym = yfSymbolFor(t.symbol);
+      var age = (Date.now() - new Date(t.date).getTime()) / 86400000;
+      var range = age > 200 ? "1y" : age > 80 ? "6mo" : "3mo";
+      fetch("/api/candles?symbol=" + encodeURIComponent(ysym) + "&range=" + range).then(function (r) { return r.json(); }).then(function (data) {
+        var out = b.querySelector("#rpOut");
+        if (!data || !data.candles || !data.candles.length) { out.innerHTML = behaviourPanel(t); return; }
+        var a = analyzeReplay(data.candles, t);
+        out.innerHTML = (a ? replayPanel(a, t) : "") + behaviourPanel(t);
+      }).catch(function () { b.querySelector("#rpOut").innerHTML = behaviourPanel(t); });
+    });
+  }
+  VIEWS.replay = function () {
+    var v = el('<div></div>');
+    v.appendChild(topbar("Trade Replay", "Replay any trade on the real market for its actual dates — see what would have happened."));
+    var trades = CM.load().trades.filter(function (t) { return !/^s\d+$/.test(t.id || ""); });
+    var c = el('<div class="card"></div>');
+    if (!trades.length) { c.appendChild(el('<p class="hint">Log a trade first — then replay it here to see exactly what the market did after your entry.</p>')); v.appendChild(c); return v; }
+    c.appendChild(el('<p class="hint" style="margin:0 0 12px">Pick a trade to replay on the real market chart of its dates, with your entry, stop and exit drawn on it.</p>'));
+    var listEl = el('<div class="replay-list"></div>');
+    trades.slice(0, 60).forEach(function (t) {
+      var p = CM.pnl(t), d = CM.tradeDiscipline(t);
+      var row = el('<button class="replay-row"><div class="rr-main"><b>' + esc(t.symbol) + '</b><span class="hint">' + esc(t.side) + ' ' + t.qty + ' · ' + new Date(t.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" }) + '</span></div><div class="rr-side"><span class="' + (p >= 0 ? "pos" : "neg") + '">' + money(p) + '</span><span class="badge b-navy">D' + d + '</span><span class="rr-go">Replay →</span></div></button>');
+      row.addEventListener("click", function () { openReplay(t); });
+      listEl.appendChild(row);
+    });
+    c.appendChild(listEl); v.appendChild(c);
+    return v;
+  };
 
   // ---- MISTAKE INSIGHTS ----------------------------------------------------
   VIEWS.insights = function () {
