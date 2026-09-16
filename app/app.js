@@ -762,6 +762,14 @@
     g.appendChild(tile("Net P&L", money(st.totalPnl), "from your logs", st.totalPnl >= 0));
     g.appendChild(tile("Discipline", st.discipline + "/100", scoreLabel(st.discipline), st.discipline >= 75));
     c.appendChild(g);
+    // Latest trade — candlestick snapshot with entry/SL/exit + profit/loss.
+    var ownTrades = CM.load().trades.filter(function (t) { return !/^s\d+$/.test(t.id || ""); });
+    if (ownTrades.length) {
+      var latest = ownTrades[0];
+      var snapCard = el('<div class="card" style="margin-top:14px"><div class="card-hd"><h3>📸 Latest trade on the chart</h3><span class="hint">' + esc(latest.symbol) + '</span></div><div class="snap-box"></div><p class="hint" style="margin-top:8px">Real market candles with your <b style="color:#7aa2ff">entry</b>, <b style="color:#ff5a6a">stop-loss</b> and <b style="color:#f5b849">exit</b>, and the estimated profit/loss.</p></div>');
+      c.appendChild(snapCard);
+      renderTradeSnapshot(snapCard.querySelector(".snap-box"), latest);
+    }
     // Visual snapshot — donut charts
     var RPIE = ["#8b5cf6", "#22e08a", "#f5b849", "#19d3c5", "#ff5a6a", "#a78bfa"];
     var spR = CM.setupPerformance(), emoR = CM.emotionBreakdown();
@@ -1644,6 +1652,44 @@
     chips += '</div>';
     var wrap = el('<div class="tl-wrap"><div class="tl-svg">' + s + '</div>' + chips + '</div>');
     return wrap;
+  }
+
+  // Self-contained candlestick SVG (prints in the report) with the trade's
+  // entry / stop-loss / exit / target drawn on it.
+  function candleSvg(candles, levels, w, h) {
+    if (!candles || !candles.length) return null;
+    var W = w || 340, H = h || 170, padT = 10, padB = 8, padL = 6, padR = 60, n = candles.length;
+    var lv = [levels.entry, levels.sl, levels.exit, levels.target].map(parseFloat).filter(isFinite);
+    var hi = Math.max.apply(null, candles.map(function (c) { return c.high; }).concat(lv));
+    var lo = Math.min.apply(null, candles.map(function (c) { return c.low; }).concat(lv));
+    var pad = (hi - lo) * 0.08 || 1; hi += pad; lo -= pad;
+    function y(v) { return padT + (hi - v) / (hi - lo) * (H - padT - padB); }
+    var cw = (W - padL - padR) / n, bw = Math.max(1.4, cw * 0.62);
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="' + H + '" style="display:block;background:#0b1533;border-radius:10px">';
+    candles.forEach(function (c, i) {
+      var x = padL + cw * i + cw / 2, up = c.close >= c.open, col = up ? "#22e08a" : "#ff5a6a";
+      s += '<line x1="' + x.toFixed(1) + '" y1="' + y(c.high).toFixed(1) + '" x2="' + x.toFixed(1) + '" y2="' + y(c.low).toFixed(1) + '" stroke="' + col + '" stroke-width="1"/>';
+      var yo = y(c.open), yc = y(c.close), top = Math.min(yo, yc), bh = Math.max(1, Math.abs(yc - yo));
+      s += '<rect x="' + (x - bw / 2).toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + bh.toFixed(1) + '" fill="' + col + '"/>';
+    });
+    function lvl(v, color, label) { var nn = parseFloat(v); if (!isFinite(nn)) return; var yy = y(nn); s += '<line x1="' + padL + '" y1="' + yy.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + yy.toFixed(1) + '" stroke="' + color + '" stroke-width="1.2" stroke-dasharray="4 3"/><text x="' + (W - padR + 3) + '" y="' + (yy + 3).toFixed(1) + '" font-size="9" font-weight="700" fill="' + color + '">' + label + ' ' + nn + '</text>'; }
+    lvl(levels.entry, "#7aa2ff", "Entry"); lvl(levels.sl, "#ff5a6a", "SL"); lvl(levels.target, "#22e08a", "Tgt"); lvl(levels.exit, "#f5b849", "Exit");
+    return s + '</svg>';
+  }
+  // Fill a container with a real-candle snapshot of a trade (entry/SL/exit) +
+  // its estimated profit / loss. Falls back to the levels ladder if no candles.
+  function renderTradeSnapshot(container, t) {
+    var levels = { entry: t.entry, sl: t.plannedSL, exit: t.exit, target: t.target, side: t.side, qty: t.qty };
+    var p = CM.pnl(t), risk = (t.plannedSL != null && t.entry != null) ? Math.abs(t.entry - t.plannedSL) * (Math.abs(t.qty) || 1) : null;
+    var pnlHtml = '<div class="snap-nums"><span class="tl-chip"><b>' + esc(t.symbol) + '</b> ' + esc(t.side) + ' ' + t.qty + '</span>' +
+      '<span class="tl-chip"><b class="' + (p >= 0 ? "pos" : "neg") + '">' + money(p) + '</b> ' + (p >= 0 ? "profit" : "loss") + '</span>' +
+      (risk != null ? '<span class="tl-chip"><b class="neg">' + money(risk) + '</b> risked</span>' : '<span class="tl-chip"><b class="neg">no SL</b></span>') + '</div>';
+    container.innerHTML = '<p class="hint">Loading chart…</p>';
+    var ysym = yfSymbolFor(t.symbol), age = (Date.now() - new Date(t.date).getTime()) / 86400000, range = age > 200 ? "1y" : age > 80 ? "6mo" : "3mo";
+    fetch("/api/candles?symbol=" + encodeURIComponent(ysym) + "&range=" + range).then(function (r) { return r.json(); }).then(function (d) {
+      if (d && d.candles && d.candles.length > 3) { container.innerHTML = candleSvg(d.candles.slice(-60), levels, 340, 170) + pnlHtml; }
+      else { container.innerHTML = ""; var lad = tradeLadder(levels); container.appendChild(lad || el(pnlHtml)); if (lad) container.insertAdjacentHTML("beforeend", pnlHtml); }
+    }).catch(function () { container.innerHTML = ""; var lad = tradeLadder(levels); container.appendChild(lad || el(pnlHtml)); if (lad) container.insertAdjacentHTML("beforeend", pnlHtml); });
   }
 
   // ---- Technical indicators (computed client-side from candles) ------------

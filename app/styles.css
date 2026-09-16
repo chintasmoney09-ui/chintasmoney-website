@@ -549,3 +549,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .ind-stats { gap: 10px; }
 .ind-card { text-align: center; padding: 12px 10px; border-radius: 12px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); }
 .ind-card .ind-v { font-size: 1.3rem; font-weight: 800; color: var(--ink); line-height: 1.15; margin: 2px 0; }
+
+/* Report: latest-trade candlestick snapshot */
+.snap-box { min-height: 40px; }
+.snap-nums { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
