@@ -373,6 +373,8 @@
   }
 
   var mkState = { sym: "NSE:NIFTYBEES" };
+  // Cross-view handoff so the chart, calculator, log and report card work together.
+  var handoff = { calc: null, log: null };
   var SYMBOLS = [["NIFTY", 24800, 11], ["BANKNIFTY", 51200, 23], ["RELIANCE", 2980, 7], ["TCS", 3910, 31], ["TATAMOTORS", 985, 5], ["ZOMATO", 168, 13]];
   // Real NSE symbols users can pick from (indices resolve to tracking ETFs via tvSymbolFor).
   var POPULAR_SYMS = ["NIFTY", "BANKNIFTY", "FINNIFTY", "RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY", "SBIN",
@@ -420,6 +422,7 @@
     var quick = el('<div class="mk-quick"></div>');
     var symRow = el('<div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px">' +
       '<label class="fld" style="margin:0;flex:1;min-width:200px"><span>Market / symbol</span><select id="mkSym">' + marketOptions(mkState.sym) + '</select></label>' +
+      '<button class="btn btn-primary" id="mkSize" title="Size a trade on this market in the Risk Calculator">📐 Size this trade</button>' +
       '<button class="btn" id="mkFull" title="Full screen — rotate your phone to analyse big">⛶ Fullscreen</button>' +
       '<a class="btn" id="mkDeep" target="_blank" rel="noopener nofollow" href="#">Deep analysis ↗</a></div>');
     var box = el('<div id="mkBox" style="margin-top:14px"></div>');
@@ -436,6 +439,10 @@
     }
     symRow.querySelector("#mkSym").addEventListener("change", function () { mkState.sym = this.value; mountMk(); refreshQuick(); });
     symRow.querySelector("#mkFull").addEventListener("click", function () { goFullscreen(box); });
+    symRow.querySelector("#mkSize").addEventListener("click", function () {
+      handoff.calc = { tv: mkState.sym, label: labelFor(mkState.sym) };
+      go("calc"); // hashchange triggers render; a 2nd render() here would wipe the handoff
+    });
     card.appendChild(quick);
     card.appendChild(symRow);
     refreshQuick();
@@ -704,8 +711,15 @@
           '<div class="hint">' + esc(x.t.setup) + ' · ' + esc(x.t.exit_reason) + ' · <span class="' + (x.p >= 0 ? "pos" : "neg") + '">' + money(x.p) + '</span></div>' + note + '</div>';
       }
       var bw = el('<div class="grid g2" style="margin-top:14px;align-items:start"></div>');
-      bw.appendChild(el(bwCard("🏆 Most disciplined trade", best, true)));
-      bw.appendChild(el(bwCard("⚠️ Least disciplined trade", worst, false)));
+      function bwNode(title, x, good) {
+        var node = el(bwCard(title, x, good));
+        var an = el('<button class="btn btn-sm" style="margin-top:10px">📈 Analyse on chart</button>');
+        an.addEventListener("click", function () { analyseTrade(x.t); });
+        node.appendChild(an);
+        return node;
+      }
+      bw.appendChild(bwNode("🏆 Most disciplined trade", best, true));
+      bw.appendChild(bwNode("⚠️ Least disciplined trade", worst, false));
       c.appendChild(bw);
 
       var now = Date.now(), DAY = 864e5;
@@ -971,6 +985,15 @@
       '<label class="fld"><span>Your emotion</span><select id="emo">' + CM.EMOTIONS.map(function (x) { return '<option>' + x + '</option>'; }).join("") + '</select></label></div>' +
       '<label class="fld"><span>Note <small class="muted" style="font-weight:400">— why you took it, what you learned (optional)</small></span><textarea id="note" rows="2" placeholder="e.g. Clean breakout retest, but I moved my stop — won\'t do that again." style="resize:vertical"></textarea></label>';
     c.innerHTML = f;
+    // Prefill when the user came here from the Risk Calculator.
+    var pl = handoff.log; handoff.log = null;
+    if (pl) {
+      if (pl.symbol) c.querySelector("#sym").value = pl.symbol;
+      if (pl.side) c.querySelector("#side").value = pl.side;
+      if (pl.qty) c.querySelector("#qty").value = pl.qty;
+      if (pl.entry != null) c.querySelector("#entry").value = pl.entry;
+      if (pl.plannedSL != null) c.querySelector("#sl").value = pl.plannedSL;
+    }
     // Live P&L + risk:reward preview — updates as you type (reinforces the plan-first habit).
     var preview = el('<div class="trade-preview" hidden><div class="tp-cell"><span class="tp-lbl">Est. P&amp;L</span><b id="tpPnl" class="tp-val">—</b></div><div class="tp-cell"><span class="tp-lbl">Risk : Reward</span><b id="tpRR" class="tp-val">—</b></div><div class="tp-cell"><span class="tp-lbl">Risk</span><b id="tpRisk" class="tp-val">—</b></div><div class="tp-cell"><span class="tp-lbl">Discipline</span><b id="tpDisc" class="tp-val">—</b></div></div>');
     c.appendChild(preview);
@@ -1282,15 +1305,19 @@
   VIEWS.calc = function () {
     var v = el('<div></div>');
     v.appendChild(topbar("Risk & Position-Size Calculator", "Size every trade before you click. The #1 discipline habit."));
+    // If we arrived from a chart, size that market; otherwise start blank.
+    var pre = handoff.calc; handoff.calc = null;
+    var preSym = pre ? pre.label : "";
+    var preLot = pre ? (lotFor(pre.label) || lotFor(pre.tv) || 1) : 1;
     var c = el('<div class="card"></div>');
     c.innerHTML =
-      '<div style="display:flex;gap:8px;margin-bottom:14px">' +
-        '<button class="btn btn-sm" id="kLong">▲ Long / Buy</button>' +
-        '<button class="btn btn-sm" id="kShort">▼ Short / Sell</button></div>' +
+      '<div class="grid g2" style="margin-bottom:12px">' +
+        '<label class="fld"><span>Symbol</span><input id="kSym" list="symList" placeholder="NIFTY, RELIANCE, Gold…" value="' + esc(preSym) + '" autocomplete="off"/><datalist id="symList">' + symOptions() + '</datalist></label>' +
+        '<div class="fld"><span>Direction</span><div style="display:flex;gap:8px"><button class="btn btn-sm" id="kLong" style="flex:1">▲ Long / Buy</button><button class="btn btn-sm" id="kShort" style="flex:1">▼ Short / Sell</button></div></div></div>' +
       '<div class="grid g3">' +
         '<label class="fld"><span>Account capital (₹)</span><input id="kCap" type="number" value="100000"/></label>' +
         '<label class="fld"><span>Risk per trade (%)</span><input id="kRisk" type="number" value="1" step="0.1"/></label>' +
-        '<label class="fld"><span>Lot / multiplier</span><input id="kLot" type="number" value="1" min="1"/></label>' +
+        '<label class="fld"><span>Lot / multiplier</span><input id="kLot" type="number" value="' + preLot + '" min="1"/></label>' +
         '<label class="fld"><span>Entry price</span><input id="kEntry" type="number" value="100" step="0.05"/></label>' +
         '<label class="fld"><span>Stop-loss</span><input id="kStop" type="number" value="95" step="0.05"/></label>' +
         '<label class="fld"><span>Target (optional)</span><input id="kTarget" type="number" value="110" step="0.05"/></label>' +
@@ -1298,6 +1325,7 @@
       '<div id="kOut" style="margin-top:6px"></div>';
     v.appendChild(c);
 
+    var lastUnits = 0;
     function n(id) { var x = parseFloat(c.querySelector(id).value); return isNaN(x) ? 0 : x; }
     function inr(x) { return "₹" + Math.round(x).toLocaleString("en-IN"); }
     function run() {
@@ -1305,6 +1333,7 @@
           target = n("#kTarget"), lot = Math.max(1, n("#kLot") || 1);
       var riskAmt = cap * rp / 100, perUnit = Math.abs(entry - stop);
       var units = perUnit > 0 ? Math.floor(riskAmt / perUnit / lot) * lot : 0;
+      lastUnits = units;
       var value = units * entry;
       var stopOK = calcSide === "long" ? stop < entry : stop > entry;
       var rr = 0, reward = 0, rewUnit = 0, tOK = true;
@@ -1321,9 +1350,48 @@
         rows.map(function (r) { return '<div class="card" style="padding:12px"><div class="hint">' + r[0] + '</div><div class="mono ' + r[2] + '" style="font-size:1.2rem;font-weight:800">' + r[1] + '</div></div>'; }).join("") + '</div>';
     }
     ["#kCap", "#kRisk", "#kLot", "#kEntry", "#kStop", "#kTarget"].forEach(function (id) { c.querySelector(id).addEventListener("input", run); });
-    c.querySelector("#kLong").addEventListener("click", function () { calcSide = "long"; run(); });
-    c.querySelector("#kShort").addEventListener("click", function () { calcSide = "short"; run(); });
+    function markSide() {
+      c.querySelector("#kLong").classList.toggle("btn-primary", calcSide === "long");
+      c.querySelector("#kShort").classList.toggle("btn-primary", calcSide === "short");
+    }
+    c.querySelector("#kLong").addEventListener("click", function () { calcSide = "long"; markSide(); run(); });
+    c.querySelector("#kShort").addEventListener("click", function () { calcSide = "short"; markSide(); run(); });
+    markSide();
+
+    // Live chart of the symbol being sized (connects the calculator to the market).
+    var chartCard = el('<div class="card" style="margin-top:16px"><div class="card-hd"><h3>📈 Live chart</h3><span class="hint mono" id="kchSym" style="flex:1"></span><button class="btn btn-sm" id="kchFull" title="Full screen">⛶</button></div><div id="kchBox"></div></div>');
+    function mountCalcChart() {
+      var raw = c.querySelector("#kSym").value.trim(); if (!raw) { chartCard.hidden = true; return; }
+      chartCard.hidden = false;
+      var sym = tvSymbolFor(raw); chartCard.querySelector("#kchSym").textContent = sym;
+      var box = chartCard.querySelector("#kchBox"); box.innerHTML = ""; box.appendChild(tvChart(sym, 420, false));
+    }
+    chartCard.querySelector("#kchFull").addEventListener("click", function () { goFullscreen(chartCard.querySelector("#kchBox")); });
+    var kct; c.querySelector("#kSym").addEventListener("input", function () {
+      var lot = lotFor(c.querySelector("#kSym").value);
+      if (lot && isLotValue(c.querySelector("#kLot").value)) { c.querySelector("#kLot").value = lot; run(); }
+      clearTimeout(kct); kct = setTimeout(mountCalcChart, 700);
+    });
+    v.appendChild(chartCard);
+
+    // Carry the sized trade straight into the log (feeds the Report Card).
+    var logRow = el('<div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">' +
+      '<button class="btn btn-primary" id="kLog">Log this trade →</button>' +
+      '<span class="hint">Carries the symbol, direction, size, entry &amp; stop into your journal.</span></div>');
+    logRow.querySelector("#kLog").addEventListener("click", function () {
+      var sym = c.querySelector("#kSym").value.trim();
+      if (!sym) { c.querySelector("#kSym").focus(); return; }
+      handoff.log = {
+        symbol: sym, side: calcSide === "long" ? "Buy" : "Sell",
+        qty: lastUnits || null, entry: n("#kEntry") || null,
+        plannedSL: n("#kStop") || null, target: n("#kTarget") || null
+      };
+      go("log"); // hashchange triggers render; a 2nd render() would wipe the handoff
+    });
+    v.appendChild(logRow);
+
     run();
+    mountCalcChart();
     return v;
   };
 
