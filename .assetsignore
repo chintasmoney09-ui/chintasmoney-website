@@ -1,0 +1,10 @@
+.git
+.git/**
+.gitignore
+.assetsignore
+wrangler.jsonc
+worker.js
+supabase-schema.sql
+BACKEND-SETUP.md
+DEPLOY.md
+README.md
