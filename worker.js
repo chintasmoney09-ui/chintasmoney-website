@@ -82,7 +82,7 @@ async function handleQuotes() {
 async function handleCandles(url) {
   const raw = (url.searchParams.get("symbol") || "").trim();
   if (!raw || raw.length > 24 || !/^[\^A-Za-z0-9.\-=]+$/.test(raw)) return jsonRes({ error: "bad symbol" }, 30);
-  const range = /^(1d|5d|1mo|3mo|6mo|1y)$/.test(url.searchParams.get("range") || "") ? url.searchParams.get("range") : "3mo";
+  const range = /^(1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|max)$/.test(url.searchParams.get("range") || "") ? url.searchParams.get("range") : "3mo";
   const interval = range === "1d" || range === "5d" ? "15m" : "1d";
   try {
     const y = "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(raw) +

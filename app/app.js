@@ -1694,7 +1694,7 @@
       '<span class="tl-chip"><b class="' + (p >= 0 ? "pos" : "neg") + '">' + money(p) + '</b> ' + (p >= 0 ? "profit" : "loss") + '</span>' +
       (risk != null ? '<span class="tl-chip"><b class="neg">' + money(risk) + '</b> risked</span>' : '<span class="tl-chip"><b class="neg">no SL</b></span>') + '</div>';
     container.innerHTML = '<p class="hint">Loading chart…</p>';
-    var ysym = yfSymbolFor(t.symbol), age = (Date.now() - new Date(t.date).getTime()) / 86400000, range = age > 200 ? "1y" : age > 80 ? "6mo" : "3mo";
+    var ysym = yfSymbolFor(t.symbol), age = (Date.now() - new Date(t.date).getTime()) / 86400000, range = age > 1700 ? "10y" : age > 850 ? "5y" : age > 500 ? "2y" : age > 200 ? "1y" : age > 80 ? "6mo" : "3mo";
     fetch("/api/candles?symbol=" + encodeURIComponent(ysym) + "&range=" + range).then(function (r) { return r.json(); }).then(function (d) {
       if (d && d.candles && d.candles.length > 3) { container.innerHTML = candleSvg(d.candles.slice(-60), levels, 340, 170) + pnlHtml; }
       else { container.innerHTML = ""; var lad = tradeLadder(levels); container.appendChild(lad || el(pnlHtml)); if (lad) container.insertAdjacentHTML("beforeend", pnlHtml); }
@@ -1939,7 +1939,7 @@
       liveTradeChart(b.querySelector("#rpChart"), t.symbol, levels, 380);
       var ysym = yfSymbolFor(t.symbol);
       var age = (Date.now() - new Date(t.date).getTime()) / 86400000;
-      var range = age > 200 ? "1y" : age > 80 ? "6mo" : "3mo";
+      var range = age > 1700 ? "10y" : age > 850 ? "5y" : age > 500 ? "2y" : age > 200 ? "1y" : age > 80 ? "6mo" : "3mo";
       fetch("/api/candles?symbol=" + encodeURIComponent(ysym) + "&range=" + range).then(function (r) { return r.json(); }).then(function (data) {
         var out = b.querySelector("#rpOut");
         if (!data || !data.candles || !data.candles.length) { out.innerHTML = behaviourPanel(t); return; }
