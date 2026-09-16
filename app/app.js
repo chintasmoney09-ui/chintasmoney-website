@@ -79,7 +79,7 @@
     var wrap = el('<div class="onb"></div>'), c = el('<div class="onb-card"></div>');
     c.appendChild(el('<div class="brand" style="padding:0 0 6px"><span class="brand-badge brand-logo-chip"><img src="assets/logo-icon.png" alt=""/></span><div><b style="color:var(--ink)">ChintasMoney</b><small style="color:var(--muted)">TRADER REPORT CARD</small></div></div>'));
     c.appendChild(el('<h2 style="margin:12px 0 4px">' + (authMode === "login" ? "Welcome back" : "Create your account") + '</h2>'));
-    c.appendChild(el('<p class="hint">' + (authMode === "login" ? "Welcome back — your journal is waiting. Only you can see it." : "It\'s free. Create your account so you never lose your journal. Only you can ever see it.") + '</p>'));
+    c.appendChild(el('<p class="hint">' + (authMode === "login" ? "Sign in to access your trading journal." : "Create a free account to save your journal and access it on any device.") + '</p>'));
     var em = el('<label class="fld"><span>Email</span><input id="aEmail" type="email" placeholder="you@example.com"/></label>');
     var pw = el('<label class="fld"><span>Password</span><input id="aPass" type="password" placeholder="••••••••"/></label>');
     c.appendChild(em); c.appendChild(pw);
@@ -588,9 +588,9 @@
     if (needsSignIn() && !sessDismissed("cm.acctNudge")) {
       var ownN = s.trades.filter(function (t) { return !/^s\d+$/.test(t.id || ""); }).length;
       if (ownN >= 2) {
-        var nudge = el('<div class="card acct-nudge"><div class="an-emoji">🪄</div>' +
-          '<div class="an-body"><div class="an-title">You\'ve logged ' + ownN + ' trades — nice work.</div>' +
-          '<div class="hint">Create a free account so you never lose them. Open your journal on any phone or laptop. Only you can ever see it.</div>' +
+        var nudge = el('<div class="card acct-nudge">' +
+          '<div class="an-body"><div class="an-title">Save your progress</div>' +
+          '<div class="hint">You\'ve logged ' + ownN + ' trades. Create a free account to securely save your journal and access it across your devices.</div>' +
           '<div class="an-row"><button class="btn btn-primary btn-sm an-go">Create free account</button>' +
           '<button class="btn btn-ghost btn-sm an-later">Maybe later</button></div></div></div>');
         nudge.querySelector(".an-go").addEventListener("click", function () { openAuth("signup"); });
@@ -1648,7 +1648,7 @@
     });
     v.appendChild(plans);
     // Data backup / restore (all data lives in this browser — let people take it with them)
-    var dataCard = el('<div class="card" style="margin-top:20px"><div class="card-hd"><h3>Your data</h3></div><p class="hint" style="margin:0 0 12px">Everything is stored in this browser. Back it up before you clear your browser or switch devices.</p></div>');
+    var dataCard = el('<div class="card" style="margin-top:20px"><div class="card-hd"><h3>Your data</h3></div><p class="hint" style="margin:0 0 12px">Download a copy of your journal to keep, or restore one you saved earlier.</p></div>');
     var dataRow = el('<div style="display:flex;gap:10px;flex-wrap:wrap"></div>');
     var backup = el('<button class="btn btn-sm">⬇ Backup (JSON)</button>');
     backup.addEventListener("click", function () {
@@ -1683,11 +1683,11 @@
     var reset = el('<button class="btn btn-ghost" style="margin-top:20px">↺ Reset demo data</button>'); reset.addEventListener("click", function () { if (confirm("Reset all local data?")) { CM.reset(); go("home"); render(); } });
     v.appendChild(reset);
     if (window.CMCloud && window.CMCloud.state === "authed") {
-      v.appendChild(el('<div class="hint" style="margin-top:12px">Signed in as <b>' + esc((window.CMCloud.user && window.CMCloud.user.email) || "") + '</b> · your journal is saved and safe — only you can see it.</div>'));
+      v.appendChild(el('<div class="hint" style="margin-top:12px">Signed in as <b>' + esc((window.CMCloud.user && window.CMCloud.user.email) || "") + '</b>. Your journal is saved to your account and private to you.</div>'));
       var so = el('<button class="btn btn-ghost btn-sm" style="margin-top:6px">Sign out</button>'); so.addEventListener("click", function () { window.CMCloud.signOut(); });
       v.appendChild(so);
     } else if (window.CM_CONFIG && window.CM_CONFIG.cloud && window.CMCloud && window.CMCloud.state === "anon") {
-      v.appendChild(el('<div class="hint" style="margin-top:12px">Right now your journal is only saved <b>on this device</b>. Create a free account so you never lose it — and open it on any phone or laptop. Only you can ever see your journal.</div>'));
+      v.appendChild(el('<div class="hint" style="margin-top:12px">Create a free account to securely save your journal and access it across your devices. Your data stays private to you.</div>'));
       var si = el('<button class="btn btn-primary btn-sm" style="margin-top:6px">Create free account</button>'); si.addEventListener("click", function () { openAuth("signup"); });
       v.appendChild(si);
     }

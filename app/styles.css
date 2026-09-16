@@ -468,7 +468,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 /* Organic "create account" nudge on Today (non-technical, dismissible) */
 .acct-nudge { display: flex; gap: 12px; align-items: flex-start;
   border: 1px solid rgba(34,224,138,.30); background: linear-gradient(180deg, rgba(34,224,138,.08), rgba(34,224,138,.03)); }
-.acct-nudge .an-emoji { font-size: 1.5rem; line-height: 1; }
 .acct-nudge .an-body { flex: 1; }
 .acct-nudge .an-title { font-weight: 800; color: var(--ink); margin-bottom: 3px; }
 .acct-nudge .an-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
