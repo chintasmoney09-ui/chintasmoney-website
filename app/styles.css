@@ -471,3 +471,13 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .acct-nudge .an-body { flex: 1; }
 .acct-nudge .an-title { font-weight: 800; color: var(--ink); margin-bottom: 3px; }
 .acct-nudge .an-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+/* Section guide — directive "what this is / what to do" banner (dismissible) */
+.sec-guide { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 16px;
+  padding: 11px 13px; border-radius: 12px; border: 1px solid rgba(167,139,250,.28);
+  background: linear-gradient(180deg, rgba(167,139,250,.10), rgba(167,139,250,.03)); }
+.sec-guide .sg-ic { font-size: 1rem; line-height: 1.3; }
+.sec-guide .sg-tx { flex: 1; font-size: .9rem; line-height: 1.45; color: var(--ink); }
+.sec-guide .sg-x { border: 0; background: none; color: var(--muted); cursor: pointer;
+  font-size: .8rem; padding: 2px 4px; border-radius: 6px; flex-shrink: 0; }
+.sec-guide .sg-x:hover { color: var(--ink); background: rgba(255,255,255,.06); }

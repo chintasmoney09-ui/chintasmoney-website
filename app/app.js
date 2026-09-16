@@ -36,6 +36,35 @@
     { id: "profile", label: "Profile & Plan", ic: "☰" }
   ];
 
+  // Plain, directive one-liner for every section: what it is + what to do.
+  var SECTION_HELP = {
+    today: "Your daily home base — open it each day for your discipline score, today's mission and quick actions.",
+    home: "Your headline scorecard: discipline score, trader personality and key stats. Check how you're really doing.",
+    checklist: "Run this 30-second check before you enter a trade — it catches bad setups before they cost you money.",
+    log: "Record each trade after you take it. This powers every score and insight, so log honestly.",
+    trades: "Every trade you've logged, in one place. Review, edit, or tap 📈 to analyse any trade on the live chart.",
+    markets: "Live charts for any market. Study the price, then tap “📐 Size this trade” to plan it in the calculator.",
+    analytics: "Deeper numbers from your logs — trends, win rate, risk:reward and more.",
+    report: "A clean summary of your trading you can download, print or save as a PDF to share.",
+    calc: "Work out how much to buy and where to put your stop — before you risk real money. Then log it in one tap.",
+    dreams: "Set a money goal (a bike, a trip) and see how disciplined trading gets you there.",
+    insights: "Your repeating mistakes, ranked by how often they cost you — so you know exactly what to fix first.",
+    strategy: "See which of your setups actually make money, and which quietly bleed your account.",
+    coach: "Ask the AI coach about your own trading and get an honest, data-based verdict.",
+    badges: "Earn streaks and badges for disciplined habits — keep your streak alive.",
+    leaderboard: "See how your discipline ranks against other traders. We reward discipline, never profit.",
+    card: "Create a shareable card of your discipline score to post or send to friends.",
+    profile: "Your account, plan and data — manage your subscription and keep your journal safe."
+  };
+  function helpDismissed(id) { try { return localStorage.getItem("cm.help." + id) === "1"; } catch (e) { return false; } }
+  function dismissHelp(id) { try { localStorage.setItem("cm.help." + id, "1"); } catch (e) {} }
+  function sectionGuide(id) {
+    var text = SECTION_HELP[id]; if (!text || helpDismissed(id)) return null;
+    var g = el('<div class="sec-guide"><span class="sg-ic">💡</span><span class="sg-tx">' + esc(text) + '</span><button class="sg-x" title="Got it — hide this">✕</button></div>');
+    g.querySelector(".sg-x").addEventListener("click", function () { dismissHelp(id); g.remove(); });
+    return g;
+  }
+
   var mobileOpen = false;
   function route() { return location.hash.replace(/^#\/?/, "") || "today"; }
   function go(r) { location.hash = "#/" + r; }
@@ -161,6 +190,7 @@
     if (mobileOpen) { var sc = el('<div class="scrim"></div>'); sc.addEventListener("click", function () { mobileOpen = false; render(); }); wrap.appendChild(sc); }
 
     var main = el('<main class="main"></main>');
+    var guide = sectionGuide(r); if (guide) main.appendChild(guide);
     main.appendChild(!CM.planAllows(s.profile.plan, r) ? paywall(r) : (VIEWS[r] || VIEWS.home)());
     wrap.appendChild(main);
 
