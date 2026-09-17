@@ -652,7 +652,7 @@
     }
     // New-here walkthrough video (self-hosted — no third-party embed or channel).
     feed.appendChild(el('<div class="card vid-card"><div class="card-hd"><h3>🎬 New here? Watch the 1-min demo</h3></div>' +
-      '<div class="vid-wrap"><video class="vid-el" controls autoplay muted loop playsinline preload="metadata" poster="../assets/app-shot.png">' +
+      '<div class="vid-wrap"><video class="vid-el" controls preload="none" playsinline poster="../assets/app-shot.png">' +
       '<source src="../assets/home-walkthrough.mp4" type="video/mp4">Your browser can\'t play this video.</video></div>' +
       '<p class="hint" style="margin:10px 0 0">A quick tour — log a trade, get your Discipline Score, and see the mirror.</p></div>'));
     // 1. Chintamani tip
@@ -1020,7 +1020,7 @@
     var v = el('<div></div>');
     v.appendChild(topbar("Should I take this trade?", "Run the gate before you click. Green means go — everything else means wait."));
     v.appendChild(el('<div class="card vid-card"><div class="card-hd"><h3>▶ How the Pre-Trade Check works <span class="hint" style="font-weight:400">· quick walkthrough</span></h3></div>' +
-      '<div class="vid-wrap"><video class="vid-el" controls autoplay muted loop playsinline preload="metadata">' +
+      '<div class="vid-wrap"><video class="vid-el" controls preload="none" playsinline poster="../assets/app-shot.png">' +
       '<source src="assets/pretrade-check-tutorial.mp4" type="video/mp4">Your browser can\'t play this video.</video></div>' +
       '<p class="hint" style="margin:10px 0 0">Tick the honest questions before you enter — stop-loss, risk, setup, reward, calm — and get a clear go, caution or wait.</p></div>'));
     var c = el('<div class="card"></div>');
@@ -1072,7 +1072,7 @@
     var v = el('<div></div>');
     v.appendChild(topbar("Log a Trade", "Honesty in = honesty out. This is between you and your data."));
     v.appendChild(el('<div class="card vid-card"><div class="card-hd"><h3>▶ How to log a trade <span class="hint" style="font-weight:400">· 40-sec walkthrough</span></h3></div>' +
-      '<div class="vid-wrap"><video class="vid-el" controls autoplay muted loop playsinline preload="metadata">' +
+      '<div class="vid-wrap"><video class="vid-el" controls preload="none" playsinline poster="../assets/app-shot.png">' +
       '<source src="assets/log-a-trade-tutorial.mp4" type="video/mp4">Your browser can\'t play this video.</video></div>' +
       '<p class="hint" style="margin:10px 0 0">Follow along: log your entry, stop-loss and exit, pick why you exited, then watch your discipline score and the replay on the real market.</p></div>'));
     var c = el('<div class="card"></div>');
@@ -1233,7 +1233,7 @@
     var imp = el('<button class="btn btn-sm">⬆ Import CSV</button>'); imp.addEventListener("click", importCSV);
     v.appendChild(topbar("Trade Journal", st.count + " trades logged", [exp, imp, logBtn()]));
     v.appendChild(el('<div class="card vid-card"><div class="card-hd"><h3>▶ View &amp; download your journal <span class="hint" style="font-weight:400">· walkthrough</span></h3></div>' +
-      '<div class="vid-wrap"><video class="vid-el" controls autoplay muted loop playsinline preload="metadata">' +
+      '<div class="vid-wrap"><video class="vid-el" controls preload="none" playsinline poster="../assets/app-shot.png">' +
       '<source src="assets/trade-journal-tutorial.mp4" type="video/mp4">Your browser can\'t play this video.</video></div>' +
       '<p class="hint" style="margin:10px 0 0">Every trade in one place — view it here, or download the whole journal as an Excel file to keep and analyse.</p></div>'));
     var limit = CM.PLANS[s.profile.plan].limits.history;
@@ -2017,7 +2017,7 @@
     var v = el('<div></div>');
     v.appendChild(topbar("Analysis Tokens", "1 token = 1 deep Trade Replay. " + CM.FREE_TOKENS + " free per account — top up or subscribe for more."));
     v.appendChild(el('<div class="card vid-card"><div class="card-hd"><h3>▶ Tokens, plans &amp; premium features <span class="hint" style="font-weight:400">· walkthrough</span></h3></div>' +
-      '<div class="vid-wrap"><video class="vid-el" controls autoplay muted loop playsinline preload="metadata">' +
+      '<div class="vid-wrap"><video class="vid-el" controls preload="none" playsinline poster="../assets/app-shot.png">' +
       '<source src="assets/tokens-plans-tutorial.mp4" type="video/mp4">Your browser can\'t play this video.</video></div>' +
       '<p class="hint" style="margin:10px 0 0">How tokens, the plans and the premium sections fit together — so you know exactly what each analysis unlocks.</p></div>'));
     var ts = CM.tokenState();
@@ -2065,7 +2065,7 @@
     var v = el('<div></div>');
     v.appendChild(topbar("Setup Performance", "Which of your setups actually make money?"));
     v.appendChild(el('<div class="card vid-card"><div class="card-hd"><h3>▶ How Setup Performance works <span class="hint" style="font-weight:400">· walkthrough</span></h3></div>' +
-      '<div class="vid-wrap"><video class="vid-el" controls autoplay muted loop playsinline preload="metadata">' +
+      '<div class="vid-wrap"><video class="vid-el" controls preload="none" playsinline poster="../assets/app-shot.png">' +
       '<source src="assets/setup-performance-tutorial.mp4" type="video/mp4">Your browser can\'t play this video.</video></div>' +
       '<p class="hint" style="margin:10px 0 0">Your trades grouped by setup — see the win rate and net result of each, so you do more of what works and drop what doesn\'t.</p></div>'));
     var sp = CM.setupPerformance();
