@@ -1027,6 +1027,10 @@
   VIEWS.checklist = function () {
     var v = el('<div></div>');
     v.appendChild(topbar("Should I take this trade?", "Run the gate before you click. Green means go — everything else means wait."));
+    v.appendChild(el('<div class="card vid-card"><div class="card-hd"><h3>▶ How the Pre-Trade Check works <span class="hint" style="font-weight:400">· quick walkthrough</span></h3></div>' +
+      '<div class="vid-wrap"><video class="vid-el" controls preload="metadata" playsinline>' +
+      '<source src="assets/pretrade-check-tutorial.mp4" type="video/mp4">Your browser can\'t play this video.</video></div>' +
+      '<p class="hint" style="margin:10px 0 0">Tick the honest questions before you enter — stop-loss, risk, setup, reward, calm — and get a clear go, caution or wait.</p></div>'));
     var c = el('<div class="card"></div>');
     var gauge = el('<div style="display:flex;justify-content:center;margin:4px 0 8px" id="ckGauge"></div>');
     var verdictMsg = el('<p class="hint" id="ckMsg" style="text-align:center;margin:0 0 14px"></p>');
