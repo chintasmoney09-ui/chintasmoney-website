@@ -1,6 +1,6 @@
 /* ChintasMoney service worker — offline app shell.
  * Bump CACHE when you ship new app files so clients update. */
-var CACHE = "chintasmoney-v84";
+var CACHE = "chintasmoney-v94";
 var SHELL = [
   "./index.html",
   "./styles.css",
@@ -29,6 +29,9 @@ self.addEventListener("activate", function (e) {
 self.addEventListener("fetch", function (e) {
   var req = e.request;
   if (req.method !== "GET") return;
+  // Let the browser handle media range requests (video) directly — caching
+  // partial (206) responses breaks playback.
+  if (req.headers.has("range")) return;
   // Let the browser handle cross-origin (e.g. TradingView, fonts) directly.
   try { if (new URL(req.url).origin !== self.location.origin) return; } catch (e2) { return; }
   var isHTML = req.mode === "navigate" || (req.headers.get("accept") || "").indexOf("text/html") !== -1;

@@ -62,10 +62,11 @@ async function oneQuote(s) {
 }
 
 function jsonRes(obj, maxAge) {
+  // maxAge === 0 → do not cache (used for transient upstream errors).
   return new Response(JSON.stringify(obj), {
     headers: {
       "content-type": "application/json; charset=utf-8",
-      "cache-control": "public, max-age=" + (maxAge || 60),
+      "cache-control": maxAge === 0 ? "no-store" : "public, max-age=" + (maxAge || 60),
       "access-control-allow-origin": "*",
     },
   });
@@ -81,25 +82,25 @@ async function handleQuotes() {
 // TradingView's gated embeds. Powers the live trade-preview chart.
 async function handleCandles(url) {
   const raw = (url.searchParams.get("symbol") || "").trim();
-  if (!raw || raw.length > 24 || !/^[\^A-Za-z0-9.\-=]+$/.test(raw)) return jsonRes({ error: "bad symbol" }, 30);
+  if (!raw || raw.length > 24 || !/^[\^A-Za-z0-9.\-=]+$/.test(raw)) return jsonRes({ error: "bad symbol" }, 0);
   const range = /^(1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|max)$/.test(url.searchParams.get("range") || "") ? url.searchParams.get("range") : "3mo";
   const interval = range === "1d" || range === "5d" ? "15m" : "1d";
   try {
     const y = "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(raw) +
       "?interval=" + interval + "&range=" + range;
     const r = await fetch(y, { headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json" } });
-    if (!r.ok) return jsonRes({ error: "fetch failed" }, 30);
+    if (!r.ok) return jsonRes({ error: "fetch failed" }, 0);
     const j = await r.json();
     const res = j && j.chart && j.chart.result && j.chart.result[0];
     const ts = res && res.timestamp, q = res && res.indicators && res.indicators.quote && res.indicators.quote[0];
-    if (!ts || !q) return jsonRes({ error: "no data" }, 30);
+    if (!ts || !q) return jsonRes({ error: "no data" }, 0);
     const candles = [];
     for (let i = 0; i < ts.length; i++) {
-      if (q.open[i] == null || q.close[i] == null) continue;
+      if (q.open[i] == null || q.high[i] == null || q.low[i] == null || q.close[i] == null) continue;
       candles.push({ time: ts[i], open: q.open[i], high: q.high[i], low: q.low[i], close: q.close[i] });
     }
     return jsonRes({ symbol: raw, candles: candles, at: Date.now() }, 120);
-  } catch (e) { return jsonRes({ error: "error" }, 30); }
+  } catch (e) { return jsonRes({ error: "error" }, 0); }
 }
 
 async function handleMovers() {
@@ -124,7 +125,8 @@ export default {
         res = url.pathname === "/api/movers" ? await handleMovers()
             : url.pathname === "/api/candles" ? await handleCandles(url)
             : await handleQuotes();
-        ctx.waitUntil(cache.put(request, res.clone()));
+        // Don't cache transient error responses (they carry no-store).
+        if (!/no-store/.test(res.headers.get("cache-control") || "")) ctx.waitUntil(cache.put(request, res.clone()));
       }
       return res;
     }

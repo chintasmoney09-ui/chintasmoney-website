@@ -529,53 +529,6 @@
   // the JS embed can't read its config when injected dynamically (no
   // document.currentScript), so it silently falls back to AAPL. The iframe
   // always shows the symbol we ask for and updates when we swap it.
-  function tvChart(sym, h, mini) {
-    // Use TradingView's current, supported "Advanced Chart" widget. We load it
-    // inside an iframe via srcdoc so the widget script has its own document
-    // context (document.currentScript works) and reliably renders the symbol we
-    // pass — the old s.tradingview.com/widgetembed endpoint is deprecated and now
-    // shows "symbol only available on TradingView" for most symbols.
-    var cfg = {
-      autosize: true,
-      symbol: sym,
-      interval: "D",
-      timezone: "Asia/Kolkata",
-      theme: "dark",
-      style: "1",
-      locale: "in",
-      withdateranges: true,
-      allow_symbol_change: false,
-      hide_side_toolbar: !!mini,
-      hide_top_toolbar: !!mini,
-      hide_legend: !!mini,
-      support_host: "https://www.tradingview.com"
-    };
-    var srcdoc =
-      '<!DOCTYPE html><html><head><meta charset="utf-8">' +
-      '<style>html,body{height:100%;margin:0;padding:0;background:#0b1533;overflow:hidden}' +
-      '.tradingview-widget-container,.tradingview-widget-container__widget{height:100%;width:100%}</style></head><body>' +
-      '<div class="tradingview-widget-container">' +
-      '<div class="tradingview-widget-container__widget"></div>' +
-      '<script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>' +
-      JSON.stringify(cfg) +
-      '<\/script></div></body></html>';
-    var wrap = el('<div class="tv-frame" style="height:' + (h || 480) + 'px"></div>');
-    var ifr = document.createElement("iframe");
-    ifr.srcdoc = srcdoc;
-    ifr.setAttribute("frameborder", "0");
-    ifr.setAttribute("scrolling", "no");
-    ifr.setAttribute("allowfullscreen", "");
-    ifr.setAttribute("loading", "lazy");
-    ifr.style.cssText = "width:100%;height:100%;border:0;display:block";
-    var cap = el('<div style="text-align:right"><a href="https://www.tradingview.com/symbols/' + encodeURIComponent(sym).replace("%3A", "-") + '/" rel="noopener nofollow" target="_blank" style="color:#8a83a6;font-size:.7rem;text-decoration:none">Live data by TradingView</a></div>');
-    wrap.appendChild(ifr);
-    var outer = el('<div></div>'); outer.appendChild(wrap); outer.appendChild(cap);
-    return outer;
-  }
-  // NSE *index* symbols (NIFTY/BANKNIFTY) aren't available in TradingView's free
-  // embeds via their index feeds (NSE:NIFTY/NSE:BANKNIFTY), which are served
-  // which mirror the index and DO load. Stocks work as-is.
-  var TV_SYM = { NIFTY: "NSE:NIFTY", BANKNIFTY: "NSE:BANKNIFTY", RELIANCE: "NSE:RELIANCE", TCS: "NSE:TCS", TATAMOTORS: "NSE:TATAMOTORS", ZOMATO: "NSE:ZOMATO" };
   // Guess the live TradingView symbol from a user's trade symbol string.
   function tvSymbolFor(s) {
     s = (s || "").trim().toUpperCase();
@@ -586,8 +539,6 @@
     var first = s.split(/\s+/)[0].replace(/[^A-Z0-9&-]/g, "");
     return first ? "NSE:" + first : "NSE:NIFTY";
   }
-  function tvAdvanced(sym, h) { return tvChart(sym, h || 480, false); }
-  function tvMini(sym, title, h) { return tvChart(sym, h || 240, true); }
   // Full-screen a chart wrapper (lets the user rotate to landscape on mobile).
   function goFullscreen(node) {
     var t = node.querySelector(".tv-frame") || node;
@@ -699,19 +650,11 @@
         feed.appendChild(nudge);
       }
     }
-    // New-here demo video — only shown once a real YouTube id is set in DEMO_YT.
-    if (DEMO_YT) {
-      var vcard = el('<div class="card"><div class="card-hd"><h3>🎬 New here? Watch the 2-min demo</h3></div><div class="vc-frame" data-yt="' + DEMO_YT + '"><div class="vc-play">▶</div><span class="vc-badge">2-min walkthrough</span></div></div>');
-      var vf = vcard.querySelector(".vc-frame");
-      vf.addEventListener("click", function () {
-        var id = (vf.getAttribute("data-yt") || "").trim(); if (!id) return;
-        var ifr = document.createElement("iframe");
-        ifr.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(id) + "?autoplay=1&rel=0&modestbranding=1&playsinline=1";
-        ifr.setAttribute("allow", "autoplay; encrypted-media; picture-in-picture"); ifr.setAttribute("allowfullscreen", "");
-        ifr.style.cssText = "width:100%;height:100%;border:0;display:block"; vf.innerHTML = ""; vf.appendChild(ifr);
-      });
-      feed.appendChild(vcard);
-    }
+    // New-here walkthrough video (self-hosted — no third-party embed or channel).
+    feed.appendChild(el('<div class="card vid-card"><div class="card-hd"><h3>🎬 New here? Watch the 1-min demo</h3></div>' +
+      '<div class="vid-wrap"><video class="vid-el" controls preload="metadata" playsinline poster="../assets/app-shot.png">' +
+      '<source src="../assets/home-walkthrough.mp4" type="video/mp4">Your browser can\'t play this video.</video></div>' +
+      '<p class="hint" style="margin:10px 0 0">A quick tour — log a trade, get your Discipline Score, and see the mirror.</p></div>'));
     // 1. Chintamani tip
     feed.appendChild(chintaCard());
     // 2. discipline snapshot
@@ -1076,6 +1019,10 @@
   VIEWS.checklist = function () {
     var v = el('<div></div>');
     v.appendChild(topbar("Should I take this trade?", "Run the gate before you click. Green means go — everything else means wait."));
+    v.appendChild(el('<div class="card vid-card"><div class="card-hd"><h3>▶ How the Pre-Trade Check works <span class="hint" style="font-weight:400">· quick walkthrough</span></h3></div>' +
+      '<div class="vid-wrap"><video class="vid-el" controls preload="metadata" playsinline>' +
+      '<source src="assets/pretrade-check-tutorial.mp4" type="video/mp4">Your browser can\'t play this video.</video></div>' +
+      '<p class="hint" style="margin:10px 0 0">Tick the honest questions before you enter — stop-loss, risk, setup, reward, calm — and get a clear go, caution or wait.</p></div>'));
     var c = el('<div class="card"></div>');
     var gauge = el('<div style="display:flex;justify-content:center;margin:4px 0 8px" id="ckGauge"></div>');
     var verdictMsg = el('<p class="hint" id="ckMsg" style="text-align:center;margin:0 0 14px"></p>');
@@ -1124,6 +1071,10 @@
   VIEWS.log = function () {
     var v = el('<div></div>');
     v.appendChild(topbar("Log a Trade", "Honesty in = honesty out. This is between you and your data."));
+    v.appendChild(el('<div class="card vid-card"><div class="card-hd"><h3>▶ How to log a trade <span class="hint" style="font-weight:400">· 40-sec walkthrough</span></h3></div>' +
+      '<div class="vid-wrap"><video class="vid-el" controls preload="metadata" playsinline>' +
+      '<source src="assets/log-a-trade-tutorial.mp4" type="video/mp4">Your browser can\'t play this video.</video></div>' +
+      '<p class="hint" style="margin:10px 0 0">Follow along: log your entry, stop-loss and exit, pick why you exited, then watch your discipline score and the replay on the real market.</p></div>'));
     var c = el('<div class="card"></div>');
     var f =
       '<div class="grid g2"><label class="fld"><span>Symbol <small class="muted" style="font-weight:400">— your symbols first</small></span><input id="sym" list="symList" placeholder="Type or pick — NIFTY, RELIANCE…" autocomplete="off" /><datalist id="symList">' + tradedSymOptions() + '</datalist></label>' +
@@ -1281,6 +1232,10 @@
     var exp = el('<button class="btn btn-sm">⬇ Download (Excel)</button>'); exp.addEventListener("click", downloadJournalCSV);
     var imp = el('<button class="btn btn-sm">⬆ Import CSV</button>'); imp.addEventListener("click", importCSV);
     v.appendChild(topbar("Trade Journal", st.count + " trades logged", [exp, imp, logBtn()]));
+    v.appendChild(el('<div class="card vid-card"><div class="card-hd"><h3>▶ View &amp; download your journal <span class="hint" style="font-weight:400">· walkthrough</span></h3></div>' +
+      '<div class="vid-wrap"><video class="vid-el" controls preload="metadata" playsinline>' +
+      '<source src="assets/trade-journal-tutorial.mp4" type="video/mp4">Your browser can\'t play this video.</video></div>' +
+      '<p class="hint" style="margin:10px 0 0">Every trade in one place — view it here, or download the whole journal as an Excel file to keep and analyse.</p></div>'));
     var limit = CM.PLANS[s.profile.plan].limits.history;
     if (!st.trades.length) {
       var empty = el('<div class="card paywall"><div class="lock-ic">📓</div><h3>No trades yet</h3><p class="hint">Log your first trade to see your Discipline Score come alive.</p></div>');
@@ -1930,8 +1885,8 @@
     var body = '<p class="hint">' + (reason || "Top up to keep analysing your trades.") + '</p>' +
       '<div class="buy-grid">' + packs + '</div>' +
       '<div class="buy-plans">' +
-        '<button class="btn btn-primary" data-plan="699">📈 Active Trader — ₹699/mo · <b>unlimited</b></button>' +
-        '<button class="btn" data-plan="2000">👑 Desk — ₹2,000/mo · for 60+ trades</button>' +
+        '<button class="btn btn-primary" data-plan="499">💎 Platinum — ₹499/mo · <b>unlimited tokens</b></button>' +
+        '<button class="btn" data-plan="199">⚡ Go Plus — ₹199/mo · 50 tokens</button>' +
       '</div>' +
       '<p class="hint" style="text-align:center;margin-top:12px">1 token = 1 deep Trade Replay. Educational behaviour analysis of your <b>own past trades</b> only — no tips, no advice.</p>';
     dialog("You're out of analyses 🎟️", body, function (b, close) {
@@ -1961,12 +1916,78 @@
       }).catch(function () { b.querySelector("#rpOut").innerHTML = behaviourPanel(t); });
     });
   }
+  // Build an AUTHENTIC sample trade anchored to real market candles: entry, stop
+  // and exit are taken from actual bars on the live chart, so nothing is invented
+  // — we read the real data source and pick genuine price points. The lot size is
+  // the real F&O lot for the index (or a sensible share qty for stocks).
+  function round2(x) { return Math.round(x * 100) / 100; }
+  function buildDemoTrade(symbol, candles) {
+    var n = candles.length;
+    if (n < 25) return null;
+    var ei = Math.floor(n * 0.6);                       // enter ~60% through the window
+    var entry = candles[ei].close;
+    var seg = candles.slice(ei, Math.min(n, ei + 15));
+    var isLong = seg[seg.length - 1].close >= entry;   // direction from the real drift
+    var win = candles.slice(Math.max(0, ei - 6), ei + 1);
+    var sl = isLong ? Math.min.apply(null, win.map(function (c) { return c.low; }))
+                    : Math.max.apply(null, win.map(function (c) { return c.high; }));
+    var risk = Math.abs(entry - sl) || entry * 0.004;
+    var target = isLong ? entry + risk * 2 : entry - risk * 2;
+    var best = isLong ? Math.max.apply(null, seg.map(function (c) { return c.high; }))
+                      : Math.min.apply(null, seg.map(function (c) { return c.low; }));
+    // Exit at a REAL later bar's close, near 60% of the best move — so the replay
+    // can honestly show "you left money on the table" (behaviour, not the market).
+    var targetExit = entry + (best - entry) * 0.6, xi = ei + 1, bestDiff = Infinity;
+    for (var k = ei + 1; k < Math.min(n, ei + 15); k++) {
+      var diff = Math.abs(candles[k].close - targetExit);
+      if (diff < bestDiff) { bestDiff = diff; xi = k; }
+    }
+    var lot = lotFor(symbol) || (entry > 3000 ? 10 : entry > 800 ? 50 : entry > 200 ? 200 : 500);
+    return { id: "sample", symbol: symbol, side: isLong ? "Buy" : "Sell", qty: lot,
+      entry: round2(entry), exit: round2(candles[xi].close), plannedSL: round2(sl), target: round2(target),
+      date: new Date(candles[ei].time * 1000).toISOString(),
+      setup: "Breakout", exit_reason: "Booked early (fear)", emotion: "Calm", demo: true };
+  }
+  // Free showcase: pick any index/stock → draw an example trade on its real,
+  // current chart. Uses no tokens; clearly labelled as a sample.
+  function openSampleReplay(symbol) {
+    var body = '<div class="legal-note" style="margin-bottom:10px">📘 <b>Sample</b> — an example trade drawn on <b>' + esc(symbol) + '</b>\'s real, current market chart to show how Replay works. It is not a real or recommended trade, and no future trade is suggested.</div>' +
+      '<div id="rpChart"></div><div id="rpOut" style="margin-top:12px"><p class="hint">Loading the real market for ' + esc(symbol) + '…</p></div>';
+    dialog(esc(symbol) + " · sample replay", body, function (b) {
+      var ysym = yfSymbolFor(symbol);
+      fetch("/api/candles?symbol=" + encodeURIComponent(ysym) + "&range=6mo").then(function (r) { return r.json(); }).then(function (data) {
+        var out = b.querySelector("#rpOut");
+        if (!data || !data.candles || data.candles.length < 25) { out.innerHTML = '<p class="hint">Couldn\'t load ' + esc(symbol) + ' right now — try another one.</p>'; return; }
+        var t = buildDemoTrade(symbol, data.candles);
+        if (!t) { out.innerHTML = '<p class="hint">Not enough data for ' + esc(symbol) + '.</p>'; return; }
+        var levels = { entry: t.entry, sl: t.plannedSL, exit: t.exit, target: t.target, side: t.side, qty: t.qty };
+        liveTradeChart(b.querySelector("#rpChart"), symbol, levels, 380);
+        var a = analyzeReplay(data.candles, t);
+        out.innerHTML = '<div class="rp-panel"><h4>The sample trade</h4>' +
+          '<div class="rp-row"><b>' + esc(t.side) + ' ' + t.qty + ' · ' + esc(symbol) + '</b><span>Entry ₹' + t.entry + ' · Stop ₹' + t.plannedSL + ' · Exit ₹' + t.exit + '</span></div></div>' +
+          (a ? replayPanel(a, t) : "") + behaviourPanel(t);
+      }).catch(function () { b.querySelector("#rpOut").innerHTML = '<p class="hint">Network issue loading ' + esc(symbol) + '.</p>'; });
+    });
+  }
+  var SAMPLE_SYMS = ["NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX", "RELIANCE", "TCS", "HDFCBANK", "INFY", "SBIN", "GOLD"];
+  function sampleReplayCard() {
+    var card = el('<div class="card"><div class="card-hd"><h3>▶ Try a sample replay on real market data</h3></div>' +
+      '<p class="hint" style="margin:0 0 10px">Pick an index or stock — we draw an example entry, stop &amp; exit on its <b>real, current chart</b> so you can see exactly how Replay works. Free · uses no tokens.</p>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+      '<label class="fld" style="margin:0;flex:1;min-width:160px"><select id="sampleSym">' +
+      SAMPLE_SYMS.map(function (s) { return '<option value="' + s + '">' + s + '</option>'; }).join("") +
+      '</select></label>' +
+      '<button class="btn btn-primary" id="sampleGo">Play sample →</button></div></div>');
+    card.querySelector("#sampleGo").addEventListener("click", function () { openSampleReplay(card.querySelector("#sampleSym").value); });
+    return card;
+  }
   VIEWS.replay = function () {
     var v = el('<div></div>');
     v.appendChild(topbar("Trade Replay", "Replay any trade on the real market for its actual dates — see what would have happened."));
+    v.appendChild(sampleReplayCard());
     var trades = CM.load().trades.filter(function (t) { return !/^s\d+$/.test(t.id || ""); });
     var c = el('<div class="card"></div>');
-    if (!trades.length) { c.appendChild(el('<p class="hint">Log a trade first — then replay it here to see exactly what the market did after your entry.</p>')); v.appendChild(c); return v; }
+    if (!trades.length) { c.appendChild(el('<p class="hint">The sample above shows how it works. Log your own trade — then replay it here to see exactly what the market did after your entry.</p>')); v.appendChild(c); return v; }
     c.appendChild(el('<div class="legal-note">📘 <b>Educational behaviour tool.</b> Trade Replay analyses <b>only your own past trades</b> on historical market data — to understand your behaviour. It is <b>not</b> investment advice, gives <b>no</b> tips, calls or future predictions, and is <b>not</b> SEBI-registered advice. No future trade is ever suggested.</div>'));
     var ts0 = CM.tokenState();
     c.appendChild(el('<div class="tok-status"><span>🎟️ <b>' + ts0.total + '</b> analyses left <span class="hint">(' + ts0.freeLeft + ' free left' + (ts0.balance ? ' + ' + ts0.balance + ' tokens' : '') + ')</span></span><a href="#/tokens" class="tok-get">Get more →</a></div>'));
@@ -1983,7 +2004,7 @@
   };
 
   // ---- ANALYSIS TOKENS (buy / balance) ------------------------------------
-  var TOKEN_PACKS = [[10, 99], [30, 249], [100, 699]];
+  var TOKEN_PACKS = [[20, 49], [60, 99], [150, 199]];
   function buyTokens(n, price) {
     // Real charge needs Razorpay (Profile → payments). Until then, tell the user.
     if (window.CMCloud && window.CM_CONFIG && window.CM_CONFIG.razorpayKeyId && window.CMCloud.checkoutTokens) {
@@ -1994,7 +2015,11 @@
   }
   VIEWS.tokens = function () {
     var v = el('<div></div>');
-    v.appendChild(topbar("Analysis Tokens", "1 token = 1 deep Trade Replay. 2 free per account — top up or subscribe for more."));
+    v.appendChild(topbar("Analysis Tokens", "1 token = 1 deep Trade Replay. " + CM.FREE_TOKENS + " free per account — top up or subscribe for more."));
+    v.appendChild(el('<div class="card vid-card"><div class="card-hd"><h3>▶ Tokens, plans &amp; premium features <span class="hint" style="font-weight:400">· walkthrough</span></h3></div>' +
+      '<div class="vid-wrap"><video class="vid-el" controls preload="metadata" playsinline>' +
+      '<source src="assets/tokens-plans-tutorial.mp4" type="video/mp4">Your browser can\'t play this video.</video></div>' +
+      '<p class="hint" style="margin:10px 0 0">How tokens, the plans and the premium sections fit together — so you know exactly what each analysis unlocks.</p></div>'));
     var ts = CM.tokenState();
     var c = el('<div class="card"></div>');
     c.appendChild(el('<div class="legal-note">🎟️ Tokens unlock <b>behaviour analysis of your own past trades</b> only — educational, not advice, no tips, no future calls.</div>'));
@@ -2008,12 +2033,14 @@
       card.appendChild(buy); packs.appendChild(card);
     });
     c.appendChild(packs);
-    c.appendChild(el('<h3 style="margin:18px 0 8px">Or go unlimited</h3>'));
-    c.appendChild(el('<div class="tok-sub"><div><div style="font-weight:800">📈 Active Trader — ₹699 / month</div><p class="hint" style="margin:4px 0 0">Unlimited Trade Replays, full behaviour reports and Excel export. Best value once you analyse more than ~10 trades a month.</p></div><button class="btn btn-primary" id="tSub">Go unlimited · ₹699</button></div>'));
-    c.querySelector("#tSub").addEventListener("click", function () { buyTokens(0, 699); });
-    c.appendChild(el('<div class="tok-sub" style="border-color:rgba(167,139,250,.35);background:rgba(167,139,250,.07)"><div><div style="font-weight:800">👑 Desk — ₹2,000 / month</div><p class="hint" style="margin:4px 0 0">For 60+ trades a month: everything in Active Trader, plus priority processing, multi-year history, every market, and a monthly 1:1 discipline review.</p></div><button class="btn" id="tDesk">Go Desk · ₹2,000</button></div>'));
-    c.querySelector("#tDesk").addEventListener("click", function () { buyTokens(0, 2000); });
-    c.appendChild(el('<p class="hint" style="margin-top:14px">1 token = one deep analysis (Trade Replay of one past trade). Free daily tokens reset each day; purchased tokens stay until used.</p>'));
+    c.appendChild(el('<h3 style="margin:18px 0 8px">Or subscribe</h3>'));
+    c.appendChild(el('<div class="tok-sub"><div><div style="font-weight:800">⚡ Go Plus — ₹199 / month</div><p class="hint" style="margin:4px 0 0">Unlimited trades &amp; full mistake analysis, plus <b>50 AI tokens a month</b>. Best for regular loggers.</p></div><button class="btn" id="tPlus">Go Plus · ₹199</button></div>'));
+    c.querySelector("#tPlus").addEventListener("click", function () { buyTokens(0, 199); });
+    c.appendChild(el('<div class="tok-sub" style="border-color:rgba(34,224,138,.35);background:rgba(34,224,138,.07)"><div><div style="font-weight:800">💎 Platinum — ₹499 / month <span class="badge b-green">Most popular</span></div><p class="hint" style="margin:4px 0 0"><b>Unlimited AI tokens</b>, unlimited Trade Replays, broker import, setup performance and weekly reports.</p></div><button class="btn btn-primary" id="tPlat">Go unlimited · ₹499</button></div>'));
+    c.querySelector("#tPlat").addEventListener("click", function () { buyTokens(0, 499); });
+    c.appendChild(el('<div class="tok-sub" style="border-color:rgba(245,184,73,.35);background:rgba(245,184,73,.07)"><div><div style="font-weight:800">👑 Diamond — ₹999 / month</div><p class="hint" style="margin:4px 0 0">Everything in Platinum, plus priority AI, a monthly 1:1 discipline review, multi-year backtesting and early access.</p></div><button class="btn" id="tDia">Go Diamond · ₹999</button></div>'));
+    c.querySelector("#tDia").addEventListener("click", function () { buyTokens(0, 999); });
+    c.appendChild(el('<p class="hint" style="margin-top:14px">1 token = one deep analysis (Trade Replay of one past trade). The ' + CM.FREE_TOKENS + ' free tokens are one-time per account; purchased tokens stay until used.</p>'));
     v.appendChild(c);
     return v;
   };
@@ -2037,6 +2064,10 @@
   VIEWS.strategy = function () {
     var v = el('<div></div>');
     v.appendChild(topbar("Setup Performance", "Which of your setups actually make money?"));
+    v.appendChild(el('<div class="card vid-card"><div class="card-hd"><h3>▶ How Setup Performance works <span class="hint" style="font-weight:400">· walkthrough</span></h3></div>' +
+      '<div class="vid-wrap"><video class="vid-el" controls preload="metadata" playsinline>' +
+      '<source src="assets/setup-performance-tutorial.mp4" type="video/mp4">Your browser can\'t play this video.</video></div>' +
+      '<p class="hint" style="margin:10px 0 0">Your trades grouped by setup — see the win rate and net result of each, so you do more of what works and drop what doesn\'t.</p></div>'));
     var sp = CM.setupPerformance();
     var c = el('<div class="card" style="overflow-x:auto"><table class="tbl"><thead><tr><th>Setup</th><th class="num">Trades</th><th class="num">Win rate</th><th class="num">Net P&L</th></tr></thead><tbody></tbody></table></div>');
     var tb = c.querySelector("tbody");
