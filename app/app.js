@@ -70,6 +70,8 @@
   }
 
   var mobileOpen = false;
+  // Set to your YouTube video id to show the demo-video card (empty = hidden).
+  var DEMO_YT = "";
   function route() { return location.hash.replace(/^#\/?/, "") || "today"; }
   function go(r) { location.hash = "#/" + r; }
   window.addEventListener("hashchange", render);
@@ -697,18 +699,19 @@
         feed.appendChild(nudge);
       }
     }
-    // New-here demo video (lazy facade; set data-yt to a YouTube id to go live)
-    var vcard = el('<div class="card"><div class="card-hd"><h3>🎬 New here? Watch the 2-min demo</h3></div><div class="vc-frame" data-yt=""><div class="vc-play">▶</div><span class="vc-badge">2-min walkthrough</span></div></div>');
-    var vf = vcard.querySelector(".vc-frame");
-    vf.addEventListener("click", function () {
-      var id = (vf.getAttribute("data-yt") || "").trim();
-      if (!id) { window.location.href = "../index.html#howto"; return; }
-      var ifr = document.createElement("iframe");
-      ifr.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(id) + "?autoplay=1&rel=0&modestbranding=1&playsinline=1";
-      ifr.setAttribute("allow", "autoplay; encrypted-media; picture-in-picture"); ifr.setAttribute("allowfullscreen", "");
-      ifr.style.cssText = "width:100%;height:100%;border:0;display:block"; vf.innerHTML = ""; vf.appendChild(ifr);
-    });
-    feed.appendChild(vcard);
+    // New-here demo video — only shown once a real YouTube id is set in DEMO_YT.
+    if (DEMO_YT) {
+      var vcard = el('<div class="card"><div class="card-hd"><h3>🎬 New here? Watch the 2-min demo</h3></div><div class="vc-frame" data-yt="' + DEMO_YT + '"><div class="vc-play">▶</div><span class="vc-badge">2-min walkthrough</span></div></div>');
+      var vf = vcard.querySelector(".vc-frame");
+      vf.addEventListener("click", function () {
+        var id = (vf.getAttribute("data-yt") || "").trim(); if (!id) return;
+        var ifr = document.createElement("iframe");
+        ifr.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(id) + "?autoplay=1&rel=0&modestbranding=1&playsinline=1";
+        ifr.setAttribute("allow", "autoplay; encrypted-media; picture-in-picture"); ifr.setAttribute("allowfullscreen", "");
+        ifr.style.cssText = "width:100%;height:100%;border:0;display:block"; vf.innerHTML = ""; vf.appendChild(ifr);
+      });
+      feed.appendChild(vcard);
+    }
     // 1. Chintamani tip
     feed.appendChild(chintaCard());
     // 2. discipline snapshot
@@ -735,7 +738,8 @@
     // 5. mini chart nudge
     var mc = el('<div class="card"></div>');
     mc.appendChild(el('<div class="card-hd"><h3>📈 NIFTY 50 · live</h3></div>'));
-    mc.appendChild(tvMini("NSE:NIFTY", "NIFTY 50", 340));
+    var mcBox = el('<div></div>'); mc.appendChild(mcBox);
+    liveTradeChart(mcBox, "NIFTY", {}, 300, true, true);
     feed.appendChild(mc);
     // 6. equity nudge
     var eq = CM.equityCurve();
@@ -917,7 +921,8 @@
     // live chart card
     var chc = el('<div class="card" style="margin-top:16px"></div>');
     chc.appendChild(el('<div class="card-hd"><h3>📈 NIFTY 50 · live</h3></div>'));
-    chc.appendChild(tvMini("NSE:NIFTY", "NIFTY 50", 340));
+    var chcBox = el('<div></div>'); chc.appendChild(chcBox);
+    liveTradeChart(chcBox, "NIFTY", {}, 300, true, true);
     var chb = el('<button class="btn btn-ghost btn-sm" style="margin-top:8px">Open full charts →</button>');
     chb.addEventListener("click", function () { go("markets"); });
     chc.appendChild(chb);
@@ -1788,7 +1793,7 @@
   // Live candlestick chart (our own data) with the trade's Entry/Stop/Target/Exit
   // drawn as price lines. Falls back to the self-contained ladder if anything fails,
   // so it never leaves an empty/broken chart.
-  function liveTradeChart(box, userSym, levels, h, live) {
+  function liveTradeChart(box, userSym, levels, h, live, hideInd) {
     h = h || 320; box.innerHTML = "";
     box.style.overflow = "hidden"; box.style.borderRadius = "12px";
     var host = el('<div style="height:' + h + 'px;width:100%;max-width:100%;overflow:hidden;border-radius:12px;border:1px solid rgba(255,255,255,.06)"></div>'); box.appendChild(host);
@@ -1812,7 +1817,7 @@
       var series = chart.addCandlestickSeries({ upColor: "#22e08a", downColor: "#ff5a6a", borderVisible: false, wickUpColor: "#22e08a", wickDownColor: "#ff5a6a" });
       series.setData(data.candles.map(function (c) { return { time: c.time, open: c.open, high: c.high, low: c.low, close: c.close }; }));
       chart.timeScale().fitContent();
-      addIndicators(chart, data.candles, box, userSym);
+      if (!hideInd) addIndicators(chart, data.candles, box, userSym);
       var lines = {};
       function setLine(key, v, color, title) {
         var n = parseFloat(v);
