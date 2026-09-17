@@ -90,6 +90,9 @@ img { max-width: 100%; }
 .g4 { grid-template-columns: repeat(4, 1fr); }
 .card { background: linear-gradient(180deg, var(--surface), var(--bg-2)); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
 .card h3 { margin: 0 0 4px; font-size: 1rem; }
+.vid-card .card-hd { margin-bottom: 10px; }
+.vid-wrap { border-radius: 12px; overflow: hidden; background: #05070f; border: 1px solid var(--line); display: flex; justify-content: center; }
+.vid-el { width: 100%; height: auto; max-height: 72vh; display: block; }
 .card .hint { color: var(--muted); font-size: .82rem; }
 .card-hd { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .card-hd h3 { flex: 1; }

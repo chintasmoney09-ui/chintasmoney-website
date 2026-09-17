@@ -1075,6 +1075,10 @@
   VIEWS.log = function () {
     var v = el('<div></div>');
     v.appendChild(topbar("Log a Trade", "Honesty in = honesty out. This is between you and your data."));
+    v.appendChild(el('<div class="card vid-card"><div class="card-hd"><h3>▶ How to log a trade <span class="hint" style="font-weight:400">· 40-sec walkthrough</span></h3></div>' +
+      '<div class="vid-wrap"><video class="vid-el" controls preload="metadata" playsinline>' +
+      '<source src="assets/log-a-trade-tutorial.mp4" type="video/mp4">Your browser can\'t play this video.</video></div>' +
+      '<p class="hint" style="margin:10px 0 0">Follow along: log your entry, stop-loss and exit, pick why you exited, then watch your discipline score and the replay on the real market.</p></div>'));
     var c = el('<div class="card"></div>');
     var f =
       '<div class="grid g2"><label class="fld"><span>Symbol <small class="muted" style="font-weight:400">— your symbols first</small></span><input id="sym" list="symList" placeholder="Type or pick — NIFTY, RELIANCE…" autocomplete="off" /><datalist id="symList">' + tradedSymOptions() + '</datalist></label>' +
