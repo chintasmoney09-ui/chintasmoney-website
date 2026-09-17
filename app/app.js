@@ -650,19 +650,11 @@
         feed.appendChild(nudge);
       }
     }
-    // New-here demo video — only shown once a real YouTube id is set in DEMO_YT.
-    if (DEMO_YT) {
-      var vcard = el('<div class="card"><div class="card-hd"><h3>🎬 New here? Watch the 2-min demo</h3></div><div class="vc-frame" data-yt="' + DEMO_YT + '"><div class="vc-play">▶</div><span class="vc-badge">2-min walkthrough</span></div></div>');
-      var vf = vcard.querySelector(".vc-frame");
-      vf.addEventListener("click", function () {
-        var id = (vf.getAttribute("data-yt") || "").trim(); if (!id) return;
-        var ifr = document.createElement("iframe");
-        ifr.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(id) + "?autoplay=1&rel=0&modestbranding=1&playsinline=1";
-        ifr.setAttribute("allow", "autoplay; encrypted-media; picture-in-picture"); ifr.setAttribute("allowfullscreen", "");
-        ifr.style.cssText = "width:100%;height:100%;border:0;display:block"; vf.innerHTML = ""; vf.appendChild(ifr);
-      });
-      feed.appendChild(vcard);
-    }
+    // New-here walkthrough video (self-hosted — no third-party embed or channel).
+    feed.appendChild(el('<div class="card vid-card"><div class="card-hd"><h3>🎬 New here? Watch the 1-min demo</h3></div>' +
+      '<div class="vid-wrap"><video class="vid-el" controls preload="metadata" playsinline poster="../assets/app-shot.png">' +
+      '<source src="../assets/home-walkthrough.mp4" type="video/mp4">Your browser can\'t play this video.</video></div>' +
+      '<p class="hint" style="margin:10px 0 0">A quick tour — log a trade, get your Discipline Score, and see the mirror.</p></div>'));
     // 1. Chintamani tip
     feed.appendChild(chintaCard());
     // 2. discipline snapshot
