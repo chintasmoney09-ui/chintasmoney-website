@@ -115,9 +115,62 @@ async function handleMovers() {
   return jsonRes({ gainers: gainers, losers: losers, at: Date.now() }, 120);
 }
 
+// ---- Razorpay: server-side order creation + signature verification --------
+// Prices are authoritative HERE (in paise) so the browser can never change the
+// amount. Secrets come from Worker env vars (RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET),
+// set in the Cloudflare dashboard — never committed to the repo.
+const RZP_PRODUCTS = {
+  plus:    { amount: 19900, type: "plan",   plan: "plus",    label: "ChintasMoney · Go Plus (monthly)" },
+  pro:     { amount: 49900, type: "plan",   plan: "pro",     label: "ChintasMoney · Platinum (monthly)" },
+  diamond: { amount: 99900, type: "plan",   plan: "diamond", label: "ChintasMoney · Diamond (monthly)" },
+  tok20:   { amount: 4900,  type: "tokens", tokens: 20,      label: "ChintasMoney · 20 analysis tokens" },
+  tok60:   { amount: 9900,  type: "tokens", tokens: 60,      label: "ChintasMoney · 60 analysis tokens" },
+  tok150:  { amount: 19900, type: "tokens", tokens: 150,     label: "ChintasMoney · 150 analysis tokens" },
+};
+
+async function handleRzpOrder(request, env) {
+  if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) return jsonRes({ error: "payments not configured" }, 0);
+  let body; try { body = await request.json(); } catch (e) { return jsonRes({ error: "bad request" }, 0); }
+  const p = RZP_PRODUCTS[body && body.product];
+  if (!p) return jsonRes({ error: "unknown product" }, 0);
+  const auth = "Basic " + btoa(env.RAZORPAY_KEY_ID + ":" + env.RAZORPAY_KEY_SECRET);
+  const r = await fetch("https://api.razorpay.com/v1/orders", {
+    method: "POST",
+    headers: { Authorization: auth, "content-type": "application/json" },
+    body: JSON.stringify({ amount: p.amount, currency: "INR", receipt: "cm_" + Date.now(), notes: { product: body.product } }),
+  });
+  if (!r.ok) return jsonRes({ error: "order failed" }, 0);
+  const order = await r.json();
+  return jsonRes({ orderId: order.id, amount: p.amount, currency: "INR", keyId: env.RAZORPAY_KEY_ID, product: body.product, label: p.label }, 0);
+}
+
+async function hmacHex(secret, msg) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(msg));
+  return Array.from(new Uint8Array(sig)).map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+}
+
+async function handleRzpVerify(request, env) {
+  if (!env.RAZORPAY_KEY_SECRET) return jsonRes({ error: "payments not configured" }, 0);
+  let b; try { b = await request.json(); } catch (e) { return jsonRes({ error: "bad request" }, 0); }
+  const orderId = b && b.order_id, paymentId = b && b.payment_id, sig = b && b.signature, product = b && b.product;
+  const p = RZP_PRODUCTS[product];
+  if (!orderId || !paymentId || !sig || !p) return jsonRes({ valid: false }, 0);
+  const expected = await hmacHex(env.RAZORPAY_KEY_SECRET, orderId + "|" + paymentId);
+  // Length-safe constant-time comparison.
+  if (expected.length !== sig.length) return jsonRes({ valid: false }, 0);
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ sig.charCodeAt(i);
+  if (diff !== 0) return jsonRes({ valid: false }, 0);
+  const grant = p.type === "plan" ? { plan: p.plan } : { tokens: p.tokens };
+  return jsonRes({ valid: true, product: product, grant: grant }, 0);
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (request.method === "POST" && url.pathname === "/api/razorpay/order") return handleRzpOrder(request, env);
+    if (request.method === "POST" && url.pathname === "/api/razorpay/verify") return handleRzpVerify(request, env);
     if (url.pathname === "/api/quotes" || url.pathname === "/api/movers" || url.pathname === "/api/candles") {
       const cache = caches.default;
       let res = await cache.match(request);

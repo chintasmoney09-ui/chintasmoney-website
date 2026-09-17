@@ -95,27 +95,48 @@
   };
   Cloud.signOut = function () { return Cloud.client.auth.signOut().then(function () { location.reload(); }); };
 
-  // ---- Razorpay checkout ---------------------------------------------------
-  Cloud.checkout = function (planId, onPaid) {
-    if (!cfg.razorpayKeyId) { alert("Payments not configured yet."); return; }
-    var amount = (cfg.planPrices && cfg.planPrices[planId]) || 0;
-    function open() {
-      var rzp = new window.Razorpay({
-        key: cfg.razorpayKeyId, amount: amount, currency: "INR",
-        name: "ChintasMoney", description: planId === "pro" ? "Platinum subscription" : "Go Plus subscription",
-        prefill: { email: (Cloud.user && Cloud.user.email) || "" },
-        theme: { color: "#8b5cf6" },
-        handler: function (resp) {
-          // NOTE: for production, verify resp.razorpay_payment_id via a webhook /
-          // Supabase Edge Function before granting the plan (see BACKEND-SETUP.md).
-          window.CM.setProfile({ plan: planId, paymentId: resp.razorpay_payment_id, plan_since: new Date().toISOString() });
-          if (onPaid) onPaid(); else rerender();
+  // ---- Razorpay checkout (secure: server-created order + verified signature) --
+  // The Worker creates the order (authoritative amount) and verifies the payment
+  // signature. We only grant the plan/tokens after /api/razorpay/verify says valid.
+  function rzpPay(product, onValid) {
+    fetch("/api/razorpay/order", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ product: product }) })
+      .then(function (r) { return r.json(); })
+      .then(function (o) {
+        if (!o || !o.orderId) { alert(o && o.error === "payments not configured" ? "Payments aren't switched on yet." : "Couldn't start checkout. Please try again."); return; }
+        function open() {
+          var rzp = new window.Razorpay({
+            key: o.keyId, order_id: o.orderId, amount: o.amount, currency: o.currency,
+            name: "ChintasMoney", description: o.label,
+            prefill: { email: (Cloud.user && Cloud.user.email) || "" },
+            theme: { color: "#8b5cf6" },
+            handler: function (resp) {
+              fetch("/api/razorpay/verify", { method: "POST", headers: { "content-type": "application/json" },
+                body: JSON.stringify({ order_id: resp.razorpay_order_id, payment_id: resp.razorpay_payment_id, signature: resp.razorpay_signature, product: product }) })
+                .then(function (r) { return r.json(); })
+                .then(function (v) {
+                  if (v && v.valid) onValid(v.grant);
+                  else alert("We couldn't verify that payment. If you were charged, contact support — nothing was unlocked.");
+                })
+                .catch(function () { alert("Payment verification failed. If you were charged, contact support."); });
+            }
+          });
+          rzp.open();
         }
-      });
-      rzp.open();
-    }
-    if (window.Razorpay) open();
-    else loadScript("https://checkout.razorpay.com/v1/checkout.js").then(open).catch(function () { alert("Could not load payment gateway."); });
+        if (window.Razorpay) open();
+        else loadScript("https://checkout.razorpay.com/v1/checkout.js").then(open).catch(function () { alert("Could not load payment gateway."); });
+      })
+      .catch(function () { alert("Could not start checkout. Please try again."); });
+  }
+  Cloud.checkout = function (planId, onPaid) {
+    rzpPay(planId, function (grant) {
+      window.CM.setProfile({ plan: grant.plan, plan_since: new Date().toISOString() });
+      if (onPaid) onPaid(); else rerender();
+    });
+  };
+  Cloud.checkoutTokens = function (n, price, onPaid) {
+    var product = n === 20 ? "tok20" : n === 60 ? "tok60" : n === 150 ? "tok150" : null;
+    if (!product) { alert("Unknown token pack."); return; }
+    rzpPay(product, function () { if (onPaid) onPaid(); });
   };
 
   // ---- init ----------------------------------------------------------------
