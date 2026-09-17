@@ -102,7 +102,7 @@
     function open() {
       var rzp = new window.Razorpay({
         key: cfg.razorpayKeyId, amount: amount, currency: "INR",
-        name: "ChintasMoney", description: planId === "pro" ? "Pro subscription" : "Plus subscription",
+        name: "ChintasMoney", description: planId === "pro" ? "Platinum subscription" : "Go Plus subscription",
         prefill: { email: (Cloud.user && Cloud.user.email) || "" },
         theme: { color: "#8b5cf6" },
         handler: function (resp) {

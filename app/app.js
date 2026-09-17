@@ -1881,8 +1881,8 @@
     var body = '<p class="hint">' + (reason || "Top up to keep analysing your trades.") + '</p>' +
       '<div class="buy-grid">' + packs + '</div>' +
       '<div class="buy-plans">' +
-        '<button class="btn btn-primary" data-plan="699">📈 Active Trader — ₹699/mo · <b>unlimited</b></button>' +
-        '<button class="btn" data-plan="2000">👑 Desk — ₹2,000/mo · for 60+ trades</button>' +
+        '<button class="btn btn-primary" data-plan="499">💎 Platinum — ₹499/mo · <b>unlimited tokens</b></button>' +
+        '<button class="btn" data-plan="199">⚡ Go Plus — ₹199/mo · 50 tokens</button>' +
       '</div>' +
       '<p class="hint" style="text-align:center;margin-top:12px">1 token = 1 deep Trade Replay. Educational behaviour analysis of your <b>own past trades</b> only — no tips, no advice.</p>';
     dialog("You're out of analyses 🎟️", body, function (b, close) {
@@ -2000,7 +2000,7 @@
   };
 
   // ---- ANALYSIS TOKENS (buy / balance) ------------------------------------
-  var TOKEN_PACKS = [[10, 99], [30, 249], [100, 699]];
+  var TOKEN_PACKS = [[20, 49], [60, 99], [150, 199]];
   function buyTokens(n, price) {
     // Real charge needs Razorpay (Profile → payments). Until then, tell the user.
     if (window.CMCloud && window.CM_CONFIG && window.CM_CONFIG.razorpayKeyId && window.CMCloud.checkoutTokens) {
@@ -2011,7 +2011,7 @@
   }
   VIEWS.tokens = function () {
     var v = el('<div></div>');
-    v.appendChild(topbar("Analysis Tokens", "1 token = 1 deep Trade Replay. 2 free per account — top up or subscribe for more."));
+    v.appendChild(topbar("Analysis Tokens", "1 token = 1 deep Trade Replay. " + CM.FREE_TOKENS + " free per account — top up or subscribe for more."));
     var ts = CM.tokenState();
     var c = el('<div class="card"></div>');
     c.appendChild(el('<div class="legal-note">🎟️ Tokens unlock <b>behaviour analysis of your own past trades</b> only — educational, not advice, no tips, no future calls.</div>'));
@@ -2025,12 +2025,14 @@
       card.appendChild(buy); packs.appendChild(card);
     });
     c.appendChild(packs);
-    c.appendChild(el('<h3 style="margin:18px 0 8px">Or go unlimited</h3>'));
-    c.appendChild(el('<div class="tok-sub"><div><div style="font-weight:800">📈 Active Trader — ₹699 / month</div><p class="hint" style="margin:4px 0 0">Unlimited Trade Replays, full behaviour reports and Excel export. Best value once you analyse more than ~10 trades a month.</p></div><button class="btn btn-primary" id="tSub">Go unlimited · ₹699</button></div>'));
-    c.querySelector("#tSub").addEventListener("click", function () { buyTokens(0, 699); });
-    c.appendChild(el('<div class="tok-sub" style="border-color:rgba(167,139,250,.35);background:rgba(167,139,250,.07)"><div><div style="font-weight:800">👑 Desk — ₹2,000 / month</div><p class="hint" style="margin:4px 0 0">For 60+ trades a month: everything in Active Trader, plus priority processing, multi-year history, every market, and a monthly 1:1 discipline review.</p></div><button class="btn" id="tDesk">Go Desk · ₹2,000</button></div>'));
-    c.querySelector("#tDesk").addEventListener("click", function () { buyTokens(0, 2000); });
-    c.appendChild(el('<p class="hint" style="margin-top:14px">1 token = one deep analysis (Trade Replay of one past trade). Free daily tokens reset each day; purchased tokens stay until used.</p>'));
+    c.appendChild(el('<h3 style="margin:18px 0 8px">Or subscribe</h3>'));
+    c.appendChild(el('<div class="tok-sub"><div><div style="font-weight:800">⚡ Go Plus — ₹199 / month</div><p class="hint" style="margin:4px 0 0">Unlimited trades &amp; full mistake analysis, plus <b>50 AI tokens a month</b>. Best for regular loggers.</p></div><button class="btn" id="tPlus">Go Plus · ₹199</button></div>'));
+    c.querySelector("#tPlus").addEventListener("click", function () { buyTokens(0, 199); });
+    c.appendChild(el('<div class="tok-sub" style="border-color:rgba(34,224,138,.35);background:rgba(34,224,138,.07)"><div><div style="font-weight:800">💎 Platinum — ₹499 / month <span class="badge b-green">Most popular</span></div><p class="hint" style="margin:4px 0 0"><b>Unlimited AI tokens</b>, unlimited Trade Replays, broker import, setup performance and weekly reports.</p></div><button class="btn btn-primary" id="tPlat">Go unlimited · ₹499</button></div>'));
+    c.querySelector("#tPlat").addEventListener("click", function () { buyTokens(0, 499); });
+    c.appendChild(el('<div class="tok-sub" style="border-color:rgba(245,184,73,.35);background:rgba(245,184,73,.07)"><div><div style="font-weight:800">👑 Diamond — ₹999 / month</div><p class="hint" style="margin:4px 0 0">Everything in Platinum, plus priority AI, a monthly 1:1 discipline review, multi-year backtesting and early access.</p></div><button class="btn" id="tDia">Go Diamond · ₹999</button></div>'));
+    c.querySelector("#tDia").addEventListener("click", function () { buyTokens(0, 999); });
+    c.appendChild(el('<p class="hint" style="margin-top:14px">1 token = one deep analysis (Trade Replay of one past trade). The ' + CM.FREE_TOKENS + ' free tokens are one-time per account; purchased tokens stay until used.</p>'));
     v.appendChild(c);
     return v;
   };

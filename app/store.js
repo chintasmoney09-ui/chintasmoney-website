@@ -19,11 +19,11 @@
       blurb: "Score your discipline.",
       features: ["log-trades", "discipline-score", "trader-personality", "last-30-days", "basic-mistakes"],
       limits: { history: 30, tradesPerMonth: 15 } },
-    plus:  { id: "plus",  name: "Plus",  price: 199, cadence: "month",
+    plus:  { id: "plus",  name: "Go Plus",  price: 199, cadence: "month",
       blurb: "See every leak in your trading.",
       features: ["everything-free", "unlimited-history", "full-mistake-analysis", "setup-and-time-insights", "streaks-and-badges", "ai-discipline-coach", "pro-shareable-card"],
       limits: { history: Infinity } },
-    pro:   { id: "pro",   name: "Pro",   price: 499, cadence: "month",
+    pro:   { id: "pro",   name: "Platinum",   price: 499, cadence: "month",
       blurb: "For serious, systematic traders.",
       features: ["everything-plus", "strategy-performance", "csv-import-export", "risk-and-r-multiples", "weekly-report", "goal-rules-engine"],
       limits: { history: Infinity } }
@@ -281,7 +281,7 @@
     setProfile: function (patch) { Object.assign(load().profile, patch); save(); },
     // Analysis tokens: each account gets FREE_TOKENS free replays ONCE (lifetime,
     // not daily); after that, only purchased tokens (profile.tokens) work.
-    FREE_TOKENS: 2,
+    FREE_TOKENS: 5,
     tokenState: function () {
       var p = load().profile;
       var free = Math.max(0, this.FREE_TOKENS - (p.freeUsedTotal || 0));
