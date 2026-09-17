@@ -1912,12 +1912,78 @@
       }).catch(function () { b.querySelector("#rpOut").innerHTML = behaviourPanel(t); });
     });
   }
+  // Build an AUTHENTIC sample trade anchored to real market candles: entry, stop
+  // and exit are taken from actual bars on the live chart, so nothing is invented
+  // — we read the real data source and pick genuine price points. The lot size is
+  // the real F&O lot for the index (or a sensible share qty for stocks).
+  function round2(x) { return Math.round(x * 100) / 100; }
+  function buildDemoTrade(symbol, candles) {
+    var n = candles.length;
+    if (n < 25) return null;
+    var ei = Math.floor(n * 0.6);                       // enter ~60% through the window
+    var entry = candles[ei].close;
+    var seg = candles.slice(ei, Math.min(n, ei + 15));
+    var isLong = seg[seg.length - 1].close >= entry;   // direction from the real drift
+    var win = candles.slice(Math.max(0, ei - 6), ei + 1);
+    var sl = isLong ? Math.min.apply(null, win.map(function (c) { return c.low; }))
+                    : Math.max.apply(null, win.map(function (c) { return c.high; }));
+    var risk = Math.abs(entry - sl) || entry * 0.004;
+    var target = isLong ? entry + risk * 2 : entry - risk * 2;
+    var best = isLong ? Math.max.apply(null, seg.map(function (c) { return c.high; }))
+                      : Math.min.apply(null, seg.map(function (c) { return c.low; }));
+    // Exit at a REAL later bar's close, near 60% of the best move — so the replay
+    // can honestly show "you left money on the table" (behaviour, not the market).
+    var targetExit = entry + (best - entry) * 0.6, xi = ei + 1, bestDiff = Infinity;
+    for (var k = ei + 1; k < Math.min(n, ei + 15); k++) {
+      var diff = Math.abs(candles[k].close - targetExit);
+      if (diff < bestDiff) { bestDiff = diff; xi = k; }
+    }
+    var lot = lotFor(symbol) || (entry > 3000 ? 10 : entry > 800 ? 50 : entry > 200 ? 200 : 500);
+    return { id: "sample", symbol: symbol, side: isLong ? "Buy" : "Sell", qty: lot,
+      entry: round2(entry), exit: round2(candles[xi].close), plannedSL: round2(sl), target: round2(target),
+      date: new Date(candles[ei].time * 1000).toISOString(),
+      setup: "Breakout", exit_reason: "Booked early (fear)", emotion: "Calm", demo: true };
+  }
+  // Free showcase: pick any index/stock → draw an example trade on its real,
+  // current chart. Uses no tokens; clearly labelled as a sample.
+  function openSampleReplay(symbol) {
+    var body = '<div class="legal-note" style="margin-bottom:10px">📘 <b>Sample</b> — an example trade drawn on <b>' + esc(symbol) + '</b>\'s real, current market chart to show how Replay works. It is not a real or recommended trade, and no future trade is suggested.</div>' +
+      '<div id="rpChart"></div><div id="rpOut" style="margin-top:12px"><p class="hint">Loading the real market for ' + esc(symbol) + '…</p></div>';
+    dialog(esc(symbol) + " · sample replay", body, function (b) {
+      var ysym = yfSymbolFor(symbol);
+      fetch("/api/candles?symbol=" + encodeURIComponent(ysym) + "&range=6mo").then(function (r) { return r.json(); }).then(function (data) {
+        var out = b.querySelector("#rpOut");
+        if (!data || !data.candles || data.candles.length < 25) { out.innerHTML = '<p class="hint">Couldn\'t load ' + esc(symbol) + ' right now — try another one.</p>'; return; }
+        var t = buildDemoTrade(symbol, data.candles);
+        if (!t) { out.innerHTML = '<p class="hint">Not enough data for ' + esc(symbol) + '.</p>'; return; }
+        var levels = { entry: t.entry, sl: t.plannedSL, exit: t.exit, target: t.target, side: t.side, qty: t.qty };
+        liveTradeChart(b.querySelector("#rpChart"), symbol, levels, 380);
+        var a = analyzeReplay(data.candles, t);
+        out.innerHTML = '<div class="rp-panel"><h4>The sample trade</h4>' +
+          '<div class="rp-row"><b>' + esc(t.side) + ' ' + t.qty + ' · ' + esc(symbol) + '</b><span>Entry ₹' + t.entry + ' · Stop ₹' + t.plannedSL + ' · Exit ₹' + t.exit + '</span></div></div>' +
+          (a ? replayPanel(a, t) : "") + behaviourPanel(t);
+      }).catch(function () { b.querySelector("#rpOut").innerHTML = '<p class="hint">Network issue loading ' + esc(symbol) + '.</p>'; });
+    });
+  }
+  var SAMPLE_SYMS = ["NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX", "RELIANCE", "TCS", "HDFCBANK", "INFY", "SBIN", "GOLD"];
+  function sampleReplayCard() {
+    var card = el('<div class="card"><div class="card-hd"><h3>▶ Try a sample replay on real market data</h3></div>' +
+      '<p class="hint" style="margin:0 0 10px">Pick an index or stock — we draw an example entry, stop &amp; exit on its <b>real, current chart</b> so you can see exactly how Replay works. Free · uses no tokens.</p>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+      '<label class="fld" style="margin:0;flex:1;min-width:160px"><select id="sampleSym">' +
+      SAMPLE_SYMS.map(function (s) { return '<option value="' + s + '">' + s + '</option>'; }).join("") +
+      '</select></label>' +
+      '<button class="btn btn-primary" id="sampleGo">Play sample →</button></div></div>');
+    card.querySelector("#sampleGo").addEventListener("click", function () { openSampleReplay(card.querySelector("#sampleSym").value); });
+    return card;
+  }
   VIEWS.replay = function () {
     var v = el('<div></div>');
     v.appendChild(topbar("Trade Replay", "Replay any trade on the real market for its actual dates — see what would have happened."));
+    v.appendChild(sampleReplayCard());
     var trades = CM.load().trades.filter(function (t) { return !/^s\d+$/.test(t.id || ""); });
     var c = el('<div class="card"></div>');
-    if (!trades.length) { c.appendChild(el('<p class="hint">Log a trade first — then replay it here to see exactly what the market did after your entry.</p>')); v.appendChild(c); return v; }
+    if (!trades.length) { c.appendChild(el('<p class="hint">The sample above shows how it works. Log your own trade — then replay it here to see exactly what the market did after your entry.</p>')); v.appendChild(c); return v; }
     c.appendChild(el('<div class="legal-note">📘 <b>Educational behaviour tool.</b> Trade Replay analyses <b>only your own past trades</b> on historical market data — to understand your behaviour. It is <b>not</b> investment advice, gives <b>no</b> tips, calls or future predictions, and is <b>not</b> SEBI-registered advice. No future trade is ever suggested.</div>'));
     var ts0 = CM.tokenState();
     c.appendChild(el('<div class="tok-status"><span>🎟️ <b>' + ts0.total + '</b> analyses left <span class="hint">(' + ts0.freeLeft + ' free left' + (ts0.balance ? ' + ' + ts0.balance + ' tokens' : '') + ')</span></span><a href="#/tokens" class="tok-get">Get more →</a></div>'));
