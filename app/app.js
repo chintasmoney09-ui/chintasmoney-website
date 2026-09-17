@@ -1240,6 +1240,10 @@
     var exp = el('<button class="btn btn-sm">⬇ Download (Excel)</button>'); exp.addEventListener("click", downloadJournalCSV);
     var imp = el('<button class="btn btn-sm">⬆ Import CSV</button>'); imp.addEventListener("click", importCSV);
     v.appendChild(topbar("Trade Journal", st.count + " trades logged", [exp, imp, logBtn()]));
+    v.appendChild(el('<div class="card vid-card"><div class="card-hd"><h3>▶ View &amp; download your journal <span class="hint" style="font-weight:400">· walkthrough</span></h3></div>' +
+      '<div class="vid-wrap"><video class="vid-el" controls preload="metadata" playsinline>' +
+      '<source src="assets/trade-journal-tutorial.mp4" type="video/mp4">Your browser can\'t play this video.</video></div>' +
+      '<p class="hint" style="margin:10px 0 0">Every trade in one place — view it here, or download the whole journal as an Excel file to keep and analyse.</p></div>'));
     var limit = CM.PLANS[s.profile.plan].limits.history;
     if (!st.trades.length) {
       var empty = el('<div class="card paywall"><div class="lock-ic">📓</div><h3>No trades yet</h3><p class="hint">Log your first trade to see your Discipline Score come alive.</p></div>');
