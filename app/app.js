@@ -2020,6 +2020,10 @@
   VIEWS.tokens = function () {
     var v = el('<div></div>');
     v.appendChild(topbar("Analysis Tokens", "1 token = 1 deep Trade Replay. " + CM.FREE_TOKENS + " free per account — top up or subscribe for more."));
+    v.appendChild(el('<div class="card vid-card"><div class="card-hd"><h3>▶ Tokens, plans &amp; premium features <span class="hint" style="font-weight:400">· walkthrough</span></h3></div>' +
+      '<div class="vid-wrap"><video class="vid-el" controls preload="metadata" playsinline>' +
+      '<source src="assets/tokens-plans-tutorial.mp4" type="video/mp4">Your browser can\'t play this video.</video></div>' +
+      '<p class="hint" style="margin:10px 0 0">How tokens, the plans and the premium sections fit together — so you know exactly what each analysis unlocks.</p></div>'));
     var ts = CM.tokenState();
     var c = el('<div class="card"></div>');
     c.appendChild(el('<div class="legal-note">🎟️ Tokens unlock <b>behaviour analysis of your own past trades</b> only — educational, not advice, no tips, no future calls.</div>'));
