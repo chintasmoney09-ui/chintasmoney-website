@@ -505,7 +505,7 @@
       quick.appendChild(ch);
     });
     function mountMk() {
-      box.innerHTML = ""; box.appendChild(tvChart(mkState.sym, 620, false));
+      liveTradeChart(box, mkState.sym, {}, 520, false, false);
       symRow.querySelector("#mkDeep").href = "https://www.tradingview.com/symbols/" + encodeURIComponent(mkState.sym).replace("%3A", "-") + "/";
     }
     symRow.querySelector("#mkSym").addEventListener("change", function () { mkState.sym = this.value; mountMk(); refreshQuick(); });
@@ -1530,14 +1530,22 @@
     function mountCalcChart() {
       var raw = c.querySelector("#kSym").value.trim(); if (!raw) { chartCard.hidden = true; return; }
       chartCard.hidden = false;
-      var sym = tvSymbolFor(raw); chartCard.querySelector("#kchSym").textContent = sym;
-      var box = chartCard.querySelector("#kchBox"); box.innerHTML = ""; box.appendChild(tvChart(sym, 420, false));
+      chartCard.querySelector("#kchSym").textContent = raw.toUpperCase();
+      var lvls = { entry: c.querySelector("#kEntry").value, sl: c.querySelector("#kStop").value, target: c.querySelector("#kTarget").value, side: calcSide };
+      liveTradeChart(chartCard.querySelector("#kchBox"), raw, lvls, 380, false, false);
     }
     chartCard.querySelector("#kchFull").addEventListener("click", function () { goFullscreen(chartCard.querySelector("#kchBox")); });
     var kct; c.querySelector("#kSym").addEventListener("input", function () {
       var lot = lotFor(c.querySelector("#kSym").value);
       if (lot && isLotValue(c.querySelector("#kLot").value)) { c.querySelector("#kLot").value = lot; run(); }
       clearTimeout(kct); kct = setTimeout(mountCalcChart, 700);
+    });
+    // Update the chart's entry/stop/target lines live as the sizing changes.
+    ["#kEntry", "#kStop", "#kTarget"].forEach(function (id) {
+      c.querySelector(id).addEventListener("input", function () {
+        var kb = chartCard.querySelector("#kchBox");
+        if (kb && kb._cmSetLevels) kb._cmSetLevels({ entry: c.querySelector("#kEntry").value, sl: c.querySelector("#kStop").value, target: c.querySelector("#kTarget").value, side: calcSide });
+      });
     });
     v.appendChild(chartCard);
 
