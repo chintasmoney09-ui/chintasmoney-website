@@ -2072,6 +2072,10 @@
   VIEWS.strategy = function () {
     var v = el('<div></div>');
     v.appendChild(topbar("Setup Performance", "Which of your setups actually make money?"));
+    v.appendChild(el('<div class="card vid-card"><div class="card-hd"><h3>▶ How Setup Performance works <span class="hint" style="font-weight:400">· walkthrough</span></h3></div>' +
+      '<div class="vid-wrap"><video class="vid-el" controls preload="metadata" playsinline>' +
+      '<source src="assets/setup-performance-tutorial.mp4" type="video/mp4">Your browser can\'t play this video.</video></div>' +
+      '<p class="hint" style="margin:10px 0 0">Your trades grouped by setup — see the win rate and net result of each, so you do more of what works and drop what doesn\'t.</p></div>'));
     var sp = CM.setupPerformance();
     var c = el('<div class="card" style="overflow-x:auto"><table class="tbl"><thead><tr><th>Setup</th><th class="num">Trades</th><th class="num">Win rate</th><th class="num">Net P&L</th></tr></thead><tbody></tbody></table></div>');
     var tb = c.querySelector("tbody");
