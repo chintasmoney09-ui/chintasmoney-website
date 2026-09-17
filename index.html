@@ -209,14 +209,15 @@
     </div>
   </section>
 
-  <!-- How it works — demo video (lazy YouTube facade; paste an ID into data-yt) -->
+  <!-- How it works — self-hosted walkthrough video (assets/home-walkthrough.mp4) -->
   <section class="section" id="howto" style="padding-top:26px">
     <div class="container">
       <div class="center reveal"><span class="eyebrow">2-min demo</span><h2>See <span class="grad">how it works</span></h2><p class="sub">A quick walkthrough — log a trade, get your Discipline Score, and fix your #1 leak.</p></div>
-      <div class="video-wrap reveal" id="ytFacade" data-yt="" role="button" tabindex="0" aria-label="Play the ChintasMoney walkthrough">
-        <img class="video-poster" src="assets/app-shot.png" alt="ChintasMoney walkthrough preview" loading="lazy" />
-        <span class="video-play"><span>▶</span></span>
-        <span class="video-badge">▶ Watch the 2-min demo</span>
+      <div class="video-wrap reveal">
+        <video class="home-video" controls preload="metadata" playsinline poster="assets/app-shot.png" aria-label="ChintasMoney walkthrough">
+          <source src="assets/home-walkthrough.mp4" type="video/mp4">
+          Your browser can't play this video.
+        </video>
       </div>
     </div>
   </section>
