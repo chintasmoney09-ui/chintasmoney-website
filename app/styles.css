@@ -29,6 +29,7 @@
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
+body { overflow-x: clip; }
 body {
   font-family: "Plus Jakarta Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   background:
@@ -272,10 +273,9 @@ select option { background: var(--surface); }
 @keyframes fabIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
 @media(min-width:900px){.fab{right:32px;bottom:32px}}
 
-/* Smooth view transition on route change */
-.app .main{animation:viewIn .28s cubic-bezier(.2,.7,.3,1)}
-@keyframes viewIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-@media(prefers-reduced-motion:reduce){.app .main,.fab{animation:none}.fab:hover,.fab:active{transform:none}}
+/* No per-render view animation — it re-fired on every re-render (e.g. account
+   sync), which read as a screen flicker / "moving" glitch. Kept steady. */
+@media(prefers-reduced-motion:reduce){.fab:hover,.fab:active{transform:none}}
 
 /* Toasts */
 .toast-wrap{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:max-content;max-width:calc(100vw - 32px)}
@@ -536,10 +536,15 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   padding: 10px 13px; border-radius: 12px; margin: 0 0 12px; background: rgba(245,184,73,.08); border: 1px solid rgba(245,184,73,.28); }
 .tok-status b { color: var(--gold); }
 .tok-get, .tok-get:hover { color: var(--gold); font-weight: 800; text-decoration: none; }
-.tok-balance { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
-  padding: 16px; border-radius: 14px; background: linear-gradient(120deg, rgba(245,184,73,.12), rgba(139,92,246,.10)); border: 1px solid rgba(245,184,73,.25); }
-.tok-big { font-size: 2.2rem; font-weight: 800; color: var(--gold); line-height: 1; }
-.tok-split { display: flex; flex-direction: column; gap: 4px; text-align: right; font-size: .82rem; color: var(--muted); }
+.tok-balance { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding: 22px 24px; border-radius: 18px; background: linear-gradient(135deg, rgba(245,184,73,.16), rgba(34,224,138,.10) 55%, rgba(139,92,246,.12));
+  border: 1px solid rgba(245,184,73,.38); box-shadow: 0 10px 34px rgba(245,184,73,.12); }
+.tok-balance .hint { font-size: .9rem; text-transform: uppercase; letter-spacing: .06em; color: var(--gold); font-weight: 700; opacity: .9; margin-bottom: 2px; }
+.tok-big { font-size: 3.6rem; font-weight: 900; color: var(--gold); line-height: 1; letter-spacing: -1.5px; text-shadow: 0 0 26px rgba(245,184,73,.38); }
+.tok-split { display: flex; flex-direction: column; gap: 6px; text-align: right; font-size: .92rem; color: var(--ink); }
+.tok-split span:first-child { color: var(--muted); }
+.tok-split span:last-child { font-weight: 700; color: var(--emerald); }
+@media (max-width: 560px) { .tok-big { font-size: 3rem; } .tok-balance { padding: 18px; } .tok-split { text-align: left; } }
 .tok-pack-card { border: 1px solid rgba(255,255,255,.08); }
 .tok-pack-n { font-weight: 800; font-size: 1.05rem; }
 .tok-pack-p { font-size: 1.5rem; font-weight: 800; color: var(--emerald); margin: 2px 0; }
