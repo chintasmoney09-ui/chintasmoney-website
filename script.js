@@ -339,3 +339,34 @@
   f.addEventListener("click", play);
   f.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); play(); } });
 })();
+
+/* ---- Install app (PWA): Android direct-install + iOS add-to-home-screen ---- */
+(function () {
+  var row = document.getElementById("installRow");
+  if (!row) return;
+  var btnA = document.getElementById("btnAndroid");
+  var btnI = document.getElementById("btnApple");
+  if ("serviceWorker" in navigator) { navigator.serviceWorker.register("/pwa-sw.js").catch(function () {}); }
+  // Already installed / running as an app → hide the buttons.
+  var standalone = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
+  if (standalone) { row.hidden = true; return; }
+
+  var deferred = null;
+  window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); deferred = e; });
+
+  function modal(title, html) {
+    var ov = document.createElement("div"); ov.className = "install-modal";
+    ov.innerHTML = '<div class="im-card"><button class="im-x" aria-label="Close">✕</button><h3>' + title + '</h3>' + html + '</div>';
+    function close() { if (ov.parentNode) document.body.removeChild(ov); }
+    ov.addEventListener("click", function (e) { if (e.target === ov || e.target.className === "im-x") close(); });
+    document.body.appendChild(ov);
+  }
+
+  btnA.addEventListener("click", function () {
+    if (deferred) { deferred.prompt(); deferred.userChoice.finally(function () { deferred = null; }); }
+    else { modal("Install on Android", '<p>In <b>Chrome</b>, tap the <b>⋮ menu</b> (top-right) → <b>Install app</b> (or <b>Add to Home screen</b>). ChintasMoney installs like a normal app — its own icon, full screen, works offline. No Play Store needed.</p>'); }
+  });
+  btnI.addEventListener("click", function () {
+    modal("Add to your iPhone", '<p>On iPhone, open this site in <b>Safari</b>, then:</p><ol style="text-align:left;margin:10px auto 0;max-width:340px;line-height:2;padding-left:20px"><li>Tap the <b>Share</b> button (a square with an arrow pointing up).</li><li>Scroll down and tap <b>Add to Home Screen</b>.</li><li>Tap <b>Add</b> — ChintasMoney lands on your home screen like an app.</li></ol><p class="im-note">Apple doesn\'t allow one-tap install, so these 3 taps are the quickest way — it works fully offline after that.</p>');
+  });
+})();
