@@ -91,7 +91,9 @@
   // enabled in Supabase → Authentication → Providers. New users are recorded in
   // the Supabase user base automatically, exactly like email sign-ups.
   Cloud.signInOAuth = function (provider) {
-    return Cloud.client.auth.signInWithOAuth({ provider: provider, options: { redirectTo: location.href } });
+    // Redirect to a CLEAN url (no "#/route") so Supabase's "#access_token=…" is
+    // the only hash — otherwise a double hash breaks session detection on return.
+    return Cloud.client.auth.signInWithOAuth({ provider: provider, options: { redirectTo: location.origin + location.pathname } });
   };
   Cloud.signOut = function () { return Cloud.client.auth.signOut().then(function () { location.reload(); }); };
 
