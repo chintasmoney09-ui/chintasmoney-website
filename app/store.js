@@ -61,24 +61,8 @@
       dreams: [
         { id: "dm1", name: "Dream home", emoji: "🏡", target: 10000000, start: 200000, monthly: 25000, rate: 14, years: 12 }
       ],
-      // Sample trades use realistic current price bands and the correct F&O lot
-      // sizes. Index/stock trades sit in the same scale as their real charts, so
-      // Replay draws entry/stop/exit on genuine candles; option rows use authentic
-      // premiums. These illustrate behaviour patterns — not real or advised trades.
-      trades: [
-        T({ id: "s1", symbol: "NIFTY", side: "Buy", qty: 75, entry: 23277, exit: 23360, date: iso(1),  setup: "Breakout",  plannedSL: 23150, target: 23500, exit_reason: "Hit target",         emotion: "Calm" }),
-        T({ id: "s2", symbol: "BANKNIFTY", side: "Buy", qty: 35, entry: 56164, exit: 55980, date: iso(1),  setup: "Reversal",  plannedSL: null, target: null, exit_reason: "Revenge exit",      emotion: "Revenge" }),
-        T({ id: "s3", symbol: "RELIANCE", side: "Buy", qty: 250, entry: 1242, exit: 1258, date: iso(2),  setup: "Momentum", plannedSL: 1225, target: 1275, exit_reason: "Booked early (fear)", emotion: "Fear" }),
-        T({ id: "s4", symbol: "TCS", side: "Sell", qty: 100, entry: 2184, exit: 2196, date: iso(3),  setup: "Scalp",    plannedSL: 2205, target: 2150, exit_reason: "Hit stop-loss",     emotion: "Calm" }),
-        T({ id: "s5", symbol: "NIFTY 23500 CE", side: "Buy", qty: 75, entry: 88, exit: 60, date: iso(3),  setup: "FOMO",     plannedSL: null, target: null, exit_reason: "FOMO exit",         emotion: "FOMO" }),
-        T({ id: "s6", symbol: "HDFCBANK", side: "Buy", qty: 300, entry: 714, exit: 726, date: iso(5),  setup: "Breakout", plannedSL: 705, target: 735, exit_reason: "Hit target",         emotion: "Calm" }),
-        T({ id: "s7", symbol: "BANKNIFTY 56000 CE", side: "Buy", qty: 35, entry: 175, exit: 120, date: iso(6),  setup: "Reversal", plannedSL: 150, target: 250, exit_reason: "Held too long (greed)", emotion: "Greed" }),
-        T({ id: "s8", symbol: "INFY", side: "Buy", qty: 200, entry: 1055, exit: 1066, date: iso(7),  setup: "Trend-follow", plannedSL: 1040, target: 1080, exit_reason: "Hit target",     emotion: "Calm" }),
-        T({ id: "s9", symbol: "NIFTY 23000 PE", side: "Buy", qty: 75, entry: 95, exit: 70, date: iso(8),  setup: "Scalp",    plannedSL: null, target: null, exit_reason: "Bored/random",      emotion: "Overconfident" }),
-        T({ id: "s10", symbol: "SBIN", side: "Buy", qty: 300, entry: 812, exit: 828, date: iso(10), setup: "Momentum", plannedSL: 800, target: 840, exit_reason: "Hit target",       emotion: "Calm" }),
-        T({ id: "s11", symbol: "RELIANCE", side: "Sell", qty: 200, entry: 1258, exit: 1240, date: iso(12), setup: "Breakout", plannedSL: 1272, target: 1220, exit_reason: "Hit target",  emotion: "Calm" }),
-        T({ id: "s12", symbol: "TCS", side: "Buy", qty: 100, entry: 2170, exit: 2158, date: iso(14), setup: "Reversal", plannedSL: null, target: 2220, exit_reason: "Revenge exit",          emotion: "Revenge" })
-      ]
+      // New accounts start empty — real users log their own trades.
+      trades: []
     };
   }
 
