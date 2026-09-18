@@ -2005,13 +2005,23 @@
 
   // ---- ANALYSIS TOKENS (buy / balance) ------------------------------------
   var TOKEN_PACKS = [[20, 49], [60, 99], [150, 199]];
+  // n > 0 → a token pack; n === 0 → a monthly plan (resolved by price).
   function buyTokens(n, price) {
-    // Real charge needs Razorpay (Profile → payments). Until then, tell the user.
-    if (window.CMCloud && window.CM_CONFIG && window.CM_CONFIG.razorpayKeyId && window.CMCloud.checkoutTokens) {
-      window.CMCloud.checkoutTokens(n, price, function () { CM.addTokens(n); toast("Added " + n + " tokens ✓", "ok"); render(); });
-    } else {
-      dialog("Token top-ups open at launch", '<p class="hint">Buying <b>' + n + ' tokens for ₹' + price + '</b> switches on the moment card payments are enabled. Every account starts with <b>' + CM.FREE_TOKENS + ' free analyses</b>.</p>', function (b, close) { });
+    var live = window.CMCloud && window.CM_CONFIG && window.CM_CONFIG.razorpayKeyId && window.CMCloud.checkoutTokens;
+    if (!live) {
+      dialog("Payments open soon", '<p class="hint">This switches on the moment card payments go live. Every account starts with <b>' + CM.FREE_TOKENS + ' free analyses</b>.</p>', function (b, close) { });
+      return;
     }
+    // A purchase must belong to an account so it persists and can't be faked.
+    signInThen(function () {
+      if (n > 0) {
+        window.CMCloud.checkoutTokens(n, price, function () { CM.addTokens(n); toast("Added " + n + " tokens ✓", "ok"); render(); });
+      } else {
+        var planId = price === 199 ? "plus" : price === 499 ? "pro" : price === 999 ? "diamond" : null;
+        if (!planId) { toast("Unknown plan", "err"); return; }
+        window.CMCloud.checkout(planId, function () { toast("Plan activated ✓", "ok"); render(); });
+      }
+    });
   }
   VIEWS.tokens = function () {
     var v = el('<div></div>');

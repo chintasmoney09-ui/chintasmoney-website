@@ -4,6 +4,11 @@
   "name": "chintasmoney",
   "main": "worker.js",
   "compatibility_date": "2026-09-14",
+  // Public Razorpay Key ID (safe to commit). The SECRET is set as an encrypted
+  // Worker secret in the Cloudflare dashboard — never here.
+  "vars": {
+    "RAZORPAY_KEY_ID": "rzp_test_TdCzS1NuNM4aQJ"
+  },
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
