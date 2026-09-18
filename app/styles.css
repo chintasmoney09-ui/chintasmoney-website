@@ -270,8 +270,20 @@ select option { background: var(--surface); }
   transition:transform .15s ease,box-shadow .15s ease;animation:fabIn .3s ease}
 .fab:hover{transform:scale(1.08);box-shadow:0 10px 30px rgba(34,224,138,.55)}
 .fab:active{transform:scale(.96)}
+.fab.open{transform:rotate(45deg)}
+.fab.open:hover{transform:rotate(45deg) scale(1.06)}
 @keyframes fabIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
 @media(min-width:900px){.fab{right:32px;bottom:32px}}
+/* Quick-actions menu that the + opens */
+.fab-scrim{position:fixed;inset:0;z-index:39;background:rgba(4,7,14,.35)}
+.fab-menu{position:fixed;right:20px;bottom:calc(88px + env(safe-area-inset-bottom,0px));z-index:41;display:flex;flex-direction:column;gap:9px;align-items:flex-end}
+@media(min-width:900px){.fab-menu{right:32px;bottom:100px}}
+.fab-item{display:flex;align-items:center;gap:10px;white-space:nowrap;background:var(--surface);color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:11px 15px;font-weight:600;font-size:.9rem;
+  box-shadow:0 10px 28px rgba(0,0,0,.4);animation:fabItemIn .18s ease both}
+.fab-item span{width:20px;text-align:center;font-size:1rem}
+.fab-item:hover{border-color:var(--emerald);color:var(--emerald);transform:translateX(-2px)}
+@keyframes fabItemIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
 /* No per-render view animation — it re-fired on every re-render (e.g. account
    sync), which read as a screen flicker / "moving" glitch. Kept steady. */
@@ -398,7 +410,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 
 /* Print — clean report/PDF output: drop chrome, expand content, light ground */
 @media print{
-  .sidebar,.scrim,.fab,.install-banner,.toast-wrap,.topbar .btn,.side-shortcuts{display:none!important}
+  .sidebar,.scrim,.fab,.fab-menu,.fab-scrim,.install-banner,.toast-wrap,.topbar .btn,.side-shortcuts{display:none!important}
   .app{display:block}
   .main{margin:0!important;padding:0!important;max-width:none!important;width:100%!important;animation:none!important}
   body,.app,.main{background:#fff!important;color:#0a0f1c!important}

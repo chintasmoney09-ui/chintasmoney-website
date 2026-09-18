@@ -223,12 +223,28 @@
     main.appendChild(!CM.planAllows(s.profile.plan, r) ? paywall(r) : (VIEWS[r] || VIEWS.home)());
     wrap.appendChild(main);
 
-    // Global quick-log floating action button (hidden on the log view itself)
-    if (r !== "log") {
-      var fab = el('<button class="fab" title="Log a trade" aria-label="Log a trade">＋</button>');
-      fab.addEventListener("click", function () { go("log"); });
-      wrap.appendChild(fab);
-    }
+    // Global quick-actions button — a + that opens the most-used actions from
+    // any screen, so nothing is more than one tap away.
+    var scrim = el('<div class="fab-scrim" hidden></div>');
+    var menu = el('<div class="fab-menu" hidden>' +
+      '<button class="fab-item" data-act="log"><span>＋</span> Log a trade</button>' +
+      '<button class="fab-item" data-act="checklist"><span>✅</span> Pre-Trade Check</button>' +
+      '<button class="fab-item" data-act="strategy"><span>📊</span> Setup Performance</button>' +
+      '<button class="fab-item" data-act="download"><span>⬇️</span> Download journal</button>' +
+      '<button class="fab-item" data-act="tokens"><span>🎟️</span> Analysis Tokens</button>' +
+      '</div>');
+    var fab = el('<button class="fab" aria-label="Quick actions" title="Quick actions">＋</button>');
+    var fabOpen = false;
+    function setFab(o) { fabOpen = o; fab.classList.toggle("open", o); menu.hidden = !o; scrim.hidden = !o; }
+    fab.addEventListener("click", function (e) { e.stopPropagation(); setFab(!fabOpen); });
+    scrim.addEventListener("click", function () { setFab(false); });
+    menu.querySelectorAll(".fab-item").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var a = b.getAttribute("data-act"); setFab(false);
+        if (a === "download") downloadJournalCSV(); else go(a);
+      });
+    });
+    wrap.appendChild(scrim); wrap.appendChild(menu); wrap.appendChild(fab);
     return wrap;
   }
 
@@ -2026,10 +2042,6 @@
   VIEWS.tokens = function () {
     var v = el('<div></div>');
     v.appendChild(topbar("Analysis Tokens", "1 token = 1 deep Trade Replay. " + CM.FREE_TOKENS + " free per account — top up or subscribe for more."));
-    v.appendChild(el('<div class="card vid-card"><div class="card-hd"><h3>▶ Tokens, plans &amp; premium features <span class="hint" style="font-weight:400">· walkthrough</span></h3></div>' +
-      '<div class="vid-wrap"><video class="vid-el" controls preload="none" playsinline poster="../assets/app-shot.png">' +
-      '<source src="assets/tokens-plans-tutorial.mp4" type="video/mp4">Your browser can\'t play this video.</video></div>' +
-      '<p class="hint" style="margin:10px 0 0">How tokens, the plans and the premium sections fit together — so you know exactly what each analysis unlocks.</p></div>'));
     var ts = CM.tokenState();
     var c = el('<div class="card"></div>');
     c.appendChild(el('<div class="legal-note">🎟️ Tokens unlock <b>behaviour analysis of your own past trades</b> only — educational, not advice, no tips, no future calls.</div>'));
@@ -2052,6 +2064,10 @@
     c.querySelector("#tDia").addEventListener("click", function () { buyTokens(0, 999); });
     c.appendChild(el('<p class="hint" style="margin-top:14px">1 token = one deep analysis (Trade Replay of one past trade). The ' + CM.FREE_TOKENS + ' free tokens are one-time per account; purchased tokens stay until used.</p>'));
     v.appendChild(c);
+    // Walkthrough video sits at the bottom (below the balance & plans).
+    v.appendChild(el('<div class="card vid-card"><div class="card-hd"><h3>▶ How tokens &amp; plans work <span class="hint" style="font-weight:400">· walkthrough</span></h3></div>' +
+      '<div class="vid-wrap"><video class="vid-el" controls preload="none" playsinline poster="../assets/app-shot.png">' +
+      '<source src="assets/tokens-plans-tutorial.mp4" type="video/mp4">Your browser can\'t play this video.</video></div></div>'));
     return v;
   };
 
@@ -2367,9 +2383,9 @@
       c.appendChild(el('<p class="hint">Shown on your shareable card &amp; the discipline leaderboard. You can change it later.</p>'));
       var hd = el('<label class="fld"><span>Handle</span><input placeholder="@yourname" /></label>'); hd.querySelector("input").value = onb.handle;
       c.appendChild(hd);
-      c.appendChild(el('<div class="notice">We\'ve loaded sample trades so your report card is alive from second one. Reset anytime in Profile.</div>'));
-      var d = el('<button class="btn btn-primary" style="margin-top:8px">See my Report Card →</button>');
-      d.addEventListener("click", function () { CM.setProfile({ name: onb.name, handle: hd.querySelector("input").value.trim(), onboarded: true }); go("today"); render(); });
+      c.appendChild(el('<div class="notice">Log your first trade and your Report Card comes alive — your honest mirror, only your own data.</div>'));
+      var d = el('<button class="btn btn-primary" style="margin-top:8px">Start — log my first trade →</button>');
+      d.addEventListener("click", function () { CM.setProfile({ name: onb.name, handle: hd.querySelector("input").value.trim(), onboarded: true }); go("log"); render(); });
       c.appendChild(d);
     }
     var dots = el('<div class="steps-dots"></div>'); [0, 1].forEach(function (i) { dots.appendChild(el('<i class="' + (i <= onb.step ? "on" : "") + '"></i>')); }); c.appendChild(dots);
