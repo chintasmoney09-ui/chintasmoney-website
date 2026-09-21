@@ -776,3 +776,25 @@ a.card:hover::after,.bento .card:hover::after{left:140%}
 .im-card ol li{color:#d6ddf2}
 .im-x{position:absolute;top:12px;right:14px;background:none;border:none;color:#8a93b5;font-size:1.05rem;cursor:pointer}
 .im-note{font-size:.8rem;color:#8a93b5;margin-top:12px}
+
+/* ---- Cookie consent banner ---- */
+.cookie-bar{position:fixed;left:12px;right:12px;bottom:12px;z-index:9998;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;background:#0e1430;border:1px solid #2a3352;border-radius:14px;padding:14px 16px;box-shadow:0 16px 44px rgba(0,0,0,.45)}
+.cookie-bar .cb-text{color:#c7cfe6;font-size:.86rem;line-height:1.5;flex:1;min-width:220px}
+.cookie-bar .cb-text a{color:#22e08a}
+.cookie-bar .cb-actions{display:flex;gap:8px}
+.cb-btn{border-radius:10px;padding:.5rem .9rem;font-weight:700;font-size:.84rem;cursor:pointer;border:1px solid #2a3352;background:transparent;color:#c7cfe6}
+.cb-btn.cb-ok{background:linear-gradient(135deg,#22e08a,#0f9d76);color:#04140d;border:none}
+@media(min-width:760px){.cookie-bar{left:auto;max-width:520px}}
+
+/* ---- Blog list ---- */
+.blog-list{display:flex;flex-direction:column;gap:16px;margin-top:30px}
+.blog-card{display:block;background:linear-gradient(180deg,#0f1734,#0b1230);border:1px solid #212a4d;border-radius:16px;padding:22px 22px;text-decoration:none;transition:border-color .15s,transform .15s}
+.blog-card:hover{border-color:#22e08a;transform:translateY(-2px)}
+.blog-tag{display:inline-block;font-size:.68rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#22e08a;background:rgba(34,224,138,.12);border:1px solid rgba(34,224,138,.3);border-radius:999px;padding:3px 10px}
+.blog-card h3{margin:12px 0 8px;color:#eef2ff;font-size:1.2rem;line-height:1.3}
+.blog-card p{color:#aab4d4;font-size:.94rem;line-height:1.6;margin:0}
+.blog-more{display:inline-block;margin-top:12px;color:#22e08a;font-weight:700;font-size:.9rem}
+.article-body h2{margin:30px 0 10px;font-size:1.35rem}
+.article-body p,.article-body li{color:var(--ink-soft);line-height:1.8}
+.article-body ul,.article-body ol{padding-left:20px}
+.article-meta{color:var(--muted);font-size:.82rem;margin-top:6px}
