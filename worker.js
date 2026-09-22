@@ -259,11 +259,16 @@ async function handleAdminData(request, env) {
     if (sr.ok) (await sr.json()).forEach(function (row) { states[row.user_id] = row; });
   } catch (e) {}
 
-  // 3) Verified payments (invoices), if the payments table is populated.
+  // 3) Verified payments (invoices) + refunds, if the tables are populated.
   let payments = [];
   try {
     const pr = await fetch(base + "/rest/v1/payments?select=*&order=created_at.desc", { headers: h });
     if (pr.ok) payments = await pr.json();
+  } catch (e) {}
+  let refundRows = [];
+  try {
+    const rr = await fetch(base + "/rest/v1/refunds?select=*&order=created_at.desc", { headers: h });
+    if (rr.ok) refundRows = await rr.json();
   } catch (e) {}
 
   const outUsers = users.map(function (u) {
@@ -281,15 +286,80 @@ async function handleAdminData(request, env) {
     };
   });
   const invoices = payments.map(function (p) {
-    return { id: "PAY-" + p.id, email: emailFor(p.user_id, users), product: p.plan || "plan",
-      amount: Math.round((p.amount || 0) / 100), date: (p.created_at || "").slice(0, 10), status: "paid", method: "Razorpay" };
+    return { id: p.razorpay_payment_id || ("PAY-" + p.id), email: p.email || emailFor(p.user_id, users),
+      product: p.product || p.plan || "plan", amount: Math.round((p.amount || 0) / 100),
+      date: (p.created_at || "").slice(0, 10), status: p.status || "paid", method: p.method || "Razorpay" };
   });
-  return aRes({ users: outUsers, invoices: invoices, refunds: [], totalUsers: outUsers.length }, 200);
+  const refunds = refundRows.map(function (r) {
+    return { id: r.razorpay_refund_id || ("RF-" + r.id), invoice: r.razorpay_payment_id || "",
+      email: r.email || "", product: r.product || "", amount: Math.round((r.amount || 0) / 100),
+      reason: r.reason || "", date: (r.created_at || "").slice(0, 10) };
+  });
+  return aRes({ users: outUsers, invoices: invoices, refunds: refunds, totalUsers: outUsers.length }, 200);
+}
+
+// ---- Razorpay webhook: record verified payments/refunds into Supabase -------
+// Configure in Razorpay → Settings → Webhooks: URL https://<site>/api/razorpay/webhook,
+// events payment.captured, refund.created, refund.processed. The secret you set
+// there must match the Worker secret RAZORPAY_WEBHOOK_SECRET. Signature = HMAC
+// SHA-256 of the RAW request body with that secret (compared to x-razorpay-signature).
+async function sbHeaders(env, extra) {
+  return Object.assign({ apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: "Bearer " + env.SUPABASE_SERVICE_ROLE_KEY }, extra || {});
+}
+async function handleRzpWebhook(request, env) {
+  if (!env.RAZORPAY_WEBHOOK_SECRET) return aRes({ error: "not_configured" }, 501);
+  const raw = await request.text();
+  const sig = request.headers.get("x-razorpay-signature") || "";
+  const expected = await hmacHex(env.RAZORPAY_WEBHOOK_SECRET, raw);
+  if (!ctEq(expected, sig)) return aRes({ error: "bad_signature" }, 401);
+  let ev; try { ev = JSON.parse(raw); } catch (e) { return aRes({ error: "bad_request" }, 400); }
+  // Acknowledge even if storage isn't wired, so Razorpay doesn't keep retrying.
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return aRes({ ok: true, stored: false }, 200);
+  const base = env.SUPABASE_URL.replace(/\/$/, "");
+  const type = ev && ev.event;
+  try {
+    if (type === "payment.captured" || type === "order.paid") {
+      const p = (ev.payload && ev.payload.payment && ev.payload.payment.entity) || null;
+      if (p) {
+        const product = (p.notes && p.notes.product) || null;
+        const row = {
+          razorpay_payment_id: p.id, razorpay_order_id: p.order_id || null,
+          email: p.email || "", product: product, plan: product,
+          amount: p.amount, currency: p.currency || "INR", method: p.method || "Razorpay",
+          status: "paid", created_at: new Date((p.created_at || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
+        };
+        await fetch(base + "/rest/v1/payments?on_conflict=razorpay_payment_id",
+          { method: "POST", headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=merge-duplicates" }), body: JSON.stringify(row) });
+      }
+    } else if (type === "refund.created" || type === "refund.processed") {
+      const r = (ev.payload && ev.payload.refund && ev.payload.refund.entity) || null;
+      if (r) {
+        const row = {
+          razorpay_refund_id: r.id, razorpay_payment_id: r.payment_id || "",
+          email: "", product: null, amount: r.amount, reason: (r.notes && r.notes.reason) || "refund",
+          status: "refunded", created_at: new Date((r.created_at || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
+        };
+        await fetch(base + "/rest/v1/refunds?on_conflict=razorpay_refund_id",
+          { method: "POST", headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=merge-duplicates" }), body: JSON.stringify(row) });
+        // Mark the original payment refunded (and copy email/product onto the refund).
+        if (r.payment_id) {
+          const pr = await fetch(base + "/rest/v1/payments?razorpay_payment_id=eq." + encodeURIComponent(r.payment_id) + "&select=email,product",
+            { method: "PATCH", headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "return=representation" }), body: JSON.stringify({ status: "refunded" }) });
+          if (pr.ok) { const arr = await pr.json(); if (arr && arr[0]) {
+            await fetch(base + "/rest/v1/refunds?razorpay_refund_id=eq." + encodeURIComponent(r.id),
+              { method: "PATCH", headers: await sbHeaders(env, { "content-type": "application/json" }), body: JSON.stringify({ email: arr[0].email || "", product: arr[0].product || null }) });
+          } }
+        }
+      }
+    }
+  } catch (e) { /* acknowledged; a failed write is retried by Razorpay */ }
+  return aRes({ ok: true }, 200);
 }
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (request.method === "POST" && url.pathname === "/api/razorpay/webhook") return handleRzpWebhook(request, env);
     if (request.method === "POST" && url.pathname === "/api/admin/login") return handleAdminLogin(request, env);
     if (request.method === "GET" && url.pathname === "/api/admin/data") return handleAdminData(request, env);
     if (request.method === "POST" && url.pathname === "/api/razorpay/order") return handleRzpOrder(request, env);
