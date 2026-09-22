@@ -70,8 +70,6 @@
   }
 
   var mobileOpen = false;
-  // Set to your YouTube video id to show the demo-video card (empty = hidden).
-  var DEMO_YT = "";
   function route() { return location.hash.replace(/^#\/?/, "") || "today"; }
   function go(r) { location.hash = "#/" + r; }
   window.addEventListener("hashchange", render);
@@ -190,9 +188,9 @@
     // Analysis-token counter — visible in every section so people always see
     // how many analyses they have left (and can top up).
     var tks = CM.tokenState();
-    var tpill = el('<a class="side-tokens' + (tks.total <= 0 ? " empty" : tks.total <= 2 ? " low" : "") + '" href="#/tokens">' +
-      '<span>🎟️ <b>' + tks.total + '</b> analys' + (tks.total === 1 ? "is" : "es") + ' left</span>' +
-      '<span class="st-cta">' + (tks.total <= 0 ? "Top up →" : "Get more →") + '</span></a>');
+    var tpill = el('<a class="side-tokens' + (tks.unlimited ? "" : (tks.total <= 0 ? " empty" : tks.total <= 2 ? " low" : "")) + '" href="#/tokens">' +
+      '<span>🎟️ <b>' + (tks.unlimited ? "∞" : tks.total) + '</b> analys' + (!tks.unlimited && tks.total === 1 ? "is" : "es") + ' left</span>' +
+      '<span class="st-cta">' + (tks.unlimited ? "Unlimited ✓" : (tks.total <= 0 ? "Top up →" : "Get more →")) + '</span></a>');
     tpill.addEventListener("click", function () { mobileOpen = false; });
     side.appendChild(tpill);
 
@@ -2006,7 +2004,7 @@
     if (!trades.length) { c.appendChild(el('<p class="hint">The sample above shows how it works. Log your own trade — then replay it here to see exactly what the market did after your entry.</p>')); v.appendChild(c); return v; }
     c.appendChild(el('<div class="legal-note">📘 <b>Educational behaviour tool.</b> Trade Replay analyses <b>only your own past trades</b> on historical market data — to understand your behaviour. It is <b>not</b> investment advice, gives <b>no</b> tips, calls or future predictions, and is <b>not</b> SEBI-registered advice. No future trade is ever suggested.</div>'));
     var ts0 = CM.tokenState();
-    c.appendChild(el('<div class="tok-status"><span>🎟️ <b>' + ts0.total + '</b> analyses left <span class="hint">(' + ts0.freeLeft + ' free left' + (ts0.balance ? ' + ' + ts0.balance + ' tokens' : '') + ')</span></span><a href="#/tokens" class="tok-get">Get more →</a></div>'));
+    c.appendChild(el('<div class="tok-status"><span>🎟️ <b>' + (ts0.unlimited ? "∞" : ts0.total) + '</b> analyses left <span class="hint">' + (ts0.unlimited ? "(unlimited on your plan)" : "(" + ts0.freeLeft + " free left" + (ts0.balance ? " + " + ts0.balance + " tokens" : "") + ")") + '</span></span><a href="#/tokens" class="tok-get">Get more →</a></div>'));
     c.appendChild(el('<p class="hint" style="margin:0 0 12px">Pick a trade to replay on the real market chart of its dates, with your entry, stop and exit drawn on it. Each replay uses 1 analysis.</p>'));
     var listEl = el('<div class="replay-list"></div>');
     trades.slice(0, 60).forEach(function (t) {
@@ -2045,7 +2043,7 @@
     var ts = CM.tokenState();
     var c = el('<div class="card"></div>');
     c.appendChild(el('<div class="legal-note">🎟️ Tokens unlock <b>behaviour analysis of your own past trades</b> only — educational, not advice, no tips, no future calls.</div>'));
-    c.appendChild(el('<div class="tok-balance"><div><div class="hint">Analyses you can run now</div><div class="tok-big">' + ts.total + '</div></div><div class="tok-split"><span>' + ts.freeLeft + ' / ' + ts.freeLimit + ' free left (one-time)</span><span>' + ts.balance + ' purchased tokens</span></div></div>'));
+    c.appendChild(el('<div class="tok-balance"><div><div class="hint">Analyses you can run now</div><div class="tok-big">' + (ts.unlimited ? "∞" : ts.total) + '</div></div><div class="tok-split">' + (ts.unlimited ? '<span>Unlimited on your plan ✓</span><span>' + ts.balance + ' extra tokens</span>' : '<span>' + ts.freeLeft + ' / ' + ts.freeLimit + ' free left (one-time)</span><span>' + ts.balance + ' purchased tokens</span>') + '</div></div>'));
     c.appendChild(el('<h3 style="margin:18px 0 8px">Top up tokens</h3>'));
     var packs = el('<div class="grid g3"></div>');
     TOKEN_PACKS.forEach(function (p) {

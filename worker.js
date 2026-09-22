@@ -151,17 +151,25 @@ async function hmacHex(secret, msg) {
 }
 
 async function handleRzpVerify(request, env) {
-  if (!env.RAZORPAY_KEY_SECRET) return jsonRes({ error: "payments not configured" }, 0);
+  if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) return jsonRes({ error: "payments not configured" }, 0);
   let b; try { b = await request.json(); } catch (e) { return jsonRes({ error: "bad request" }, 0); }
-  const orderId = b && b.order_id, paymentId = b && b.payment_id, sig = b && b.signature, product = b && b.product;
-  const p = RZP_PRODUCTS[product];
-  if (!orderId || !paymentId || !sig || !p) return jsonRes({ valid: false }, 0);
+  const orderId = b && b.order_id, paymentId = b && b.payment_id, sig = b && b.signature;
+  if (!orderId || !paymentId || !sig) return jsonRes({ valid: false }, 0);
+  // 1) Verify the payment signature (proves the payment belongs to this order).
   const expected = await hmacHex(env.RAZORPAY_KEY_SECRET, orderId + "|" + paymentId);
-  // Length-safe constant-time comparison.
   if (expected.length !== sig.length) return jsonRes({ valid: false }, 0);
   let diff = 0;
   for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ sig.charCodeAt(i);
   if (diff !== 0) return jsonRes({ valid: false }, 0);
+  // 2) Re-read the order from Razorpay and trust ITS product + amount — never
+  // the client's, so a cheap order can't claim an expensive grant.
+  const auth = "Basic " + btoa(env.RAZORPAY_KEY_ID + ":" + env.RAZORPAY_KEY_SECRET);
+  const r = await fetch("https://api.razorpay.com/v1/orders/" + encodeURIComponent(orderId), { headers: { Authorization: auth } });
+  if (!r.ok) return jsonRes({ valid: false }, 0);
+  const order = await r.json();
+  const product = order && order.notes && order.notes.product;
+  const p = RZP_PRODUCTS[product];
+  if (!p || order.amount !== p.amount) return jsonRes({ valid: false }, 0);
   const grant = p.type === "plan" ? { plan: p.plan } : { tokens: p.tokens };
   return jsonRes({ valid: true, product: product, grant: grant }, 0);
 }

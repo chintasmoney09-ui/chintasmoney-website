@@ -26,6 +26,10 @@
     pro:   { id: "pro",   name: "Platinum",   price: 499, cadence: "month",
       blurb: "For serious, systematic traders.",
       features: ["everything-plus", "strategy-performance", "csv-import-export", "risk-and-r-multiples", "weekly-report", "goal-rules-engine"],
+      limits: { history: Infinity } },
+    diamond: { id: "diamond", name: "Diamond", price: 999, cadence: "month",
+      blurb: "Everything, white-glove.",
+      features: ["everything-pro", "priority-ai", "monthly-1-1-review", "multi-year-backtest", "early-access"],
       limits: { history: Infinity } }
   };
   var FEATURE_MATRIX = {
@@ -33,7 +37,7 @@
     insights: "plus", coach: "plus", badges: "plus", leaderboard: "plus",
     strategy: "pro", replay: "pro"
   };
-  var PLAN_RANK = { free: 0, plus: 1, pro: 2 };
+  var PLAN_RANK = { free: 0, plus: 1, pro: 2, diamond: 3 };
   function planAllows(p, area) { return PLAN_RANK[p] >= PLAN_RANK[FEATURE_MATRIX[area] || "free"]; }
 
   var SETUPS = ["Breakout", "Reversal", "Momentum", "Scalp", "News", "Gap", "Trend-follow", "Other"];
@@ -266,16 +270,34 @@
     // Analysis tokens: each account gets FREE_TOKENS free replays ONCE (lifetime,
     // not daily); after that, only purchased tokens (profile.tokens) work.
     FREE_TOKENS: 5,
+    // Plan token entitlements: Platinum/Diamond = unlimited; Go Plus = 50/month.
+    _planMonthly: function (plan) { return plan === "plus" ? 50 : 0; },
+    _syncPlan: function (p) {
+      var plan = p.plan || "free";
+      if (plan === "pro" || plan === "diamond") return { unlimited: true, monthly: 0 };
+      var allow = this._planMonthly(plan);
+      if (allow > 0) {
+        var d = new Date(), key = d.getFullYear() + "-" + d.getMonth();
+        if (p.planMonth !== key) { p.planMonth = key; p.planTokens = allow; save(); }
+        return { unlimited: false, monthly: Math.max(0, p.planTokens || 0) };
+      }
+      return { unlimited: false, monthly: 0 };
+    },
     tokenState: function () {
       var p = load().profile;
+      var ps = this._syncPlan(p);
       var free = Math.max(0, this.FREE_TOKENS - (p.freeUsedTotal || 0));
       var bal = p.tokens || 0;
-      return { freeLeft: free, freeLimit: this.FREE_TOKENS, balance: bal, total: free + bal, canUse: (free + bal) > 0 };
+      if (ps.unlimited) return { unlimited: true, freeLeft: free, freeLimit: this.FREE_TOKENS, balance: bal, monthly: 0, total: Infinity, canUse: true };
+      return { unlimited: false, freeLeft: free, freeLimit: this.FREE_TOKENS, balance: bal, monthly: ps.monthly, total: free + ps.monthly + bal, canUse: (free + ps.monthly + bal) > 0 };
     },
     useToken: function () {
       var p = load().profile;
+      var ps = this._syncPlan(p);
+      if (ps.unlimited) return true; // Platinum/Diamond — never decrement
       var free = Math.max(0, this.FREE_TOKENS - (p.freeUsedTotal || 0));
       if (free > 0) { p.freeUsedTotal = (p.freeUsedTotal || 0) + 1; save(); return true; }
+      if ((p.planTokens || 0) > 0) { p.planTokens = p.planTokens - 1; save(); return true; }
       if ((p.tokens || 0) > 0) { p.tokens = p.tokens - 1; save(); return true; }
       return false;
     },

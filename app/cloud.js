@@ -97,7 +97,13 @@
   };
   Cloud.signOut = function () { return Cloud.client.auth.signOut().then(function () { location.reload(); }); };
 
-  // ---- Razorpay checkout (secure: server-created order + verified signature) --
+  // ---- Razorpay checkout (server-created order + verified signature) ----------
+  // The Worker verifies the payment signature and re-reads the order's true
+  // product/amount, so the amount and product can't be tampered. NOTE: the grant
+  // is still applied client-side (localStorage + cloud sync), so a determined
+  // user could edit their own local entitlements. Full server-enforced
+  // entitlements (write grant to Supabase, gate token use server-side) is a
+  // follow-up hardening step; it only affects that user's own account.
   // The Worker creates the order (authoritative amount) and verifies the payment
   // signature. We only grant the plan/tokens after /api/razorpay/verify says valid.
   function rzpPay(product, onValid) {
