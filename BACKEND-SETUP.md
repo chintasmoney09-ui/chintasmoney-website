@@ -74,6 +74,53 @@ add a **Supabase Edge Function** that verifies Razorpay's webhook signature and
 sets the plan server-side. Ping me and I'll write that function for you (it's ~40
 lines) and the exact deploy command.
 
+## Admin control panel (real login + live data)
+
+The owner control panel lives at **`/app/admin.html`**. It has a server-side
+login and can show **real** cross-user data (who signed up, their plan, revenue)
+pulled from Supabase via the Worker using the **service-role** key.
+
+Until you add the secrets below, the panel still works: it falls back to a local
+password gate (`chintasmoney` / the in-panel password) and shows clearly-labelled
+demo data. Add these to make it real:
+
+1. **Supabase → Project Settings → API** → copy the **`service_role`** key
+   (secret — server only, never in the browser or the repo).
+2. **Cloudflare → Worker → Settings → Variables → Add secret** (Encrypt):
+   - `ADMIN_PASSWORD` — your chosen admin password (set the real value here only)
+   - `ADMIN_SESSION_SECRET` — any long random string (e.g. 40+ random chars)
+   - `SUPABASE_SERVICE_ROLE_KEY` — the service_role key from step 1
+3. Non-secret vars are already in `wrangler.jsonc`: `ADMIN_USER` (`chintasmoney`)
+   and `SUPABASE_URL`. Adjust there if needed.
+4. Re-deploy the Worker.
+
+Now signing in at `/app/admin.html` authenticates against the Worker (12-hour
+token), and **People logged / Revenue** show live Supabase users. Invoices appear
+once the payments table is populated (add the Razorpay webhook — ask me).
+
+> The service-role key bypasses row-level security, so it must ONLY ever live in
+> the Worker secret store — never in `config.js`, the repo, or the browser.
+
+## Real invoices & refunds (Razorpay webhook)
+
+The Worker records every verified payment and refund into Supabase, so the
+admin panel's **Invoices**, **Refunds**, **total money made** and **net revenue**
+become real. Turn it on:
+
+1. First run `supabase-schema.sql` again (it's safe to re-run) — it adds the new
+   payment columns and the `refunds` table.
+2. **Razorpay → Settings → Webhooks → Create Webhook**:
+   - **Webhook URL:** `https://chintasmoney.com/api/razorpay/webhook`
+   - **Secret:** make up a strong random string and paste it.
+   - **Active events:** `payment.captured`, `refund.created`, `refund.processed`.
+3. **Cloudflare → Worker → Settings → Variables → Add secret** (Encrypt):
+   - `RAZORPAY_WEBHOOK_SECRET` — the same secret from step 2.
+4. Re-deploy the Worker.
+
+Now every successful payment and refund flows into Supabase automatically (the
+Worker verifies Razorpay's signature on the raw body and upserts by payment/
+refund id, so retries never double-count), and appears live in the admin panel.
+
 ## Costs
 - **Supabase Free**: up to 50,000 monthly active users, 500 MB database — plenty
   to start, ₹0.

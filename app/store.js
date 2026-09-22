@@ -47,11 +47,16 @@
   // ---- Admin config ----------------------------------------------------------
   var ADMIN_KEY = "chintasmoney.admin.v1";
   function adminConfig() {
-    var def = { priceOverrides: {}, flags: { aiCoach: true, leaderboard: true, badges: true, csvImport: true } };
+    var def = { priceOverrides: {}, featureGates: {}, flags: { aiCoach: true, leaderboard: true, badges: true, csvImport: true } };
     try { var raw = localStorage.getItem(ADMIN_KEY); return raw ? Object.assign(def, JSON.parse(raw)) : def; } catch (e) { return def; }
   }
   function saveAdmin(c) { try { localStorage.setItem(ADMIN_KEY, JSON.stringify(c)); } catch (e) {} applyOverrides(); }
-  function applyOverrides() { var c = adminConfig(); Object.keys(c.priceOverrides || {}).forEach(function (id) { if (PLANS[id]) PLANS[id].price = c.priceOverrides[id]; }); }
+  function applyOverrides() {
+    var c = adminConfig();
+    Object.keys(c.priceOverrides || {}).forEach(function (id) { if (PLANS[id]) PLANS[id].price = c.priceOverrides[id]; });
+    // Admin can re-gate any section to a different minimum plan (locked sections).
+    Object.keys(c.featureGates || {}).forEach(function (area) { if (FEATURE_MATRIX[area]) FEATURE_MATRIX[area] = c.featureGates[area]; });
+  }
   applyOverrides();
 
   // ---- Seed sample trades ----------------------------------------------------
@@ -256,6 +261,7 @@
     adminConfig: adminConfig, saveAdmin: saveAdmin,
     setPlanPrice: function (id, p) { var c = adminConfig(); c.priceOverrides[id] = p; saveAdmin(c); },
     setFlag: function (k, v) { var c = adminConfig(); c.flags[k] = v; saveAdmin(c); },
+    setFeatureGate: function (area, plan) { var c = adminConfig(); c.featureGates = c.featureGates || {}; c.featureGates[area] = plan; saveAdmin(c); },
     load: load, save: save, reset: reset, uid: uid, adapters: adapters,
     hydrate: function (obj) { if (obj && typeof obj === "object") { _s = obj; save(); } },
     pnl: pnl, isWin: isWin, hasSL: hasSL, tradeDiscipline: tradeDiscipline,
