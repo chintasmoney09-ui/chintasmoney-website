@@ -351,6 +351,17 @@
   var standalone = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
   if (standalone) { row.hidden = true; return; }
 
+  // Direct APK download path (hosted on the site). If the file isn't present
+  // yet, we fall back to the PWA install so the button always does something.
+  var APK_URL = "/chintasmoney.apk";
+
+  // Show the button that matches the visitor's device (both on desktop).
+  var ua = navigator.userAgent || "";
+  var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  var isAndroid = /Android/.test(ua);
+  if (isIOS) { btnA.hidden = true; }
+  else if (isAndroid) { btnI.hidden = true; }
+
   var deferred = null;
   window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); deferred = e; });
 
@@ -361,10 +372,20 @@
     ov.addEventListener("click", function (e) { if (e.target === ov || e.target.className === "im-x") close(); });
     document.body.appendChild(ov);
   }
+  function androidFallback() {
+    if (deferred) { deferred.prompt(); deferred.userChoice.finally(function () { deferred = null; }); }
+    else { modal("Install on Android", '<p>In <b>Chrome</b>, tap the <b>⋮ menu</b> (top-right) → <b>Install app</b> (or <b>Add to Home screen</b>). ChintasMoney installs like a normal app — its own icon, full screen, works offline.</p>'); }
+  }
 
   btnA.addEventListener("click", function () {
-    if (deferred) { deferred.prompt(); deferred.userChoice.finally(function () { deferred = null; }); }
-    else { modal("Install on Android", '<p>In <b>Chrome</b>, tap the <b>⋮ menu</b> (top-right) → <b>Install app</b> (or <b>Add to Home screen</b>). ChintasMoney installs like a normal app — its own icon, full screen, works offline. No Play Store needed.</p>'); }
+    // Use the hosted APK if it exists; otherwise fall back to PWA install.
+    fetch(APK_URL, { method: "HEAD" }).then(function (r) {
+      if (r && r.ok) {
+        var a = document.createElement("a"); a.href = APK_URL; a.download = "ChintasMoney.apk";
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        modal("Installing the app", '<p>The <b>ChintasMoney.apk</b> is downloading. When it finishes, open it and tap <b>Install</b>. If Android asks, allow <b>“install from this source.”</b> Then open ChintasMoney from your home screen.</p>');
+      } else { androidFallback(); }
+    }).catch(androidFallback);
   });
   btnI.addEventListener("click", function () {
     modal("Add to your iPhone", '<p>On iPhone, open this site in <b>Safari</b>, then:</p><ol style="text-align:left;margin:10px auto 0;max-width:340px;line-height:2;padding-left:20px"><li>Tap the <b>Share</b> button (a square with an arrow pointing up).</li><li>Scroll down and tap <b>Add to Home Screen</b>.</li><li>Tap <b>Add</b> — ChintasMoney lands on your home screen like an app.</li></ol><p class="im-note">Apple doesn\'t allow one-tap install, so these 3 taps are the quickest way — it works fully offline after that.</p>');
