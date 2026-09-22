@@ -174,9 +174,124 @@ async function handleRzpVerify(request, env) {
   return jsonRes({ valid: true, product: product, grant: grant }, 0);
 }
 
+// ---- Admin: server-side login + cross-user data (Supabase service-role) -----
+// Auth is a signed, expiring token (HMAC-SHA256). Secrets are Worker env vars
+// set in the Cloudflare dashboard — never committed:
+//   ADMIN_USER (optional, default "chintasmoney")
+//   ADMIN_PASSWORD           — the owner's admin password
+//   ADMIN_SESSION_SECRET     — random string used to sign session tokens
+//   SUPABASE_URL             — https://xxxx.supabase.co
+//   SUPABASE_SERVICE_ROLE_KEY — Supabase "service_role" key (server-only!)
+function aRes(obj, status) {
+  return new Response(JSON.stringify(obj), {
+    status: status || 200,
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "access-control-allow-origin": "*" },
+  });
+}
+function ctEq(a, b) {
+  a = String(a == null ? "" : a); b = String(b == null ? "" : b);
+  if (a.length !== b.length) return false;
+  let diff = 0; for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+function b64url(s) { return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+function ub64url(s) { s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; return atob(s); }
+async function signToken(secret, payload) {
+  const body = b64url(JSON.stringify(payload));
+  const sig = await hmacHex(secret, body);
+  return body + "." + sig;
+}
+async function verifyToken(secret, token) {
+  if (!token || token.indexOf(".") === -1) return null;
+  const parts = token.split(".");
+  if (parts.length !== 2) return null;
+  const expected = await hmacHex(secret, parts[0]);
+  if (!ctEq(expected, parts[1])) return null;
+  let payload; try { payload = JSON.parse(ub64url(parts[0])); } catch (e) { return null; }
+  if (!payload || !payload.exp || Date.now() > payload.exp) return null;
+  return payload;
+}
+
+async function handleAdminLogin(request, env) {
+  if (!env.ADMIN_PASSWORD || !env.ADMIN_SESSION_SECRET) return aRes({ error: "not_configured" }, 501);
+  let b; try { b = await request.json(); } catch (e) { return aRes({ error: "bad_request" }, 400); }
+  const wantUser = env.ADMIN_USER || "chintasmoney";
+  const okUser = ctEq(b && b.user, wantUser);
+  const okPass = ctEq(b && b.password, env.ADMIN_PASSWORD);
+  if (!okUser || !okPass) return aRes({ error: "invalid_credentials" }, 401);
+  const token = await signToken(env.ADMIN_SESSION_SECRET, { sub: "admin", exp: Date.now() + 12 * 3600 * 1000 });
+  return aRes({ token: token }, 200);
+}
+
+function emailFor(id, users) {
+  for (let i = 0; i < users.length; i++) if (users[i].id === id) return users[i].email || "";
+  return "";
+}
+async function handleAdminData(request, env) {
+  if (!env.ADMIN_SESSION_SECRET) return aRes({ error: "not_configured" }, 501);
+  const auth = request.headers.get("authorization") || "";
+  const token = auth.replace(/^Bearer\s+/i, "");
+  const payload = await verifyToken(env.ADMIN_SESSION_SECRET, token);
+  if (!payload) return aRes({ error: "unauthorized" }, 401);
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return aRes({ error: "supabase_not_configured" }, 501);
+  const base = env.SUPABASE_URL.replace(/\/$/, "");
+  const h = { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: "Bearer " + env.SUPABASE_SERVICE_ROLE_KEY };
+
+  // 1) All auth users (email, created_at, last_sign_in_at). GoTrue caps page
+  //    size (~50), so page through until a short/empty page. Bounded for safety.
+  let users = [];
+  try {
+    for (let page = 1; page <= 200; page++) {
+      const ur = await fetch(base + "/auth/v1/admin/users?page=" + page + "&per_page=200", { headers: h });
+      if (!ur.ok) break;
+      const uj = await ur.json();
+      const batch = uj.users || (Array.isArray(uj) ? uj : []);
+      if (!batch.length) break;
+      users = users.concat(batch);
+      if (batch.length < 50) break; // last (partial) page reached
+    }
+  } catch (e) {}
+
+  // 2) Per-user app state (plan, persona, AI usage) from user_state.
+  const states = {};
+  try {
+    const sr = await fetch(base + "/rest/v1/user_state?select=user_id,data,updated_at", { headers: h });
+    if (sr.ok) (await sr.json()).forEach(function (row) { states[row.user_id] = row; });
+  } catch (e) {}
+
+  // 3) Verified payments (invoices), if the payments table is populated.
+  let payments = [];
+  try {
+    const pr = await fetch(base + "/rest/v1/payments?select=*&order=created_at.desc", { headers: h });
+    if (pr.ok) payments = await pr.json();
+  } catch (e) {}
+
+  const outUsers = users.map(function (u) {
+    const st = (states[u.id] && states[u.id].data) || {};
+    const prof = st.profile || {};
+    return {
+      name: prof.name || (u.user_metadata && (u.user_metadata.full_name || u.user_metadata.name)) || (u.email || "").split("@")[0] || "User",
+      email: u.email || u.phone || "",
+      plan: prof.plan || "free",
+      persona: prof.persona || "—",
+      joined: (u.created_at || "").slice(0, 10),
+      last: (u.last_sign_in_at || "").slice(0, 10),
+      ai: (st.usage && st.usage.aiQuestions) || 0,
+      status: "active",
+    };
+  });
+  const invoices = payments.map(function (p) {
+    return { id: "PAY-" + p.id, email: emailFor(p.user_id, users), product: p.plan || "plan",
+      amount: Math.round((p.amount || 0) / 100), date: (p.created_at || "").slice(0, 10), status: "paid", method: "Razorpay" };
+  });
+  return aRes({ users: outUsers, invoices: invoices, refunds: [], totalUsers: outUsers.length }, 200);
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (request.method === "POST" && url.pathname === "/api/admin/login") return handleAdminLogin(request, env);
+    if (request.method === "GET" && url.pathname === "/api/admin/data") return handleAdminData(request, env);
     if (request.method === "POST" && url.pathname === "/api/razorpay/order") return handleRzpOrder(request, env);
     if (request.method === "POST" && url.pathname === "/api/razorpay/verify") return handleRzpVerify(request, env);
     if (url.pathname === "/api/quotes" || url.pathname === "/api/movers" || url.pathname === "/api/candles") {

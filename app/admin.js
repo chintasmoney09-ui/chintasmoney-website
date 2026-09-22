@@ -30,8 +30,32 @@
   function esc(s) { return (s == null ? "" : String(s)).replace(/[&<>"]/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]; }); }
   function money(n) { return "₹" + Math.round(n || 0).toLocaleString("en-IN"); }
   function creds() { var c = CM.adminConfig(); return (c.auth && c.auth.user) ? c.auth : { user: DEFAULT_USER, pass: DEFAULT_PASS }; }
-  function isAuthed() { try { return sessionStorage.getItem(SESSION_KEY) === "1"; } catch (e) { return false; } }
-  function setAuthed(v) { try { v ? sessionStorage.setItem(SESSION_KEY, "1") : sessionStorage.removeItem(SESSION_KEY); } catch (e) {} }
+  // Session holds either a server JWT-style token ("live") or the sentinel "1"
+  // (local-only gate, used when the Worker admin API isn't configured yet).
+  function token() { try { return sessionStorage.getItem(SESSION_KEY) || ""; } catch (e) { return ""; } }
+  function isAuthed() { return !!token(); }
+  function setToken(v) { try { v ? sessionStorage.setItem(SESSION_KEY, v) : sessionStorage.removeItem(SESSION_KEY); } catch (e) {} }
+  function setAuthed(v) { setToken(v ? "1" : ""); }
+
+  // ---- live data (Supabase via Worker service-role) -------------------------
+  var LIVE = { state: "idle", users: null, invoices: null, refunds: null, error: "" };
+  function fetchLive() {
+    if (token() === "1") { LIVE.state = "demo"; return; } // local gate → demo data
+    LIVE.state = "loading";
+    fetch("/api/admin/data", { headers: { Authorization: "Bearer " + token() } })
+      .then(function (r) {
+        if (r.status === 401) { setToken(""); LIVE.state = "idle"; render(); return null; }
+        if (!r.ok) { LIVE.state = "demo"; LIVE.error = r.status === 501 ? "Supabase not wired in the Worker yet — showing demo data." : "Couldn't load live data — showing demo."; render(); return null; }
+        return r.json();
+      })
+      .then(function (d) {
+        if (!d) return;
+        LIVE.users = d.users || []; LIVE.invoices = d.invoices || []; LIVE.refunds = d.refunds || [];
+        LIVE.state = "live"; render();
+      })
+      .catch(function () { LIVE.state = "demo"; LIVE.error = "Network error — showing demo data."; render(); });
+  }
+  function liveOn() { return LIVE.state === "live"; }
 
   // ---- inject admin-only styles (self-contained; no styles.css dependency) ---
   (function styles() {
@@ -155,7 +179,9 @@
       plan: s.profile.plan || "free", persona: s.profile.persona || "—", joined: (s.meta.createdAt || "").slice(0, 10),
       last: new Date().toISOString().slice(0, 10), ai: s.usage.aiQuestions || 0, status: "active", country: "IN", local: true };
   }
-  function allUsers() { return [localUser()].concat(DEMO_USERS); }
+  function allUsers() { return liveOn() ? (LIVE.users || []) : [localUser()].concat(DEMO_USERS); }
+  function allInvoices() { return liveOn() ? (LIVE.invoices || []) : DEMO_INVOICES; }
+  function allRefunds() { return liveOn() ? (LIVE.refunds || []) : DEMO_REFUNDS; }
   function planPrice(id) { return (CM.PLANS[id] && CM.PLANS[id].price) || 0; }
   function packPrice(id) { var p = TOKEN_PACKS.filter(function (x) { return x.id === id; })[0]; return p ? p.price : 0; }
   function productPrice(id) { return CM.PLANS[id] ? planPrice(id) : packPrice(id); }
@@ -179,11 +205,23 @@
     var uF = el('<label class="cm-fld"><span>Username</span><input type="text" autocomplete="username" placeholder="username"/></label>');
     var pF = el('<label class="cm-fld"><span>Password</span><input type="password" autocomplete="current-password" placeholder="password"/></label>');
     var btn = el('<button class="cm-btn p" style="width:100%;margin-top:6px">Sign in</button>');
-    function attempt() {
+    function localAttempt() {
       var c = creds();
       if (uF.querySelector("input").value.trim() === c.user && pF.querySelector("input").value === c.pass) {
-        setAuthed(true); render();
+        setAuthed(true); LIVE.state = "demo"; render();
       } else { errP.textContent = "Wrong username or password."; }
+    }
+    function attempt() {
+      errP.textContent = "Signing in…"; btn.disabled = true;
+      var u = uF.querySelector("input").value.trim(), p = pF.querySelector("input").value;
+      fetch("/api/admin/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ user: u, password: p }) })
+        .then(function (r) {
+          if (r.status === 200) return r.json().then(function (d) { setToken(d.token); LIVE.state = "idle"; fetchLive(); render(); });
+          if (r.status === 401) { errP.textContent = "Wrong username or password."; btn.disabled = false; return; }
+          // 501/not configured (or other) → fall back to the local gate + demo data.
+          btn.disabled = false; localAttempt();
+        })
+        .catch(function () { btn.disabled = false; localAttempt(); });
     }
     btn.addEventListener("click", attempt);
     card.addEventListener("keydown", function (e) { if (e.key === "Enter") attempt(); });
@@ -201,6 +239,8 @@
 
   function render() {
     if (!isAuthed()) return renderLogin();
+    // Kick off the live fetch once per session for a real (server) token.
+    if (LIVE.state === "idle" && token() !== "1") fetchLive();
     root.innerHTML = "";
     var shell = el('<div class="cm-shell"></div>');
 
@@ -216,7 +256,7 @@
     side.appendChild(el('<div class="cm-sep"></div>'));
     side.appendChild(el('<a class="cm-nav" href="index.html">↩ Back to app</a>'));
     var out = el('<button class="cm-nav">⎋ Sign out</button>');
-    out.addEventListener("click", function () { setAuthed(false); render(); });
+    out.addEventListener("click", function () { setToken(""); LIVE = { state: "idle", users: null, invoices: null, refunds: null, error: "" }; render(); });
     side.appendChild(out);
     shell.appendChild(side);
 
@@ -226,7 +266,10 @@
     menuBtn.addEventListener("click", function () { side.classList.toggle("open"); });
     var titleBox = el('<div></div>');
     titleBox.appendChild(el('<h1 class="cm-h1">' + TABTITLE[TAB] + '</h1>'));
-    titleBox.appendChild(el('<div class="cm-sub">Live: pricing, gating &amp; flags. Demo: cross-user rows (wire a backend to make them real).</div>'));
+    var srcTxt = LIVE.state === "loading" ? "Loading live data…"
+      : LIVE.state === "live" ? "🟢 Live data — signed in via server (Supabase)."
+      : "🟡 Demo data — " + (LIVE.error || "server admin API not configured yet.");
+    titleBox.appendChild(el('<div class="cm-sub">' + srcTxt + '</div>'));
     var titleWrap = el('<div style="display:flex;gap:12px;align-items:center"></div>');
     titleWrap.appendChild(menuBtn); titleWrap.appendChild(titleBox);
     top.appendChild(titleWrap);
@@ -241,9 +284,9 @@
   }
 
   // ---- revenue helpers ------------------------------------------------------
-  function paidInvoices() { return DEMO_INVOICES.filter(function (i) { return i.status === "paid"; }); }
+  function paidInvoices() { return allInvoices().filter(function (i) { return i.status === "paid"; }); }
   function grossRevenue() { return paidInvoices().reduce(function (a, i) { return a + i.amount; }, 0); }
-  function refundTotal() { return DEMO_REFUNDS.reduce(function (a, r) { return a + r.amount; }, 0); }
+  function refundTotal() { return allRefunds().reduce(function (a, r) { return a + r.amount; }, 0); }
   function netRevenue() { return grossRevenue() - refundTotal(); }
   function mrr() {
     return allUsers().reduce(function (a, u) { return a + (u.status === "active" ? planPrice(u.plan) : 0); }, 0);
@@ -264,8 +307,8 @@
       v.appendChild(g);
 
       var g2 = el('<div class="cm-grid cm-g4" style="margin-top:14px"></div>');
-      g2.appendChild(stat("Invoices", String(DEMO_INVOICES.length), paidInvoices().length + " paid"));
-      g2.appendChild(stat("Refunds", String(DEMO_REFUNDS.length), money(refundTotal()) + " returned"));
+      g2.appendChild(stat("Invoices", String(allInvoices().length), paidInvoices().length + " paid"));
+      g2.appendChild(stat("Refunds", String(allRefunds().length), money(refundTotal()) + " returned"));
       g2.appendChild(stat("Past due", String(users.filter(function (u) { return u.status === "past_due"; }).length), "need attention"));
       g2.appendChild(stat("AI questions", String(users.reduce(function (a, u) { return a + u.ai; }, 0)), "all-time"));
       v.appendChild(g2);
@@ -365,12 +408,12 @@
       var g = el('<div class="cm-grid cm-g4"></div>');
       g.appendChild(stat("Total money made", money(grossRevenue()), "gross, paid invoices"));
       g.appendChild(stat("Net revenue", money(netRevenue()), "after refunds"));
-      g.appendChild(stat("Invoices", String(DEMO_INVOICES.length), paidInvoices().length + " paid"));
-      g.appendChild(stat("Refunds", money(refundTotal()), DEMO_REFUNDS.length + " refunded"));
+      g.appendChild(stat("Invoices", String(allInvoices().length), paidInvoices().length + " paid"));
+      g.appendChild(stat("Refunds", money(refundTotal()), allRefunds().length + " refunded"));
       v.appendChild(g);
 
       v.appendChild(filterBar(true));
-      var invs = applyInvoiceFilter(DEMO_INVOICES);
+      var invs = applyInvoiceFilter(allInvoices());
       v.appendChild(el('<div class="cm-hd"><h3>Invoices</h3></div>'));
       if (!invs.length) v.appendChild(el('<div class="cm-card cm-muted">No invoices match the filter.</div>'));
       else {
@@ -393,10 +436,10 @@
 
       // refunds
       v.appendChild(el('<div class="cm-hd"><h3>Refunds</h3></div>'));
-      if (!DEMO_REFUNDS.length) v.appendChild(el('<div class="cm-card cm-muted">No refunds.</div>'));
+      if (!allRefunds().length) v.appendChild(el('<div class="cm-card cm-muted">No refunds.</div>'));
       else {
         var rg = el('<div class="cm-cards"></div>');
-        DEMO_REFUNDS.forEach(function (r) {
+        allRefunds().forEach(function (r) {
           var card = el('<div class="cm-inv"></div>');
           card.appendChild(el('<div class="cm-inv-top"><span class="code">' + esc(r.id) + '</span><span class="cm-badge b-warn">refunded</span></div>'));
           card.appendChild(el('<div class="cm-inv-amt">' + money(r.amount) + '</div>'));
@@ -458,7 +501,7 @@
       var items = [
         ["📦 Everything (JSON)", "Full snapshot: users, invoices, refunds, catalogue, config.", function () {
           downloadJSON("chintasmoney-backup.json", {
-            exportedAt: new Date().toISOString(), users: allUsers(), invoices: DEMO_INVOICES, refunds: DEMO_REFUNDS,
+            exportedAt: new Date().toISOString(), users: allUsers(), invoices: allInvoices(), refunds: allRefunds(),
             catalogue: { plans: CM.PLANS, tokenPacks: TOKEN_PACKS }, config: CM.adminConfig(),
             revenue: { gross: grossRevenue(), refunds: refundTotal(), net: netRevenue(), mrr: mrr() }
           });
@@ -467,10 +510,10 @@
           downloadCSV("chintasmoney-users.csv", ["name", "email", "plan", "persona", "status", "ai", "joined", "last"], allUsers());
         }],
         ["🧾 Invoices (CSV)", "Every invoice with amount, method, status.", function () {
-          downloadCSV("chintasmoney-invoices.csv", ["id", "email", "product", "amount", "method", "status", "date"], DEMO_INVOICES);
+          downloadCSV("chintasmoney-invoices.csv", ["id", "email", "product", "amount", "method", "status", "date"], allInvoices());
         }],
         ["↩ Refunds (CSV)", "All refunds with reason and amount.", function () {
-          downloadCSV("chintasmoney-refunds.csv", ["id", "invoice", "email", "product", "amount", "reason", "date"], DEMO_REFUNDS);
+          downloadCSV("chintasmoney-refunds.csv", ["id", "invoice", "email", "product", "amount", "reason", "date"], allRefunds());
         }],
         ["🏷️ Catalogue (JSON)", "Plans and token packs with current prices.", function () {
           downloadJSON("chintasmoney-catalogue.json", { plans: CM.PLANS, tokenPacks: TOKEN_PACKS });

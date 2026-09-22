@@ -4,10 +4,14 @@
   "name": "chintasmoney",
   "main": "worker.js",
   "compatibility_date": "2026-09-14",
-  // Public Razorpay Key ID (safe to commit). The SECRET is set as an encrypted
-  // Worker secret in the Cloudflare dashboard — never here.
+  // Public / non-secret vars (safe to commit). All SECRETS are set as encrypted
+  // Worker secrets in the Cloudflare dashboard — never here. Secrets to add there:
+  //   RAZORPAY_KEY_SECRET, ADMIN_PASSWORD, ADMIN_SESSION_SECRET,
+  //   SUPABASE_SERVICE_ROLE_KEY
   "vars": {
-    "RAZORPAY_KEY_ID": "rzp_test_TdCzS1NuNM4aQJ"
+    "RAZORPAY_KEY_ID": "rzp_test_TdCzS1NuNM4aQJ",
+    "ADMIN_USER": "chintasmoney",
+    "SUPABASE_URL": "https://voycwperlvcozshjambo.supabase.co"
   },
   "assets": {
     "directory": ".",

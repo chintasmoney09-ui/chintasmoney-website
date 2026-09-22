@@ -74,6 +74,33 @@ add a **Supabase Edge Function** that verifies Razorpay's webhook signature and
 sets the plan server-side. Ping me and I'll write that function for you (it's ~40
 lines) and the exact deploy command.
 
+## Admin control panel (real login + live data)
+
+The owner control panel lives at **`/app/admin.html`**. It has a server-side
+login and can show **real** cross-user data (who signed up, their plan, revenue)
+pulled from Supabase via the Worker using the **service-role** key.
+
+Until you add the secrets below, the panel still works: it falls back to a local
+password gate (`chintasmoney` / the in-panel password) and shows clearly-labelled
+demo data. Add these to make it real:
+
+1. **Supabase → Project Settings → API** → copy the **`service_role`** key
+   (secret — server only, never in the browser or the repo).
+2. **Cloudflare → Worker → Settings → Variables → Add secret** (Encrypt):
+   - `ADMIN_PASSWORD` — your chosen admin password (set the real value here only)
+   - `ADMIN_SESSION_SECRET` — any long random string (e.g. 40+ random chars)
+   - `SUPABASE_SERVICE_ROLE_KEY` — the service_role key from step 1
+3. Non-secret vars are already in `wrangler.jsonc`: `ADMIN_USER` (`chintasmoney`)
+   and `SUPABASE_URL`. Adjust there if needed.
+4. Re-deploy the Worker.
+
+Now signing in at `/app/admin.html` authenticates against the Worker (12-hour
+token), and **People logged / Revenue** show live Supabase users. Invoices appear
+once the payments table is populated (add the Razorpay webhook — ask me).
+
+> The service-role key bypasses row-level security, so it must ONLY ever live in
+> the Worker secret store — never in `config.js`, the repo, or the browser.
+
 ## Costs
 - **Supabase Free**: up to 50,000 monthly active users, 500 MB database — plenty
   to start, ₹0.
