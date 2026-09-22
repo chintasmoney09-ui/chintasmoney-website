@@ -276,7 +276,11 @@ select option { background: var(--surface); }
 @media(min-width:900px){.fab{right:32px;bottom:32px}}
 /* Quick-actions menu that the + opens */
 .fab-scrim{position:fixed;inset:0;z-index:39;background:rgba(4,7,14,.35)}
+.fab-scrim[hidden]{display:none}
 .fab-menu{position:fixed;right:20px;bottom:calc(88px + env(safe-area-inset-bottom,0px));z-index:41;display:flex;flex-direction:column;gap:9px;align-items:flex-end}
+/* Respect the `hidden` attribute — a class selector's display would otherwise
+   override the browser default, leaving the menu always on screen. */
+.fab-menu[hidden]{display:none}
 @media(min-width:900px){.fab-menu{right:32px;bottom:100px}}
 .fab-item{display:flex;align-items:center;gap:10px;white-space:nowrap;background:var(--surface);color:var(--ink);
   border:1px solid var(--line);border-radius:12px;padding:11px 15px;font-weight:600;font-size:.9rem;
