@@ -1,0 +1,16 @@
+{
+  "name": "ChintasMoney Admin",
+  "short_name": "CM Admin",
+  "description": "ChintasMoney owner control panel — users, revenue, products and settings.",
+  "start_url": "/app/admin.html",
+  "scope": "/app/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1533",
+  "theme_color": "#0b1533",
+  "icons": [
+    { "src": "/app/assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/app/assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/app/assets/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
