@@ -92,7 +92,21 @@
       ".cm-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}",
       ".cm-hd h3{margin:0;font-size:1.02rem}",
       "@media(max-width:760px){.cm-side{position:fixed;left:-260px;transition:left .2s;z-index:40}.cm-side.open{left:0}.cm-main{padding:16px}.cm-menu-btn{display:inline-flex!important}}",
-      ".cm-menu-btn{display:none;align-items:center}"
+      ".cm-menu-btn{display:none;align-items:center}",
+      ".cm-cards{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}",
+      ".cm-uc{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px}",
+      ".cm-uc-top{display:flex;gap:12px;align-items:center}",
+      ".cm-av{width:44px;height:44px;flex:0 0 44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:1.05rem;background:linear-gradient(135deg,#8b5cf6,#6366f1)}",
+      ".cm-uc-name{font-weight:700;font-size:.98rem;line-height:1.2}",
+      ".cm-uc-mail{font-size:.8rem;color:#64748b;word-break:break-all}",
+      ".cm-uc-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.8rem}",
+      ".cm-uc-meta .k{color:#94a3b8;display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em}",
+      ".cm-uc-meta .v{font-weight:600;color:#334155}",
+      ".cm-uc-foot{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #eef2f7;padding-top:10px;font-size:.8rem}",
+      ".cm-inv{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px}",
+      ".cm-inv-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}",
+      ".cm-inv-amt{font-size:1.35rem;font-weight:800}",
+      ".cm-inv .code{font-family:ui-monospace,monospace;font-size:.78rem;color:#475569}"
     ].join("");
     document.head.appendChild(s);
   })();
@@ -273,20 +287,26 @@
       var v = el('<div></div>');
       v.appendChild(filterBar());
       var users = applyFilter(allUsers());
-      var c = el('<div class="cm-card" style="overflow-x:auto"><table class="cm-tbl"><thead><tr><th>User</th><th>Email</th><th>Plan (hamburger)</th><th>Persona</th><th>Status</th><th class="num">AI</th><th>Joined</th><th>Last login</th></tr></thead><tbody></tbody></table></div>');
-      var tb = c.querySelector("tbody");
-      if (!users.length) tb.appendChild(el('<tr><td colspan="8" class="cm-muted">No users match the filter.</td></tr>'));
+      if (!users.length) { v.appendChild(el('<div class="cm-card cm-muted">No users match the filter.</div>')); return v; }
+      var grid = el('<div class="cm-cards"></div>');
       users.forEach(function (u) {
-        tb.appendChild(el('<tr>' +
-          '<td><b>' + esc(u.name) + '</b>' + (u.local ? ' <span class="cm-badge b-ok">this device</span>' : '') + '</td>' +
-          '<td>' + esc(u.email) + '</td>' +
-          '<td><span class="cm-badge ' + PLAN_BADGE[u.plan] + '">' + PLAN_ICON[u.plan] + ' ' + CM.PLANS[u.plan].name + '</span></td>' +
-          '<td>' + esc(u.persona) + '</td>' +
-          '<td><span class="cm-badge ' + (u.status === "active" ? "b-ok" : "b-bad") + '">' + esc(u.status.replace("_", " ")) + '</span></td>' +
-          '<td class="num">' + u.ai + '</td>' +
-          '<td>' + esc(u.joined) + '</td><td>' + esc(u.last) + '</td></tr>'));
+        var initials = (u.name || "?").split(/\s+/).map(function (w) { return w.charAt(0); }).slice(0, 2).join("").toUpperCase();
+        var card = el('<div class="cm-uc"></div>');
+        var top = el('<div class="cm-uc-top"></div>');
+        top.appendChild(el('<div class="cm-av">' + esc(initials || "U") + '</div>'));
+        top.appendChild(el('<div style="min-width:0"><div class="cm-uc-name">' + esc(u.name) + (u.local ? ' <span class="cm-badge b-ok">this device</span>' : '') + '</div><div class="cm-uc-mail">' + esc(u.email) + '</div></div>'));
+        card.appendChild(top);
+        card.appendChild(el('<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+          '<span class="cm-badge ' + PLAN_BADGE[u.plan] + '">' + PLAN_ICON[u.plan] + ' ' + CM.PLANS[u.plan].name + '</span>' +
+          '<span class="cm-badge ' + (u.status === "active" ? "b-ok" : "b-bad") + '">' + esc(u.status.replace("_", " ")) + '</span></div>'));
+        card.appendChild(el('<div class="cm-uc-meta">' +
+          '<div><span class="k">Persona</span><span class="v">' + esc(u.persona) + '</span></div>' +
+          '<div><span class="k">AI questions</span><span class="v">' + u.ai + '</span></div>' +
+          '<div><span class="k">Joined</span><span class="v">' + esc(u.joined) + '</span></div>' +
+          '<div><span class="k">Last login</span><span class="v">' + esc(u.last) + '</span></div></div>'));
+        grid.appendChild(card);
       });
-      v.appendChild(c);
+      v.appendChild(grid);
       var dl = el('<div style="margin-top:12px"><button class="cm-btn sm">⬇ Download these users (CSV)</button></div>');
       dl.querySelector("button").addEventListener("click", function () {
         downloadCSV("chintasmoney-users.csv", ["name", "email", "plan", "persona", "status", "ai", "joined", "last"], users);
@@ -351,26 +371,43 @@
 
       v.appendChild(filterBar(true));
       var invs = applyInvoiceFilter(DEMO_INVOICES);
-      var c = el('<div class="cm-card" style="overflow-x:auto;margin-top:4px"><div class="cm-hd"><h3>Invoices</h3></div><table class="cm-tbl"><thead><tr><th>Invoice</th><th>Email</th><th>Product</th><th class="num">Amount</th><th>Method</th><th>Status</th><th>Date</th></tr></thead><tbody></tbody></table></div>');
-      var tb = c.querySelector("tbody");
-      if (!invs.length) tb.appendChild(el('<tr><td colspan="7" class="cm-muted">No invoices match the filter.</td></tr>'));
-      invs.forEach(function (i) {
-        var sb = i.status === "paid" ? "b-ok" : i.status === "refunded" ? "b-warn" : "b-bad";
-        tb.appendChild(el('<tr><td><code>' + esc(i.id) + '</code></td><td>' + esc(i.email) + '</td><td>' + esc(productName(i.product)) + '</td><td class="num">' + money(i.amount) + '</td><td>' + esc(i.method) + '</td><td><span class="cm-badge ' + sb + '">' + esc(i.status.replace("_", " ")) + '</span></td><td>' + esc(i.date) + '</td></tr>'));
-      });
-      v.appendChild(c);
+      v.appendChild(el('<div class="cm-hd"><h3>Invoices</h3></div>'));
+      if (!invs.length) v.appendChild(el('<div class="cm-card cm-muted">No invoices match the filter.</div>'));
+      else {
+        var ig = el('<div class="cm-cards"></div>');
+        invs.forEach(function (i) {
+          var sb = i.status === "paid" ? "b-ok" : i.status === "refunded" ? "b-warn" : "b-bad";
+          var card = el('<div class="cm-inv"></div>');
+          card.appendChild(el('<div class="cm-inv-top"><span class="code">' + esc(i.id) + '</span><span class="cm-badge ' + sb + '">' + esc(i.status.replace("_", " ")) + '</span></div>'));
+          card.appendChild(el('<div class="cm-inv-amt">' + money(i.amount) + '</div>'));
+          card.appendChild(el('<div style="font-size:.86rem"><b>' + esc(productName(i.product)) + '</b></div>'));
+          card.appendChild(el('<div class="cm-uc-mail">' + esc(i.email) + '</div>'));
+          card.appendChild(el('<div class="cm-uc-foot"><span class="cm-muted">' + esc(i.method) + '</span><span class="cm-muted">' + esc(i.date) + '</span></div>'));
+          ig.appendChild(card);
+        });
+        v.appendChild(ig);
+      }
       var dl = el('<div style="margin:12px 0"><button class="cm-btn sm">⬇ Download invoices (CSV)</button></div>');
       dl.querySelector("button").addEventListener("click", function () { downloadCSV("chintasmoney-invoices.csv", ["id", "email", "product", "amount", "method", "status", "date"], invs); });
       v.appendChild(dl);
 
       // refunds
-      var rc = el('<div class="cm-card" style="overflow-x:auto"><div class="cm-hd"><h3>Refunds</h3></div><table class="cm-tbl"><thead><tr><th>Refund</th><th>Invoice</th><th>Email</th><th>Product</th><th class="num">Amount</th><th>Reason</th><th>Date</th></tr></thead><tbody></tbody></table></div>');
-      var rtb = rc.querySelector("tbody");
-      if (!DEMO_REFUNDS.length) rtb.appendChild(el('<tr><td colspan="7" class="cm-muted">No refunds.</td></tr>'));
-      DEMO_REFUNDS.forEach(function (r) {
-        rtb.appendChild(el('<tr><td><code>' + esc(r.id) + '</code></td><td><code>' + esc(r.invoice) + '</code></td><td>' + esc(r.email) + '</td><td>' + esc(productName(r.product)) + '</td><td class="num">' + money(r.amount) + '</td><td>' + esc(r.reason) + '</td><td>' + esc(r.date) + '</td></tr>'));
-      });
-      v.appendChild(rc);
+      v.appendChild(el('<div class="cm-hd"><h3>Refunds</h3></div>'));
+      if (!DEMO_REFUNDS.length) v.appendChild(el('<div class="cm-card cm-muted">No refunds.</div>'));
+      else {
+        var rg = el('<div class="cm-cards"></div>');
+        DEMO_REFUNDS.forEach(function (r) {
+          var card = el('<div class="cm-inv"></div>');
+          card.appendChild(el('<div class="cm-inv-top"><span class="code">' + esc(r.id) + '</span><span class="cm-badge b-warn">refunded</span></div>'));
+          card.appendChild(el('<div class="cm-inv-amt">' + money(r.amount) + '</div>'));
+          card.appendChild(el('<div style="font-size:.86rem"><b>' + esc(productName(r.product)) + '</b></div>'));
+          card.appendChild(el('<div class="cm-uc-mail">' + esc(r.email) + '</div>'));
+          card.appendChild(el('<div style="font-size:.82rem;color:#475569">Reason: ' + esc(r.reason) + '</div>'));
+          card.appendChild(el('<div class="cm-uc-foot"><span class="cm-muted">inv ' + esc(r.invoice) + '</span><span class="cm-muted">' + esc(r.date) + '</span></div>'));
+          rg.appendChild(card);
+        });
+        v.appendChild(rg);
+      }
       v.appendChild(el('<div class="cm-note" style="margin-top:14px">Real invoices &amp; refunds appear here once the Razorpay webhook is stored in a backend. Today these are demo figures.</div>'));
       return v;
     },
