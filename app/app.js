@@ -35,7 +35,8 @@
     { id: "card", label: "Shareable Card", ic: "↗" },
     { sep: true },
     { id: "tokens", label: "Analysis Tokens", ic: "🎟️" },
-    { id: "profile", label: "Profile & Plan", ic: "☰" }
+    { id: "profile", label: "Profile & Plan", ic: "☰" },
+    { id: "about", label: "About Us", ic: "ℹ️" }
   ];
 
   // Plain, directive one-liner for every section: what it is + what to do.
@@ -2037,6 +2038,20 @@
       }
     });
   }
+  VIEWS.about = function () {
+    var v = el('<div></div>');
+    v.appendChild(topbar("About ChintasMoney", "The honest mirror your broker never shows you."));
+    var c = el('<div class="card"></div>');
+    c.appendChild(el('<p class="hint" style="font-size:.95rem;line-height:1.7">Most Indian F&amp;O traders lose — and almost none lose to the market. They lose to <b>themselves</b>: the revenge trade after a red day, the missing stop-loss, the exit taken on emotion. Your broker shows the damage in your P&amp;L; it never shows the <b>reason</b>.</p>'));
+    c.appendChild(el('<p class="hint" style="font-size:.95rem;line-height:1.7">ChintasMoney is a <b>Trader Report Card</b>. Log your own trades and get a brutally honest <b>Discipline Score</b>, your trading personality, and the exact habits draining your account. Our motto is simple: <b>reduce your losses by understanding your behaviour.</b></p>'));
+    c.appendChild(el('<div class="legal-note" style="margin-top:8px">✅ Educational behaviour-analysis of your <b>own past</b> trades. 🚫 <b>Not</b> investment advice — no tips, calls, predictions, and not SEBI-registered.</div>'));
+    c.appendChild(el('<h3 style="margin:18px 0 6px">Contact</h3>'));
+    c.appendChild(el('<p class="hint" style="line-height:1.9">✉️ <a href="mailto:support@chintasmoney.com" style="color:var(--emerald)">support@chintasmoney.com</a><br>📞 +91 91066 80559<br>📍 Surat, Gujarat, India</p>'));
+    c.appendChild(el('<p class="hint" style="margin-top:10px"><a href="/about.html" target="_blank" rel="noopener" style="color:var(--emerald)">Full about page →</a> · <a href="/disclaimer.html" target="_blank" rel="noopener" style="color:var(--emerald)">Risk disclaimer →</a> · <a href="/privacy.html" target="_blank" rel="noopener" style="color:var(--emerald)">Privacy →</a></p>'));
+    v.appendChild(c);
+    return v;
+  };
+
   VIEWS.tokens = function () {
     var v = el('<div></div>');
     v.appendChild(topbar("Analysis Tokens", "1 token = 1 deep Trade Replay. " + CM.FREE_TOKENS + " free per account — top up or subscribe for more."));
