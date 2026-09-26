@@ -302,6 +302,14 @@
     var titleWrap = el('<div style="display:flex;gap:12px;align-items:center"></div>');
     titleWrap.appendChild(menuBtn); titleWrap.appendChild(titleBox);
     top.appendChild(titleWrap);
+    // Refresh button — re-pull live data (payments/users) without reloading the page.
+    var refreshBtn = el('<button class="cm-btn sm" title="Reload live data">' + (LIVE.state === "loading" ? "⏳ Refreshing…" : "🔄 Refresh") + '</button>');
+    if (LIVE.state === "loading") refreshBtn.disabled = true;
+    refreshBtn.addEventListener("click", function () {
+      if (token() === "1") { render(); return; } // demo gate — nothing live to pull
+      LIVE.state = "loading"; render(); fetchLive();
+    });
+    top.appendChild(refreshBtn);
     main.appendChild(top);
     main.appendChild(TABS[TAB]());
     shell.appendChild(main);
