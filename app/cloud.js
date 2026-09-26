@@ -119,7 +119,7 @@
             theme: { color: "#8b5cf6" },
             handler: function (resp) {
               fetch("/api/razorpay/verify", { method: "POST", headers: { "content-type": "application/json" },
-                body: JSON.stringify({ order_id: resp.razorpay_order_id, payment_id: resp.razorpay_payment_id, signature: resp.razorpay_signature, product: product }) })
+                body: JSON.stringify({ order_id: resp.razorpay_order_id, payment_id: resp.razorpay_payment_id, signature: resp.razorpay_signature, product: product, email: (Cloud.user && Cloud.user.email) || "" }) })
                 .then(function (r) { return r.json(); })
                 .then(function (v) {
                   if (v && v.valid) onValid(v.grant);

@@ -128,6 +128,65 @@ const RZP_PRODUCTS = {
   tok150:  { amount: 19900, type: "tokens", tokens: 150,     label: "ChintasMoney · 150 analysis tokens" },
 };
 
+// Rupee string from paise, for emails/receipts.
+function rupees(paise) { return "₹" + (Math.round(paise) / 100).toLocaleString("en-IN"); }
+
+// Upsert one verified payment into Supabase (idempotent on razorpay_payment_id).
+// Used by BOTH the verify endpoint (immediate, has the signed-in email) and the
+// Razorpay webhook (authoritative), so a payment is recorded even if one path
+// is delayed or fails. Safe no-op when Supabase isn't configured.
+async function recordPayment(env, row) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return;
+  const base = env.SUPABASE_URL.replace(/\/$/, "");
+  try {
+    await fetch(base + "/rest/v1/payments?on_conflict=razorpay_payment_id", {
+      method: "POST",
+      headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=merge-duplicates" }),
+      body: JSON.stringify(row),
+    });
+  } catch (e) { /* best effort — the webhook retries the canonical write */ }
+}
+
+// Send a receipt/invoice email via Resend (https://resend.com). No-op unless
+// RESEND_API_KEY (Worker secret) and RECEIPT_FROM (e.g. "ChintasMoney
+// <receipts@chintasmoney.com>") are set. Never throws into the caller.
+async function sendReceiptEmail(env, o) {
+  if (!env.RESEND_API_KEY || !env.RECEIPT_FROM || !o || !o.email) return;
+  const when = new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+  const amt = rupees(o.amount);
+  const html =
+    '<div style="font-family:system-ui,Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto;color:#0f1730">' +
+    '<h2 style="margin:0 0 4px">Thanks for your purchase 🎉</h2>' +
+    '<p style="color:#5b6b8c;margin:0 0 18px">Here is your ChintasMoney receipt.</p>' +
+    '<div style="border:1px solid #e6ebf5;border-radius:12px;padding:16px 18px">' +
+    '<table style="width:100%;border-collapse:collapse;font-size:14px">' +
+    '<tr><td style="padding:6px 0;color:#5b6b8c">Item</td><td style="padding:6px 0;text-align:right;font-weight:700">' + esc(o.label || o.product || "ChintasMoney") + '</td></tr>' +
+    '<tr><td style="padding:6px 0;color:#5b6b8c">Amount paid</td><td style="padding:6px 0;text-align:right;font-weight:700">' + amt + '</td></tr>' +
+    '<tr><td style="padding:6px 0;color:#5b6b8c">Payment ID</td><td style="padding:6px 0;text-align:right">' + esc(o.paymentId || "—") + '</td></tr>' +
+    '<tr><td style="padding:6px 0;color:#5b6b8c">Date</td><td style="padding:6px 0;text-align:right">' + esc(when) + '</td></tr>' +
+    '</table></div>' +
+    '<p style="color:#5b6b8c;font-size:13px;margin:18px 0 0">Need a refund or have a question? Reply to this email or write to ' +
+    'support@chintasmoney.com. Refund policy: https://chintasmoney.com/refund.html</p>' +
+    '<p style="color:#98a6c4;font-size:12px;margin:14px 0 0">ChintasMoney is educational software (a trading journal &amp; behaviour analytics tool). ' +
+    'Not investment advice. No buy/sell tips.</p></div>';
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "content-type": "application/json" },
+      body: JSON.stringify({
+        from: env.RECEIPT_FROM,
+        to: [o.email],
+        subject: "Your ChintasMoney receipt — " + amt,
+        html: html,
+        reply_to: "support@chintasmoney.com",
+      }),
+    });
+  } catch (e) { /* email is best-effort; payment is already recorded */ }
+}
+
+// Minimal HTML escape for email fields (worker has no shared esc for this).
+function esc(s) { return (s == null ? "" : String(s)).replace(/[&<>"]/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]; }); }
+
 async function handleRzpOrder(request, env) {
   if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) return jsonRes({ error: "payments not configured" }, 0);
   let body; try { body = await request.json(); } catch (e) { return jsonRes({ error: "bad request" }, 0); }
@@ -171,6 +230,16 @@ async function handleRzpVerify(request, env) {
   const p = RZP_PRODUCTS[product];
   if (!p || order.amount !== p.amount) return jsonRes({ valid: false }, 0);
   const grant = p.type === "plan" ? { plan: p.plan } : { tokens: p.tokens };
+  // Record the verified payment immediately (fallback to the webhook) and email
+  // the buyer a receipt. Both are best-effort and never block the grant.
+  const email = (b && typeof b.email === "string") ? b.email.trim() : "";
+  await recordPayment(env, {
+    razorpay_payment_id: paymentId, razorpay_order_id: orderId,
+    email: email, product: product, plan: product,
+    amount: p.amount, currency: "INR", method: "Razorpay",
+    status: "paid", created_at: new Date().toISOString(),
+  });
+  await sendReceiptEmail(env, { email: email, product: product, label: p.label, amount: p.amount, paymentId: paymentId });
   return jsonRes({ valid: true, product: product, grant: grant }, 0);
 }
 
@@ -275,6 +344,7 @@ async function handleAdminData(request, env) {
     const st = (states[u.id] && states[u.id].data) || {};
     const prof = st.profile || {};
     return {
+      id: u.id,
       name: prof.name || (u.user_metadata && (u.user_metadata.full_name || u.user_metadata.name)) || (u.email || "").split("@")[0] || "User",
       email: u.email || u.phone || "",
       plan: prof.plan || "free",
@@ -356,12 +426,111 @@ async function handleRzpWebhook(request, env) {
   return aRes({ ok: true }, 200);
 }
 
+// ---- Admin write actions (all require a valid admin session token) ---------
+async function requireAdmin(request, env) {
+  if (!env.ADMIN_SESSION_SECRET) return { err: aRes({ error: "not_configured" }, 501) };
+  const token = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  const payload = await verifyToken(env.ADMIN_SESSION_SECRET, token);
+  if (!payload) return { err: aRes({ error: "unauthorized" }, 401) };
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return { err: aRes({ error: "supabase_not_configured" }, 501) };
+  return { base: env.SUPABASE_URL.replace(/\/$/, "") };
+}
+
+// Refund a payment through Razorpay, then record it. body: { payment_id, amount? (paise, optional = full) }
+async function handleAdminRefund(request, env) {
+  const gate = await requireAdmin(request, env); if (gate.err) return gate.err;
+  if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) return aRes({ error: "payments_not_configured" }, 501);
+  let b; try { b = await request.json(); } catch (e) { return aRes({ error: "bad_request" }, 400); }
+  const paymentId = b && b.payment_id;
+  if (!paymentId) return aRes({ error: "missing_payment_id" }, 400);
+  const auth = "Basic " + btoa(env.RAZORPAY_KEY_ID + ":" + env.RAZORPAY_KEY_SECRET);
+  const payload = {}; if (b.amount) payload.amount = b.amount; // partial refund if amount given
+  const rr = await fetch("https://api.razorpay.com/v1/payments/" + encodeURIComponent(paymentId) + "/refund", {
+    method: "POST", headers: { Authorization: auth, "content-type": "application/json" }, body: JSON.stringify(payload),
+  });
+  const rj = await rr.json().catch(function () { return {}; });
+  if (!rr.ok) return aRes({ error: "refund_failed", detail: (rj && rj.error && rj.error.description) || "Razorpay rejected the refund" }, 400);
+  // Record the refund and mark the payment refunded (idempotent).
+  const base = gate.base;
+  try {
+    // Copy email/product from the original payment onto the refund row.
+    let email = "", product = null;
+    const pr = await fetch(base + "/rest/v1/payments?razorpay_payment_id=eq." + encodeURIComponent(paymentId) + "&select=email,product", { headers: await sbHeaders(env) });
+    if (pr.ok) { const arr = await pr.json(); if (arr && arr[0]) { email = arr[0].email || ""; product = arr[0].product || null; } }
+    await recordRefund(env, {
+      razorpay_refund_id: rj.id, razorpay_payment_id: paymentId, email: email, product: product,
+      amount: rj.amount, reason: (b.reason || "admin refund"), status: rj.status || "refunded", created_at: new Date().toISOString(),
+    });
+    await fetch(base + "/rest/v1/payments?razorpay_payment_id=eq." + encodeURIComponent(paymentId), {
+      method: "PATCH", headers: await sbHeaders(env, { "content-type": "application/json" }), body: JSON.stringify({ status: "refunded" }),
+    });
+  } catch (e) { /* refund already succeeded at Razorpay; recording is best-effort */ }
+  return aRes({ ok: true, refund: { id: rj.id, amount: rj.amount, status: rj.status } }, 200);
+}
+
+async function recordRefund(env, row) {
+  const base = env.SUPABASE_URL.replace(/\/$/, "");
+  try {
+    await fetch(base + "/rest/v1/refunds?on_conflict=razorpay_refund_id", {
+      method: "POST", headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=merge-duplicates" }), body: JSON.stringify(row),
+    });
+  } catch (e) {}
+}
+
+// Edit a user's profile (name / plan) and optionally grant tokens.
+// body: { user_id, name?, plan?, tokensDelta? }
+async function handleAdminUpdateUser(request, env) {
+  const gate = await requireAdmin(request, env); if (gate.err) return gate.err;
+  let b; try { b = await request.json(); } catch (e) { return aRes({ error: "bad_request" }, 400); }
+  const userId = b && b.user_id;
+  if (!userId) return aRes({ error: "missing_user_id" }, 400);
+  const base = gate.base;
+  // Read the current state row (if any).
+  let data = { profile: {} };
+  const sr = await fetch(base + "/rest/v1/user_state?user_id=eq." + encodeURIComponent(userId) + "&select=data", { headers: await sbHeaders(env) });
+  if (sr.ok) { const arr = await sr.json(); if (arr && arr[0] && arr[0].data) data = arr[0].data; }
+  if (!data.profile || typeof data.profile !== "object") data.profile = {};
+  if (typeof b.name === "string") data.profile.name = b.name;
+  if (typeof b.plan === "string" && ["free", "plus", "pro", "diamond"].indexOf(b.plan) !== -1) {
+    data.profile.plan = b.plan; data.profile.plan_since = new Date().toISOString();
+  }
+  if (b.tokensDelta) data.profile.tokens = Math.max(0, (data.profile.tokens || 0) + Number(b.tokensDelta));
+  // Upsert the row (create if the user has never synced).
+  const up = await fetch(base + "/rest/v1/user_state?on_conflict=user_id", {
+    method: "POST", headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" }),
+    body: JSON.stringify({ user_id: userId, data: data, updated_at: new Date().toISOString() }),
+  });
+  if (!up.ok) return aRes({ error: "update_failed" }, 400);
+  return aRes({ ok: true, profile: data.profile }, 200);
+}
+
+// Email an invoice/receipt for an existing payment. body: { payment_id }
+async function handleAdminSendInvoice(request, env) {
+  const gate = await requireAdmin(request, env); if (gate.err) return gate.err;
+  let b; try { b = await request.json(); } catch (e) { return aRes({ error: "bad_request" }, 400); }
+  const paymentId = b && b.payment_id;
+  if (!paymentId) return aRes({ error: "missing_payment_id" }, 400);
+  if (!env.RESEND_API_KEY || !env.RECEIPT_FROM) return aRes({ error: "email_not_configured", detail: "Set RESEND_API_KEY and RECEIPT_FROM in Cloudflare to email invoices." }, 501);
+  const base = gate.base;
+  const pr = await fetch(base + "/rest/v1/payments?razorpay_payment_id=eq." + encodeURIComponent(paymentId) + "&select=*", { headers: await sbHeaders(env) });
+  if (!pr.ok) return aRes({ error: "lookup_failed" }, 400);
+  const arr = await pr.json(); const p = arr && arr[0];
+  if (!p) return aRes({ error: "payment_not_found" }, 404);
+  const email = (b.email && String(b.email)) || p.email || "";
+  if (!email) return aRes({ error: "no_email", detail: "This payment has no customer email on record." }, 400);
+  await sendReceiptEmail(env, { email: email, product: p.product || p.plan, label: p.product || p.plan, amount: p.amount, paymentId: paymentId });
+  return aRes({ ok: true, sentTo: email }, 200);
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (request.method === "POST" && url.pathname === "/api/razorpay/webhook") return handleRzpWebhook(request, env);
     if (request.method === "POST" && url.pathname === "/api/admin/login") return handleAdminLogin(request, env);
     if (request.method === "GET" && url.pathname === "/api/admin/data") return handleAdminData(request, env);
+    if (request.method === "POST" && url.pathname === "/api/admin/refund") return handleAdminRefund(request, env);
+    if (request.method === "POST" && url.pathname === "/api/admin/update-user") return handleAdminUpdateUser(request, env);
+    if (request.method === "POST" && url.pathname === "/api/admin/send-invoice") return handleAdminSendInvoice(request, env);
     if (request.method === "POST" && url.pathname === "/api/razorpay/order") return handleRzpOrder(request, env);
     if (request.method === "POST" && url.pathname === "/api/razorpay/verify") return handleRzpVerify(request, env);
     if (url.pathname === "/api/quotes" || url.pathname === "/api/movers" || url.pathname === "/api/candles") {
