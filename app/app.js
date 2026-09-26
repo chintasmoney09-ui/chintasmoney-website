@@ -256,6 +256,7 @@
     var mb = el('<button class="btn btn-sm menu-btn">☰</button>'); mb.addEventListener("click", function () { mobileOpen = true; render(); }); bar.appendChild(mb);
     bar.appendChild(el('<div><h1>' + title + '</h1>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>'));
     bar.appendChild(el('<div class="spacer"></div>'));
+    bar.appendChild(notifBell());
     var searchBtn = el('<button class="btn btn-sm topbar-search" title="Search (press /)" aria-label="Search">🔍</button>');
     searchBtn.addEventListener("click", function () { openSearch(); });
     bar.appendChild(searchBtn);
@@ -775,7 +776,14 @@
     var st = CM.stats(), wl = CM.winLoss(), ms = CM.mistakes(), e = CM.engagement(), v = el('<div></div>');
     var dl = el('<button class="btn btn-sm">⬇ Download sheet (CSV)</button>'); dl.addEventListener("click", downloadReportCSV);
     var pr = el('<button class="btn btn-sm">🖨 Save as PDF</button>'); pr.addEventListener("click", function () { window.print(); });
-    v.appendChild(topbar("My Report", "A clean summary you can download, print or share.", [dl, pr]));
+    var acts = [dl, pr];
+    // Monthly deep-dive — branded report for Platinum & Diamond.
+    if (CM.planAllows(CM.load().profile.plan, "strategy")) {
+      var md = el('<button class="btn btn-primary btn-sm">📅 Monthly deep-dive</button>');
+      md.addEventListener("click", function () { printMonthlyReport(); });
+      acts.push(md);
+    }
+    v.appendChild(topbar("My Report", "A clean summary you can download, print or share.", acts));
     var c = el('<div class="card"></div>');
     c.appendChild(el('<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px"><div style="display:flex;align-items:center;gap:10px">' + mascot(56) + '<div><div style="font-weight:800;font-size:1.15rem">' + esc(CM.load().profile.name || "Trader") + '\'s Report Card</div><div class="hint">' + new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) + ' · Lv ' + e.level + ' ' + esc(e.title) + '</div></div></div><div style="text-align:right">' + gauge(st.discipline, 96) + '</div></div>'));
     var g = el('<div class="grid g4" style="margin-top:12px"></div>');
@@ -1454,6 +1462,45 @@
   };
   function fmtShortMoney(n) { var a = Math.abs(n); return a >= 1e7 ? "₹" + (n / 1e7).toFixed(1) + "Cr" : a >= 1e5 ? "₹" + (n / 1e5).toFixed(1) + "L" : money(n); }
 
+  // Branded monthly deep-dive report (Platinum/Diamond). Opens printable window.
+  function printMonthlyReport() {
+    var win = window.open("", "_blank");
+    if (!win) { toast("Allow pop-ups to open your report", "err"); return; }
+    var now = new Date(), m = now.getMonth(), y = now.getFullYear();
+    var all = CM.load().trades.filter(function (t) { var d = new Date(t.date); return d.getMonth() === m && d.getFullYear() === y; });
+    var st = CM.stats(), ms = CM.mistakes(), sp = CM.setupPerformance(), e = CM.engagement();
+    var monthly = { n: all.length, wins: all.filter(CM.isWin).length, pnl: all.reduce(function (a, t) { return a + CM.pnl(t); }, 0), disc: all.length ? Math.round(all.reduce(function (a, t) { return a + CM.tradeDiscipline(t); }, 0) / all.length) : 0, noSL: all.filter(function (t) { return !CM.hasSL(t); }).length };
+    var monLabel = now.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+    var name = CM.load().profile.name || "Trader";
+    var rowP = function (k, v) { return '<tr><td style="padding:10px 0;color:#5b6b8c;border-bottom:1px solid #eef2f7">' + k + '</td><td style="padding:10px 0;text-align:right;font-weight:700;border-bottom:1px solid #eef2f7">' + v + '</td></tr>'; };
+    var mistakesHtml = ms.length ? ms.slice(0, 4).map(function (x) { return '<li>' + esc(x.name) + ' <b>×' + x.n + '</b> — <span style="color:#5b6b8c">' + esc(x.tip) + '</span></li>'; }).join("") : '<li>No repeating mistakes — clean sheet. 👏</li>';
+    var setupHtml = sp.length ? '<tr><td style="color:#5b6b8c">Best setup</td><td style="text-align:right;font-weight:700">' + esc(sp[0].setup) + ' (' + sp[0].winRate + '% win)</td></tr><tr><td style="color:#5b6b8c">Weakest setup</td><td style="text-align:right;font-weight:700">' + esc(sp[sp.length - 1].setup) + '</td></tr>' : '';
+    var html =
+      '<!doctype html><html><head><meta charset="utf-8"><title>Monthly deep-dive — ' + esc(monLabel) + '</title>' +
+      '<style>@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap");' +
+      'body{font-family:"Plus Jakarta Sans",system-ui,Arial,sans-serif;color:#0f1730;margin:0;background:#f4f6fb}' +
+      '.wrap{max-width:660px;margin:24px auto;background:#fff;border-radius:18px;overflow:hidden;border:1px solid #e6ebf5}' +
+      '.hd{background:linear-gradient(135deg,#0b1533,#1e2a5a);padding:26px;text-align:center;color:#fff}.hd img{height:40px}.hd .t{font-size:.8rem;letter-spacing:.14em;color:#a9b6da;margin-top:6px}' +
+      '.body{padding:26px}h1{font-size:1.5rem;margin:0 0 2px;text-align:center}.sub{text-align:center;color:#5b6b8c;margin:0 0 18px}' +
+      'table{width:100%;border-collapse:collapse;font-size:15px}h3{margin:22px 0 6px}ul{padding-left:18px;line-height:1.8}' +
+      '.big{display:flex;gap:12px;justify-content:center;margin:16px 0}' +
+      '.stat{background:#f8fafc;border:1px solid #e6ebf5;border-radius:12px;padding:12px 14px;text-align:center;min-width:110px}.stat .n{font-size:1.4rem;font-weight:800}.stat .l{font-size:.72rem;color:#5b6b8c;text-transform:uppercase;letter-spacing:.05em}' +
+      '.note{background:#eef2ff;border-radius:12px;padding:14px;color:#3730a3;margin-top:16px}' +
+      '.ft{background:#0b1533;color:#a9b6da;padding:18px 26px;font-size:12px;line-height:1.7}.ft a{color:#7cc7ff}' +
+      '.btn{display:inline-block;margin:18px auto 0;padding:11px 20px;border:none;border-radius:10px;background:#8b5cf6;color:#fff;cursor:pointer;font-weight:700}@media print{.btn{display:none}body{background:#fff}.wrap{border:none;margin:0}}</style></head><body>' +
+      '<div class="wrap"><div class="hd"><img src="https://chintasmoney.com/assets/logo-full.png" alt="ChintasMoney"/><div class="t">MONTHLY DEEP-DIVE</div></div>' +
+      '<div class="body"><h1>' + esc(name) + '\'s ' + esc(monLabel) + ' review</h1><p class="sub">Your behaviour, in numbers — so next month is sharper.</p>' +
+      '<div class="big"><div class="stat"><div class="n" style="color:' + (monthly.disc >= 75 ? "#12b39a" : monthly.disc >= 50 ? "#d19a12" : "#dc2626") + '">' + monthly.disc + '</div><div class="l">Discipline</div></div>' +
+      '<div class="stat"><div class="n">' + monthly.n + '</div><div class="l">Trades</div></div>' +
+      '<div class="stat"><div class="n">' + (monthly.n ? Math.round(monthly.wins / monthly.n * 100) : 0) + '%</div><div class="l">Win rate</div></div></div>' +
+      '<table>' + rowP("Net P&amp;L this month", money(monthly.pnl)) + rowP("Trades without a stop-loss", monthly.noSL) + rowP("Current streak", e.streak + " days") + rowP("Level", "Lv " + e.level + " · " + esc(e.title)) + setupHtml + '</table>' +
+      '<h3>Top leaks to fix</h3><ul>' + mistakesHtml + '</ul>' +
+      '<div class="note"><b>Your focus for next month:</b> ' + (monthly.noSL > 0 ? "set a stop-loss on every single trade — that alone is your biggest score lift." : monthly.disc >= 75 ? "you\'re disciplined — now protect it and let compounding work." : "tighten your exits and avoid revenge trades after a red day.") + ' You\'ve got this. 💚</div>' +
+      '<div style="text-align:center"><button class="btn" onclick="window.print()">🖨 Save as PDF / Print</button></div></div>' +
+      '<div class="ft"><b style="color:#fff">ChintasMoney</b> · reduce your losses by understanding your behaviour.<br>chintasmoney.com · support: chintasmoney@gmail.com<br><span style="color:#6f83ab">Behaviour analysis of your own trades. Not investment advice.</span></div></div></body></html>';
+    win.document.write(html); win.document.close();
+  }
+
   // Branded, printable dream plan (Save as PDF). Opens in a new window.
   function printDreamPlan(o) {
     var win = window.open("", "_blank");
@@ -1616,6 +1663,44 @@
         });
         setTimeout(function () { input.focus(); }, 40);
       });
+    return d;
+  }
+
+  // ---- Notifications -------------------------------------------------------
+  // Smart, real in-app notifications built from the user's own state.
+  function cmNotifs() {
+    var s = CM.load(), st = CM.stats(), e = CM.engagement(), ts = CM.tokenState(), plan = s.profile.plan || "free";
+    var list = [];
+    if (e.streak > 0 && !e.loggedToday) list.push({ id: "streak", ic: "🔥", title: e.streak + "-day streak going", body: "Log a trade today to keep your streak alive.", cta: ["Log a trade", "log"] });
+    if (!ts.unlimited && ts.total <= 0) list.push({ id: "tokens0", ic: "🎟️", title: "You're out of analyses", body: "Top up tokens or upgrade to keep running Trade Replays.", cta: ["Get tokens", "tokens"] });
+    else if (!ts.unlimited && ts.total <= 2) list.push({ id: "tokenslow", ic: "🎟️", title: "Only " + ts.total + " analyses left", body: "Top up so you never stop analysing your trades.", cta: ["Top up", "tokens"] });
+    if (st.count && st.discipline < 60) list.push({ id: "disc", ic: "🧭", title: "Discipline needs attention", body: "Your score is " + st.discipline + ". Ask the coach what to fix first.", cta: ["Open coach", "coach"] });
+    if (st.noSL > 0) list.push({ id: "nosl", ic: "🛡️", title: st.noSL + " trade(s) had no stop-loss", body: "The fastest way to lift your score is to always set a stop.", cta: ["See insights", "insights"] });
+    if (plan === "free" && st.count >= 3) list.push({ id: "upsell", ic: "✨", title: "Unlock your full report", body: "Go Plus for full mistake analysis, the AI coach & time-of-day edge.", cta: ["See plans", "profile"] });
+    if (e.nextBadge) list.push({ id: "badge", ic: "🏅", title: "Next badge: " + e.nextBadge.name, body: e.nextBadge.desc, cta: ["View badges", "badges"] });
+    if (!list.length) list.push({ id: "welcome", ic: "⭐", title: "Welcome to ChintasMoney", body: "Log your trades honestly and watch your discipline grow.", cta: ["Log a trade", "log"] });
+    return list;
+  }
+  function notifReadKey() { return "cm.notif.read"; }
+  function notifReadSet() { try { return JSON.parse(localStorage.getItem(notifReadKey()) || "[]"); } catch (e) { return []; } }
+  function markNotifsRead(ids) { try { var cur = notifReadSet(); ids.forEach(function (i) { if (cur.indexOf(i) === -1) cur.push(i); }); localStorage.setItem(notifReadKey(), JSON.stringify(cur.slice(-40))); } catch (e) {} }
+  function notifBell() {
+    var items = cmNotifs(), read = notifReadSet();
+    var unread = items.filter(function (n) { return read.indexOf(n.id) === -1; }).length;
+    var b = el('<button class="btn btn-sm" title="Notifications" aria-label="Notifications" style="position:relative">🔔' + (unread ? '<span style="position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;border-radius:999px;font-size:.62rem;font-weight:800;min-width:16px;height:16px;line-height:16px;text-align:center;padding:0 3px">' + unread + '</span>' : '') + '</button>');
+    b.addEventListener("click", function () { openNotifications(items); });
+    return b;
+  }
+  function openNotifications(items) {
+    var rows = items.map(function (n) {
+      return '<button class="cm-notif-row" data-go="' + esc(n.cta[1]) + '" style="display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:transparent;cursor:pointer;margin-bottom:8px">' +
+        '<span style="font-size:1.3rem">' + n.ic + '</span>' +
+        '<span style="flex:1"><b style="color:var(--ink)">' + esc(n.title) + '</b><div class="hint" style="margin-top:2px">' + esc(n.body) + '</div><span class="pos" style="font-size:.8rem;font-weight:700">' + esc(n.cta[0]) + ' →</span></span></button>';
+    }).join("");
+    var d = dialog("🔔 Notifications", rows || '<p class="hint">You\'re all caught up.</p>', function (body, close) {
+      body.querySelectorAll(".cm-notif-row").forEach(function (r) { r.addEventListener("click", function () { close(); go(r.getAttribute("data-go")); render(); }); });
+    });
+    markNotifsRead(items.map(function (n) { return n.id; }));
     return d;
   }
 

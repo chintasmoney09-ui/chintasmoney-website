@@ -102,7 +102,7 @@
     if (Math.round(rupees * 100) !== maxPaise) body.amount = Math.round(rupees * 100); // partial
     if (!confirm("Refund ₹" + rupees + " to " + (email || "the customer") + "? This cannot be undone.")) return;
     adminPost("/api/admin/refund", body).then(function (r) {
-      if (r.ok) { alert("Refund of ₹" + rupees + " processed ✓"); RZP_CACHE = {}; fetchLive(); if (after) after(); }
+      if (r.ok) { adminConfetti(); alert("Refund of ₹" + rupees + " processed ✓"); RZP_CACHE = {}; fetchLive(); if (after) after(); }
       else alert(r.detail || "Refund failed.");
     });
   }
@@ -164,11 +164,58 @@
       var td = parseInt(box.querySelector("#euTok").value, 10); if (td) body.tokensDelta = td;
       save.disabled = true; save.textContent = "Saving…"; msg.style.color = "#475569"; msg.textContent = "";
       adminPost("/api/admin/update-user", body).then(function (r) {
-        if (r.ok) { close(); fetchLive(); }
+        if (r.ok) { close(); adminConfetti(); fetchLive(); }
         else { save.disabled = false; save.textContent = "Save changes"; msg.style.color = "#dc2626"; msg.textContent = r.detail || "Couldn't save. Try again."; }
       });
     });
     row.appendChild(cancel); row.appendChild(save); box.appendChild(row);
+    back.appendChild(box); document.body.appendChild(back);
+    function close() { if (back.parentNode) document.body.removeChild(back); }
+    back.addEventListener("click", function (e) { if (e.target === back) close(); });
+  }
+
+  // Lightweight confetti for admin celebrations (no library).
+  function adminConfetti() {
+    try { if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return; } catch (e) {}
+    var colors = ["#22e08a", "#f5b849", "#8b5cf6", "#19d3c5", "#ff5a6a", "#7cc7ff"];
+    var wrap = document.createElement("div");
+    wrap.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:300;overflow:hidden";
+    for (var i = 0; i < 36; i++) {
+      var p = document.createElement("i");
+      p.style.cssText = "position:absolute;top:-10px;width:9px;height:14px;border-radius:2px;left:" + (Math.random() * 100) + "%;background:" + colors[i % colors.length] + ";transform:rotate(" + (Math.random() * 360) + "deg);animation:cmfall " + (0.9 + Math.random() * 0.8) + "s ease-in forwards;animation-delay:" + (Math.random() * 0.2) + "s";
+      wrap.appendChild(p);
+    }
+    if (!document.getElementById("cm-confetti-kf")) { var st = document.createElement("style"); st.id = "cm-confetti-kf"; st.textContent = "@keyframes cmfall{to{top:100%;opacity:.2;transform:translateY(20px) rotate(400deg)}}"; document.head.appendChild(st); }
+    document.body.appendChild(wrap);
+    setTimeout(function () { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); }, 1900);
+  }
+
+  // Gift a plan or tokens to a user (grants + emails a gift message).
+  function openGiftUser(u) {
+    var back = el('<div style="position:fixed;inset:0;background:rgba(11,21,51,.55);z-index:200;display:flex;align-items:flex-start;justify-content:center;padding:50px 16px;overflow:auto"></div>');
+    var box = el('<div style="background:#fff;border-radius:16px;width:100%;max-width:440px;box-shadow:0 24px 60px rgba(0,0,0,.35);padding:20px"></div>');
+    box.appendChild(el('<h3 style="margin:0 0 2px">🎁 Gift to user</h3><div class="cm-uc-mail" style="margin-bottom:14px">' + esc(u.email) + '</div>'));
+    var planF = el('<label class="cm-fld"><span>Gift a plan (optional)</span><select id="gPlan"><option value="">— none —</option>' +
+      ["plus", "pro", "diamond"].map(function (p) { return '<option value="' + p + '">' + CM.PLANS[p].name + '</option>'; }).join("") + '</select></label>');
+    var tokF = el('<label class="cm-fld"><span>Gift tokens (optional)</span><input id="gTok" type="number" value="0" min="0" step="1"/></label>');
+    var msgF = el('<label class="cm-fld"><span>Personal message (optional)</span><input id="gMsg" placeholder="Enjoy — on us!"/></label>');
+    box.appendChild(planF); box.appendChild(tokF); box.appendChild(msgF);
+    var msg = el('<div class="cm-err" style="color:#475569"></div>'); box.appendChild(msg);
+    var row = el('<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px"></div>');
+    var cancel = el('<button class="cm-btn sm">Cancel</button>'); cancel.addEventListener("click", close);
+    var send = el('<button class="cm-btn sm p">🎁 Send gift</button>');
+    send.addEventListener("click", function () {
+      var plan = box.querySelector("#gPlan").value, tok = parseInt(box.querySelector("#gTok").value, 10) || 0;
+      if (!plan && !tok) { msg.style.color = "#dc2626"; msg.textContent = "Pick a plan or enter tokens to gift."; return; }
+      var body = { user_id: u.id, email: u.email, message: box.querySelector("#gMsg").value };
+      if (plan) body.plan = plan; if (tok) body.tokens = tok;
+      send.disabled = true; send.textContent = "Sending…";
+      adminPost("/api/admin/gift", body).then(function (r) {
+        if (r.ok) { close(); adminConfetti(); fetchLive(); }
+        else { send.disabled = false; send.textContent = "🎁 Send gift"; msg.style.color = "#dc2626"; msg.textContent = r.detail || "Couldn't send the gift."; }
+      });
+    });
+    row.appendChild(cancel); row.appendChild(send); box.appendChild(row);
     back.appendChild(box); document.body.appendChild(back);
     function close() { if (back.parentNode) document.body.removeChild(back); }
     back.addEventListener("click", function (e) { if (e.target === back) close(); });
@@ -475,7 +522,19 @@
     var searchBtn = el('<button class="cm-btn sm" title="Search sections">🔍 Search</button>');
     searchBtn.addEventListener("click", openAdminSearch);
     var actions = el('<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"></div>');
-    actions.appendChild(searchBtn); actions.appendChild(refreshBtn);
+    // Notifications: today's payments & refunds.
+    var today = new Date().toISOString().slice(0, 10);
+    var todayPays = allInvoices().filter(function (i) { return i.date === today && i.status === "paid"; });
+    var todayRefs = allRefunds().filter(function (r) { return r.date === today; });
+    var nCount = todayPays.length + todayRefs.length;
+    var notifBtn = el('<button class="cm-btn sm" title="Today\'s activity" style="position:relative">🔔' + (nCount ? '<span style="position:absolute;top:-5px;right:-5px;background:#dc2626;color:#fff;border-radius:999px;font-size:.62rem;font-weight:800;min-width:16px;height:16px;line-height:16px;text-align:center;padding:0 3px">' + nCount + '</span>' : '') + '</button>');
+    notifBtn.addEventListener("click", function () {
+      var lines = [];
+      todayPays.forEach(function (i) { lines.push("💰 " + money(i.amount) + " · " + (i.email || "customer") + " · " + productName(i.product)); });
+      todayRefs.forEach(function (r) { lines.push("↩ Refund " + money(r.amount) + " · " + (r.email || "")); });
+      alert(nCount ? "Today (" + today + "):\n\n" + lines.join("\n") : "No new payments or refunds today.");
+    });
+    actions.appendChild(notifBtn); actions.appendChild(searchBtn); actions.appendChild(refreshBtn);
     top.appendChild(actions);
     main.appendChild(top);
     main.appendChild(TABS[TAB]());
@@ -654,10 +713,13 @@
         // Edit (live mode, real accounts only — needs the server user id).
         if (liveOn() && u.id) {
           var foot = el('<div class="cm-uc-foot"></div>');
-          foot.appendChild(el('<span class="cm-muted">Manage this user</span>'));
+          var acts = el('<div style="display:flex;gap:8px"></div>');
+          var giftBtn = el('<button class="cm-btn sm">🎁 Gift</button>');
+          giftBtn.addEventListener("click", function () { openGiftUser(u); });
           var editBtn = el('<button class="cm-btn sm">✎ Edit</button>');
           editBtn.addEventListener("click", function () { openEditUser(u); });
-          foot.appendChild(editBtn);
+          acts.appendChild(giftBtn); acts.appendChild(editBtn);
+          foot.appendChild(el('<span class="cm-muted">Manage</span>')); foot.appendChild(acts);
           card.appendChild(foot);
         }
         grid.appendChild(card);

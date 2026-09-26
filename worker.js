@@ -559,6 +559,41 @@ async function handleAdminUpdateUser(request, env) {
   return aRes({ ok: true, profile: data.profile }, 200);
 }
 
+// Gift a plan or tokens to a user (grant + branded gift email).
+// body: { user_id, email, plan?, tokens?, message? }
+async function sendGiftEmail(env, o) {
+  if (!o.email) return;
+  var giftLine = o.plan ? "the <b>" + esc(productDesc(o.plan).name) + "</b> plan" : (o.tokens ? "<b>" + o.tokens + " analysis tokens</b>" : "a gift");
+  var inner =
+    '<h2 style="margin:0 0 6px;font-size:1.35rem">You\'ve received a gift 🎁</h2>' +
+    '<p style="color:#5b6b8c;margin:0 0 14px">Someone at ChintasMoney just gifted you ' + giftLine + '. It\'s already active on your account — enjoy!</p>' +
+    (o.message ? '<div style="background:#f8fafc;border:1px dashed #cbd5e1;border-radius:12px;padding:12px 14px;color:#475569;margin:0 0 14px">“' + esc(o.message) + '”</div>' : '') +
+    '<div style="text-align:center;margin:20px 0 8px"><a href="' + APP_URL + '" style="display:inline-block;background:linear-gradient(135deg,#22e08a,#12b39a);color:#04231b;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:800">Open your app →</a></div>' +
+    '<p style="color:#5b6b8c;font-size:13px;text-align:center;margin:6px 0 0">Your account: <b>' + esc(o.email) + '</b></p>' +
+    '<p style="color:#5b6b8c;font-size:14px;margin:20px 0 0">Thank you for being part of our community. Keep building that discipline. 💚<br>— Team ChintasMoney</p>';
+  await sendEmail(env, { to: o.email, subject: "You've received a gift from ChintasMoney 🎁", html: emailShell(inner) });
+}
+async function handleAdminGift(request, env) {
+  const gate = await requireAdmin(request, env); if (gate.err) return gate.err;
+  let b; try { b = await request.json(); } catch (e) { return aRes({ error: "bad_request" }, 400); }
+  const userId = b && b.user_id;
+  if (!userId) return aRes({ error: "missing_user_id" }, 400);
+  const base = gate.base;
+  let data = { profile: {} };
+  const sr = await fetch(base + "/rest/v1/user_state?user_id=eq." + encodeURIComponent(userId) + "&select=data", { headers: await sbHeaders(env) });
+  if (sr.ok) { const arr = await sr.json(); if (arr && arr[0] && arr[0].data) data = arr[0].data; }
+  if (!data.profile || typeof data.profile !== "object") data.profile = {};
+  if (typeof b.plan === "string" && ["free", "plus", "pro", "diamond"].indexOf(b.plan) !== -1) { data.profile.plan = b.plan; data.profile.plan_since = new Date().toISOString(); }
+  if (b.tokens) data.profile.tokens = Math.max(0, (data.profile.tokens || 0) + Number(b.tokens));
+  const up = await fetch(base + "/rest/v1/user_state?on_conflict=user_id", {
+    method: "POST", headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" }),
+    body: JSON.stringify({ user_id: userId, data: data, updated_at: new Date().toISOString() }),
+  });
+  if (!up.ok) return aRes({ error: "gift_failed" }, 400);
+  if (b.email) await sendGiftEmail(env, { email: b.email, plan: b.plan, tokens: b.tokens, message: b.message });
+  return aRes({ ok: true }, 200);
+}
+
 // Email an invoice/receipt for an existing payment. body: { payment_id }
 async function handleAdminSendInvoice(request, env) {
   const gate = await requireAdmin(request, env); if (gate.err) return gate.err;
@@ -686,6 +721,7 @@ export default {
     if (request.method === "POST" && url.pathname === "/api/admin/refund") return handleAdminRefund(request, env);
     if (request.method === "POST" && url.pathname === "/api/admin/update-user") return handleAdminUpdateUser(request, env);
     if (request.method === "POST" && url.pathname === "/api/admin/send-invoice") return handleAdminSendInvoice(request, env);
+    if (request.method === "POST" && url.pathname === "/api/admin/gift") return handleAdminGift(request, env);
     if (request.method === "POST" && url.pathname === "/api/razorpay/order") return handleRzpOrder(request, env);
     if (request.method === "POST" && url.pathname === "/api/razorpay/verify") return handleRzpVerify(request, env);
     if (url.pathname === "/api/quotes" || url.pathname === "/api/movers" || url.pathname === "/api/candles") {
