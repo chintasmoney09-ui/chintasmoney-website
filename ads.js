@@ -5,17 +5,20 @@
    your AdSense dashboard. Ads then appear on the blog/learn pages only — never
    on the homepage or inside the app. Leave it empty and nothing loads.
    ========================================================================== */
-var ADSENSE_CLIENT = ""; // <-- paste "ca-pub-XXXXXXXXXXXXXXXX" here
+var ADSENSE_CLIENT = "ca-pub-1462824307424705"; // ChintasMoney AdSense publisher ID
 
 (function () {
   if (!ADSENSE_CLIENT || ADSENSE_CLIENT.indexOf("ca-pub-") !== 0) return;
-  // Load the AdSense script (this alone powers Auto ads once enabled in the
-  // AdSense dashboard). Also required for account/site verification.
-  var s = document.createElement("script");
-  s.async = true;
-  s.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" + encodeURIComponent(ADSENSE_CLIENT);
-  s.crossOrigin = "anonymous";
-  document.head.appendChild(s);
+  // The AdSense script tag is placed directly in each page's <head> (needed for
+  // reliable verification). Only inject it here if it isn't already present, so
+  // we never load adsbygoogle.js twice.
+  if (!document.querySelector('script[src*="adsbygoogle.js"]')) {
+    var s = document.createElement("script");
+    s.async = true;
+    s.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" + encodeURIComponent(ADSENSE_CLIENT);
+    s.crossOrigin = "anonymous";
+    document.head.appendChild(s);
+  }
   // Optional manual ad units: any <div class="ad-slot" data-ad-slot="123..."></div>
   // in the page gets a responsive display ad. (Create the slot IDs in AdSense.)
   function fill() {
