@@ -9,7 +9,7 @@
   //   RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET, ADMIN_PASSWORD,
   //   ADMIN_SESSION_SECRET, SUPABASE_SERVICE_ROLE_KEY
   "vars": {
-    "RAZORPAY_KEY_ID": "rzp_test_TdCzS1NuNM4aQJ",
+    "RAZORPAY_KEY_ID": "rzp_live_TghHwuaNLfCqIx",
     "ADMIN_USER": "chintasmoney",
     "SUPABASE_URL": "https://voycwperlvcozshjambo.supabase.co"
   },
