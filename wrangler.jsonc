@@ -19,5 +19,10 @@
     "directory": ".",
     "binding": "ASSETS",
     "not_found_handling": "404-page"
+  },
+  // Weekly discipline report email to Platinum/Diamond users.
+  // Mondays 04:00 UTC = 09:30 IST.
+  "triggers": {
+    "crons": ["0 4 * * 1"]
   }
 }

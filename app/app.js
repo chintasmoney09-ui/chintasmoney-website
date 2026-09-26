@@ -276,6 +276,32 @@
   function featLabel(f) { return FEATURE_LABELS[f] || f.replace(/-/g, " "); }
   function planFeatureList(id) { var p = CM.PLANS[id]; return (p && p.features || []).map(featLabel); }
 
+  // Crystal-clear "what each plan gives" comparison table.
+  function planComparison(highlight) {
+    var rows = [
+      ["Trades you can log", "15 / month", "Unlimited", "Unlimited", "Unlimited"],
+      ["Journal history", "30 days", "Unlimited", "Unlimited", "Unlimited"],
+      ["Discipline Score & personality", "✓", "✓", "✓", "✓"],
+      ["Full mistake analysis", "—", "✓", "✓", "✓"],
+      ["AI Discipline Coach", "—", "✓", "✓", "✓"],
+      ["AI analysis tokens", "5 free (once)", "50 / month", "Unlimited", "Unlimited"],
+      ["Trade Replay", "5 free (once)", "50 / month", "Unlimited", "Unlimited"],
+      ["Setup performance", "—", "—", "✓", "✓"],
+      ["Broker CSV import", "—", "—", "✓", "✓"],
+      ["Weekly email report", "—", "—", "✓", "✓"],
+      ["Priority AI + monthly 1:1 review", "—", "—", "—", "✓"],
+      ["Multi-year backtesting", "—", "—", "—", "✓"]
+    ];
+    var cols = [["free", "Free"], ["plus", "Go Plus"], ["pro", "Platinum"], ["diamond", "Diamond"]];
+    function cell(v) { return v === "✓" ? '<span style="color:var(--emerald);font-weight:800">✓</span>' : v === "—" ? '<span class="muted">—</span>' : esc(v); }
+    var head = '<tr><th style="text-align:left">Feature</th>' + cols.map(function (c) { return '<th class="num"' + (c[0] === highlight ? ' style="color:var(--violet)"' : '') + '>' + c[1] + '</th>'; }).join("") + '</tr>';
+    var body = rows.map(function (r) {
+      return '<tr><td>' + esc(r[0]) + '</td>' + r.slice(1).map(function (v, i) { return '<td class="num"' + (cols[i][0] === highlight ? ' style="background:rgba(139,92,246,.06)"' : '') + '>' + cell(v) + '</td>'; }).join("") + '</tr>';
+    }).join("");
+    var card = el('<div class="card" style="overflow-x:auto;margin-top:16px"><div class="card-hd"><h3>Compare plans</h3><span class="hint">what each plan unlocks</span></div><table class="tbl" style="min-width:520px"><thead>' + head + '</thead><tbody>' + body + '</tbody></table></div>');
+    return card;
+  }
+
   // What each locked area actually gives you — so the paywall sells, not just blocks.
   var AREA_SELL = {
     insights: { em: "🔍", title: "Mistake Insights", tag: "See every leak in your trading — ranked.", feats: ["Your repeating mistakes, ranked by how often they bleed you", "The exact rupee cost of each bad habit", "A fix for your #1 leak, updated as you log"] },
@@ -1645,7 +1671,7 @@
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
   }
   function importCSV() {
-    var body = '<p class="hint">Upload a CSV with columns:<br><code>' + CSV_COLS.join(", ") + '</code><br>Only <b>symbol</b> is required; missing stop-loss counts as “no SL”.</p>' +
+    var body = '<p class="hint">Upload a CSV — including a <b>broker export</b> (Zerodha, Groww, Upstox, Angel One…). We auto-detect columns like <code>tradingsymbol, quantity, buy/sell, price, date</code>.<br>Or use our columns: <code>' + CSV_COLS.join(", ") + '</code>. Only <b>symbol</b> is required.</p>' +
       '<input type="file" id="csvf" accept=".csv,text/csv" style="margin-top:10px" /><p class="hint" id="csvnote" style="margin-top:8px"></p>';
     dialog("Import trades from CSV", body, function (b, close) {
       b.querySelector("#csvf").addEventListener("change", function (e) {
@@ -1666,14 +1692,35 @@
     var lines = text.split(/\r?\n/).filter(function (l) { return l.trim(); });
     if (!lines.length) return 0;
     var head = splitCSVLine(lines[0]).map(function (h) { return h.trim().toLowerCase(); });
-    var idx = {}; CSV_COLS.forEach(function (k) { idx[k] = head.indexOf(k.toLowerCase()); });
+    // Header aliases so broker exports (Zerodha, Groww, Upstox, Angel, etc.) import directly.
+    var ALIASES = {
+      symbol: ["symbol", "tradingsymbol", "trading symbol", "instrument", "scrip", "stock", "ticker", "name", "contract"],
+      side: ["side", "type", "transaction_type", "transaction type", "trade_type", "trade type", "buy/sell", "b/s", "order type"],
+      qty: ["qty", "quantity", "qty.", "filled qty", "filled quantity", "shares", "lots", "traded qty"],
+      entry: ["entry", "entry price", "buy price", "buy_price", "avg price", "average price", "avg. price", "price", "buy avg"],
+      exit: ["exit", "exit price", "sell price", "sell_price", "sell avg", "close price"],
+      plannedSL: ["plannedsl", "sl", "stop loss", "stoploss", "stop-loss", "stop"],
+      setup: ["setup", "strategy"],
+      exit_reason: ["exit_reason", "exit reason", "reason"],
+      emotion: ["emotion", "mood"],
+      note: ["note", "notes", "remark", "remarks"],
+      date: ["date", "trade date", "order time", "time", "timestamp", "order execution time", "trade_date"]
+    };
+    var idx = {};
+    CSV_COLS.forEach(function (k) {
+      var names = ALIASES[k] || [k.toLowerCase()];
+      idx[k] = -1;
+      for (var a = 0; a < names.length; a++) { var p = head.indexOf(names[a]); if (p >= 0) { idx[k] = p; break; } }
+    });
     var count = 0;
     for (var i = 1; i < lines.length; i++) {
       var cells = splitCSVLine(lines[i]);
       var get = function (k) { return idx[k] >= 0 ? (cells[idx[k]] || "").trim() : ""; };
       var sym = get("symbol"); if (!sym) continue;
       var sl = get("plannedSL");
-      CM.addTrade({ symbol: sym, side: get("side") || "Buy", qty: +get("qty") || 0, entry: +get("entry") || 0,
+      var rawSide = (get("side") || "Buy").trim();
+      var side = /^s/i.test(rawSide) ? "Sell" : "Buy"; // handles SELL / S / sell
+      CM.addTrade({ symbol: sym, side: side, qty: Math.abs(+get("qty")) || 0, entry: +get("entry") || 0,
         exit: +get("exit") || 0, plannedSL: sl === "" ? null : +sl, target: null,
         setup: get("setup") || "Other", exit_reason: get("exit_reason") || "Hit target",
         emotion: get("emotion") || "Calm", note: (get("note") || "").slice(0, 500), date: get("date") || new Date().toISOString() });
@@ -2201,6 +2248,7 @@
     });
     c.appendChild(el('<p class="hint" style="margin-top:14px">1 token = one deep analysis (Trade Replay of one past trade). The ' + CM.FREE_TOKENS + ' free tokens are one-time per account; purchased tokens stay until used.</p>'));
     v.appendChild(c);
+    v.appendChild(planComparison(curId));
     // Walkthrough video sits at the bottom (below the balance & plans).
     v.appendChild(el('<div class="card vid-card"><div class="card-hd"><h3>▶ How tokens &amp; plans work <span class="hint" style="font-weight:400">· walkthrough</span></h3></div>' +
       '<div class="vid-wrap"><video class="vid-el" controls preload="none" playsinline poster="../assets/app-shot.png">' +
@@ -2495,6 +2543,7 @@
       card.appendChild(b); plans.appendChild(card);
     });
     v.appendChild(plans);
+    v.appendChild(planComparison(s.profile.plan));
     // Data backup / restore (all data lives in this browser — let people take it with them)
     var dataCard = el('<div class="card" style="margin-top:20px"><div class="card-hd"><h3>Your data</h3></div><p class="hint" style="margin:0 0 12px">Download a copy of your journal to keep, or restore one you saved earlier.</p></div>');
     var dataRow = el('<div style="display:flex;gap:10px;flex-wrap:wrap"></div>');
