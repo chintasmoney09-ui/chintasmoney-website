@@ -265,6 +265,49 @@
   function contentPlan() { var c = CM.adminConfig(); return c.contentPlan || {}; }
   function saveContentPlan(p) { var c = CM.adminConfig(); c.contentPlan = p; CM.saveAdmin(c); }
 
+  // ---- Global admin search (jump to any section) ---------------------------
+  var SEARCH_ITEMS = [
+    ["overview", "▦ Overview", "totals, paying users, revenue, plan mix"],
+    ["people", "👥 People logged", "every user, plan, activity"],
+    ["calendar", "📅 Activity calendar", "signups & active users per day"],
+    ["content", "🗓️ Content calendar", "plan your posts and reels"],
+    ["catalogue", "🏷️ Products & prices", "edit plan and token prices"],
+    ["revenue", "₹ Revenue & invoices", "money made, invoices, refunds"],
+    ["gating", "🔒 Locked sections", "which plan unlocks each feature"],
+    ["flags", "⚑ Feature flags", "turn features on or off"],
+    ["exportt", "⬇ Export everything", "download users, invoices, refunds"],
+    ["privacy", "🛡️ Privacy & security", "admin password & security"]
+  ];
+  function openAdminSearch() {
+    var back = el('<div style="position:fixed;inset:0;background:rgba(11,21,51,.55);z-index:200;display:flex;align-items:flex-start;justify-content:center;padding:60px 16px"></div>');
+    var box = el('<div style="background:#fff;border-radius:16px;width:100%;max-width:460px;box-shadow:0 24px 60px rgba(0,0,0,.35);overflow:hidden"></div>');
+    box.appendChild(el('<div style="padding:14px 16px 0"><input id="cmAdSearch" placeholder="Search sections… e.g. revenue, prices, users" autocomplete="off" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #cbd5e1;border-radius:10px;font-size:1rem;font-family:inherit"/></div>'));
+    var list = el('<div id="cmAdList" style="padding:10px 12px 14px;display:grid;gap:6px;max-height:56vh;overflow:auto"></div>');
+    box.appendChild(list); back.appendChild(box); document.body.appendChild(back);
+    function close() { if (back.parentNode) document.body.removeChild(back); }
+    back.addEventListener("click", function (e) { if (e.target === back) close(); });
+    var input = box.querySelector("#cmAdSearch");
+    function pick(id) { close(); TAB = id; render(); }
+    function draw(q) {
+      q = (q || "").toLowerCase().trim();
+      var rows = SEARCH_ITEMS.filter(function (it) { return !q || it[1].toLowerCase().indexOf(q) !== -1 || it[2].indexOf(q) !== -1; });
+      list.innerHTML = "";
+      if (!rows.length) { list.appendChild(el('<div style="padding:10px;color:#64748b">No section matches “' + esc(q) + '”.</div>')); return; }
+      rows.forEach(function (it, i) {
+        var row = el('<button style="display:block;text-align:left;width:100%;padding:11px 12px;border:1px solid #eef2f7;border-radius:10px;background:' + (i === 0 ? "#f5f3ff" : "#fff") + ';cursor:pointer;font-family:inherit"><b style="color:#0f172a">' + it[1] + '</b><div style="font-size:.78rem;color:#64748b;margin-top:1px">' + esc(it[2]) + '</div></button>');
+        row.addEventListener("click", function () { pick(it[0]); });
+        list.appendChild(row);
+      });
+    }
+    draw("");
+    input.addEventListener("input", function () { draw(input.value); });
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { var q = input.value.toLowerCase().trim(); var first = SEARCH_ITEMS.filter(function (it) { return !q || it[1].toLowerCase().indexOf(q) !== -1 || it[2].indexOf(q) !== -1; })[0]; if (first) pick(first[0]); }
+      if (e.key === "Escape") close();
+    });
+    setTimeout(function () { input.focus(); }, 40);
+  }
+
   function render() {
     if (!isAuthed()) return renderLogin();
     // Kick off the live fetch once per session for a real (server) token.
@@ -309,7 +352,11 @@
       if (token() === "1") { render(); return; } // demo gate — nothing live to pull
       LIVE.state = "loading"; render(); fetchLive();
     });
-    top.appendChild(refreshBtn);
+    var searchBtn = el('<button class="cm-btn sm" title="Search sections">🔍 Search</button>');
+    searchBtn.addEventListener("click", openAdminSearch);
+    var actions = el('<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"></div>');
+    actions.appendChild(searchBtn); actions.appendChild(refreshBtn);
+    top.appendChild(actions);
     main.appendChild(top);
     main.appendChild(TABS[TAB]());
     shell.appendChild(main);
@@ -456,7 +503,9 @@
         mix.appendChild(el('<div style="margin:9px 0"><div style="display:flex;justify-content:space-between;font-size:.85rem"><span>' + PLAN_ICON[id] + ' ' + CM.PLANS[id].name + '</span><span class="cm-muted">' + n + ' · ' + w + '%</span></div><div class="cm-bar"><i style="width:' + w + '%"></i></div></div>'));
       });
       v.appendChild(mix);
-      v.appendChild(el('<div class="cm-note" style="margin-top:14px">Cross-user rows are demo data. Prices, gating and flags you change here are <b>real</b> and take effect in the live app immediately.</div>'));
+      v.appendChild(el('<div class="cm-note" style="margin-top:14px">' + (liveOn()
+        ? 'User rows and revenue are <b>live</b> from your database. Prices, gating and flags you change here are real and take effect in the app immediately.'
+        : 'Cross-user rows are demo data. Prices, gating and flags you change here are <b>real</b> and take effect in the live app immediately.') + '</div>'));
       return v;
     },
 
@@ -586,7 +635,9 @@
         });
         v.appendChild(rg);
       }
-      v.appendChild(el('<div class="cm-note" style="margin-top:14px">Real invoices &amp; refunds appear here once the Razorpay webhook is stored in a backend. Today these are demo figures.</div>'));
+      v.appendChild(el('<div class="cm-note" style="margin-top:14px">' + (liveOn()
+        ? '🟢 <b>Live figures</b> — real verified payments &amp; refunds from Razorpay, stored in your database. Tap 🔄 Refresh to pull the latest.'
+        : 'Real invoices &amp; refunds appear here once you are signed in via the server. These are demo figures.') + '</div>'));
       return v;
     },
 
