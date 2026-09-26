@@ -8,6 +8,8 @@
   // Worker secrets in the Cloudflare dashboard — never here. Secrets to add there:
   //   RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET, ADMIN_PASSWORD,
   //   ADMIN_SESSION_SECRET, SUPABASE_SERVICE_ROLE_KEY
+  //   RESEND_API_KEY   — (optional) Resend API key to email receipts to buyers
+  //   RECEIPT_FROM     — (optional) e.g. "ChintasMoney <receipts@chintasmoney.com>"
   "vars": {
     "RAZORPAY_KEY_ID": "rzp_live_TghHwuaNLfCqIx",
     "ADMIN_USER": "chintasmoney",

@@ -128,6 +128,65 @@ const RZP_PRODUCTS = {
   tok150:  { amount: 19900, type: "tokens", tokens: 150,     label: "ChintasMoney · 150 analysis tokens" },
 };
 
+// Rupee string from paise, for emails/receipts.
+function rupees(paise) { return "₹" + (Math.round(paise) / 100).toLocaleString("en-IN"); }
+
+// Upsert one verified payment into Supabase (idempotent on razorpay_payment_id).
+// Used by BOTH the verify endpoint (immediate, has the signed-in email) and the
+// Razorpay webhook (authoritative), so a payment is recorded even if one path
+// is delayed or fails. Safe no-op when Supabase isn't configured.
+async function recordPayment(env, row) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return;
+  const base = env.SUPABASE_URL.replace(/\/$/, "");
+  try {
+    await fetch(base + "/rest/v1/payments?on_conflict=razorpay_payment_id", {
+      method: "POST",
+      headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=merge-duplicates" }),
+      body: JSON.stringify(row),
+    });
+  } catch (e) { /* best effort — the webhook retries the canonical write */ }
+}
+
+// Send a receipt/invoice email via Resend (https://resend.com). No-op unless
+// RESEND_API_KEY (Worker secret) and RECEIPT_FROM (e.g. "ChintasMoney
+// <receipts@chintasmoney.com>") are set. Never throws into the caller.
+async function sendReceiptEmail(env, o) {
+  if (!env.RESEND_API_KEY || !env.RECEIPT_FROM || !o || !o.email) return;
+  const when = new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+  const amt = rupees(o.amount);
+  const html =
+    '<div style="font-family:system-ui,Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto;color:#0f1730">' +
+    '<h2 style="margin:0 0 4px">Thanks for your purchase 🎉</h2>' +
+    '<p style="color:#5b6b8c;margin:0 0 18px">Here is your ChintasMoney receipt.</p>' +
+    '<div style="border:1px solid #e6ebf5;border-radius:12px;padding:16px 18px">' +
+    '<table style="width:100%;border-collapse:collapse;font-size:14px">' +
+    '<tr><td style="padding:6px 0;color:#5b6b8c">Item</td><td style="padding:6px 0;text-align:right;font-weight:700">' + esc(o.label || o.product || "ChintasMoney") + '</td></tr>' +
+    '<tr><td style="padding:6px 0;color:#5b6b8c">Amount paid</td><td style="padding:6px 0;text-align:right;font-weight:700">' + amt + '</td></tr>' +
+    '<tr><td style="padding:6px 0;color:#5b6b8c">Payment ID</td><td style="padding:6px 0;text-align:right">' + esc(o.paymentId || "—") + '</td></tr>' +
+    '<tr><td style="padding:6px 0;color:#5b6b8c">Date</td><td style="padding:6px 0;text-align:right">' + esc(when) + '</td></tr>' +
+    '</table></div>' +
+    '<p style="color:#5b6b8c;font-size:13px;margin:18px 0 0">Need a refund or have a question? Reply to this email or write to ' +
+    'support@chintasmoney.com. Refund policy: https://chintasmoney.com/refund.html</p>' +
+    '<p style="color:#98a6c4;font-size:12px;margin:14px 0 0">ChintasMoney is educational software (a trading journal &amp; behaviour analytics tool). ' +
+    'Not investment advice. No buy/sell tips.</p></div>';
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "content-type": "application/json" },
+      body: JSON.stringify({
+        from: env.RECEIPT_FROM,
+        to: [o.email],
+        subject: "Your ChintasMoney receipt — " + amt,
+        html: html,
+        reply_to: "support@chintasmoney.com",
+      }),
+    });
+  } catch (e) { /* email is best-effort; payment is already recorded */ }
+}
+
+// Minimal HTML escape for email fields (worker has no shared esc for this).
+function esc(s) { return (s == null ? "" : String(s)).replace(/[&<>"]/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]; }); }
+
 async function handleRzpOrder(request, env) {
   if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) return jsonRes({ error: "payments not configured" }, 0);
   let body; try { body = await request.json(); } catch (e) { return jsonRes({ error: "bad request" }, 0); }
@@ -171,6 +230,16 @@ async function handleRzpVerify(request, env) {
   const p = RZP_PRODUCTS[product];
   if (!p || order.amount !== p.amount) return jsonRes({ valid: false }, 0);
   const grant = p.type === "plan" ? { plan: p.plan } : { tokens: p.tokens };
+  // Record the verified payment immediately (fallback to the webhook) and email
+  // the buyer a receipt. Both are best-effort and never block the grant.
+  const email = (b && typeof b.email === "string") ? b.email.trim() : "";
+  await recordPayment(env, {
+    razorpay_payment_id: paymentId, razorpay_order_id: orderId,
+    email: email, product: product, plan: product,
+    amount: p.amount, currency: "INR", method: "Razorpay",
+    status: "paid", created_at: new Date().toISOString(),
+  });
+  await sendReceiptEmail(env, { email: email, product: product, label: p.label, amount: p.amount, paymentId: paymentId });
   return jsonRes({ valid: true, product: product, grant: grant }, 0);
 }
 

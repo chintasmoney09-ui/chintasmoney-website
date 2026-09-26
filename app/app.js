@@ -252,10 +252,29 @@
     var mb = el('<button class="btn btn-sm menu-btn">☰</button>'); mb.addEventListener("click", function () { mobileOpen = true; render(); }); bar.appendChild(mb);
     bar.appendChild(el('<div><h1>' + title + '</h1>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>'));
     bar.appendChild(el('<div class="spacer"></div>'));
+    var searchBtn = el('<button class="btn btn-sm topbar-search" title="Search (press /)" aria-label="Search">🔍</button>');
+    searchBtn.addEventListener("click", function () { openSearch(); });
+    bar.appendChild(searchBtn);
     (actions || []).forEach(function (a) { bar.appendChild(a); });
     return bar;
   }
   function logBtn() { var b = el('<button class="btn btn-primary">＋ Log a trade</button>'); b.addEventListener("click", function () { go("log"); }); return b; }
+
+  // Human-friendly labels for every plan feature key (store.js uses slugs).
+  var FEATURE_LABELS = {
+    "log-trades": "Log your trades", "discipline-score": "Discipline Score", "trader-personality": "Trader Personality",
+    "last-30-days": "Last 30 days of history", "basic-mistakes": "Basic mistake spotting",
+    "everything-free": "Everything in Free", "unlimited-history": "Unlimited trade history",
+    "full-mistake-analysis": "Full mistake analysis", "setup-and-time-insights": "Setup & time-of-day insights",
+    "streaks-and-badges": "Streaks & badges", "ai-discipline-coach": "AI Discipline Coach", "pro-shareable-card": "Pro shareable card",
+    "everything-plus": "Everything in Go Plus", "strategy-performance": "Setup performance analytics",
+    "csv-import-export": "CSV / broker import & export", "risk-and-r-multiples": "Risk & R-multiple analytics",
+    "weekly-report": "Weekly report", "goal-rules-engine": "Goal & rules engine",
+    "everything-pro": "Everything in Platinum", "priority-ai": "Priority AI coach",
+    "monthly-1-1-review": "Monthly 1:1 discipline review", "multi-year-backtest": "Multi-year backtesting", "early-access": "Early access to new tools"
+  };
+  function featLabel(f) { return FEATURE_LABELS[f] || f.replace(/-/g, " "); }
+  function planFeatureList(id) { var p = CM.PLANS[id]; return (p && p.features || []).map(featLabel); }
 
   // What each locked area actually gives you — so the paywall sells, not just blocks.
   var AREA_SELL = {
@@ -1437,6 +1456,79 @@
     setTimeout(function () { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); }, 1900);
   }
 
+  // ---- Purchase celebration ------------------------------------------------
+  // Shown right after a successful payment so people SEE what they unlocked and
+  // land somewhere useful — instead of a silent toast.
+  function celebrate(kind, detail) {
+    confetti();
+    var titleTxt, subTxt, listHtml, ctaTxt, ctaGo;
+    if (kind === "plan") {
+      var p = CM.PLANS[detail] || CM.PLANS.plus;
+      titleTxt = "🎉 You're on " + p.name + "!";
+      subTxt = "Payment successful. A receipt is on its way to your email. Here's everything you just unlocked:";
+      listHtml = planFeatureList(detail).map(function (f) { return '<li>✓ ' + esc(f) + '</li>'; }).join("");
+      ctaTxt = "Start exploring →"; ctaGo = "home";
+    } else {
+      var n = detail || 0;
+      titleTxt = "🎟️ " + n + " tokens added!";
+      subTxt = "Payment successful. A receipt is on its way to your email. Each token runs one deep Trade Replay of your own past trades.";
+      var ts = CM.tokenState();
+      listHtml = '<li>✓ ' + (ts.unlimited ? "∞" : ts.total) + ' analyses available now</li><li>✓ Purchased tokens never expire</li>';
+      ctaTxt = "Run an analysis →"; ctaGo = "replay";
+    }
+    var d = dialog(titleTxt,
+      '<p class="hint" style="margin:0 0 14px">' + subTxt + '</p>' +
+      '<ul class="celebrate-feats" style="list-style:none;padding:0;margin:0 0 6px;display:grid;gap:8px">' + listHtml + '</ul>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">' +
+      '<button class="btn btn-primary" id="cbGo">' + ctaTxt + '</button>' +
+      '<button class="btn btn-ghost" id="cbBill">View my billing</button></div>',
+      function (body, close) {
+        body.querySelector("#cbGo").addEventListener("click", function () { close(); go(ctaGo); render(); });
+        body.querySelector("#cbBill").addEventListener("click", function () { close(); go("profile"); render(); });
+      });
+    return d;
+  }
+
+  // ---- Search / command palette --------------------------------------------
+  // Jump to any section fast. Opens from the 🔍 button or the "/" key.
+  function searchItems() {
+    var items = NAV.filter(function (n) { return !n.sep && n.id; }).map(function (n) {
+      return { id: n.id, label: n.label, ic: n.ic, hint: SECTION_HELP[n.id] || "" };
+    });
+    items.push({ id: "__refund", label: "Refund / cancel", ic: "↩", hint: "Get a refund or stop renewals." });
+    return items;
+  }
+  function openSearch() {
+    var d = dialog("Search ChintasMoney",
+      '<input id="cmSearchIn" type="text" placeholder="Type a section… e.g. tokens, coach, refund" autocomplete="off" ' +
+      'style="width:100%;padding:12px 14px;border:1px solid var(--line-2);border-radius:12px;background:var(--bg);color:var(--ink);font-size:1rem" />' +
+      '<div id="cmSearchList" style="margin-top:12px;display:grid;gap:6px;max-height:52vh;overflow:auto"></div>',
+      function (body, close) {
+        var input = body.querySelector("#cmSearchIn"), list = body.querySelector("#cmSearchList");
+        function pick(id) { close(); if (id === "__refund") { go("profile"); render(); setTimeout(function () { toast("Scroll to ‘Your plan’ for refunds", "ok"); }, 200); } else { go(id); render(); } }
+        function draw(q) {
+          q = (q || "").toLowerCase().trim();
+          var all = searchItems().filter(function (it) { return !q || it.label.toLowerCase().indexOf(q) !== -1 || (it.hint || "").toLowerCase().indexOf(q) !== -1; });
+          list.innerHTML = "";
+          if (!all.length) { list.appendChild(el('<p class="hint" style="margin:6px 2px">No section matches “' + esc(q) + '”.</p>')); return; }
+          all.slice(0, 10).forEach(function (it, i) {
+            var row = el('<button class="cm-search-row" style="display:flex;gap:12px;align-items:center;text-align:left;width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:' + (i === 0 ? "var(--surface-2,rgba(139,92,246,.08))" : "transparent") + ';cursor:pointer">' +
+              '<span style="font-size:1.1rem;width:22px;text-align:center">' + it.ic + '</span>' +
+              '<span style="flex:1"><b style="color:var(--ink)">' + esc(it.label) + '</b>' + (it.hint ? '<div class="hint" style="font-size:.78rem;margin-top:1px">' + esc(it.hint.slice(0, 70)) + (it.hint.length > 70 ? "…" : "") + '</div>' : '') + '</span></button>');
+            row.addEventListener("click", function () { pick(it.id); });
+            list.appendChild(row);
+          });
+        }
+        draw("");
+        input.addEventListener("input", function () { draw(input.value); });
+        input.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") { var first = searchItems().filter(function (it) { var q = input.value.toLowerCase().trim(); return !q || it.label.toLowerCase().indexOf(q) !== -1 || (it.hint || "").toLowerCase().indexOf(q) !== -1; })[0]; if (first) pick(first.id); }
+        });
+        setTimeout(function () { input.focus(); }, 40);
+      });
+    return d;
+  }
+
   // ---- RISK CALCULATOR -----------------------------------------------------
   var calcSide = "long";
   VIEWS.calc = function () {
@@ -2030,11 +2122,11 @@
     // A purchase must belong to an account so it persists and can't be faked.
     signInThen(function () {
       if (n > 0) {
-        window.CMCloud.checkoutTokens(n, price, function () { CM.addTokens(n); toast("Added " + n + " tokens ✓", "ok"); render(); });
+        window.CMCloud.checkoutTokens(n, price, function () { CM.addTokens(n); render(); celebrate("tokens", n); });
       } else {
         var planId = price === 199 ? "plus" : price === 499 ? "pro" : price === 999 ? "diamond" : null;
         if (!planId) { toast("Unknown plan", "err"); return; }
-        window.CMCloud.checkout(planId, function () { toast("Plan activated ✓", "ok"); render(); });
+        window.CMCloud.checkout(planId, function () { render(); celebrate("plan", planId); });
       }
     });
   }
@@ -2300,6 +2392,45 @@
     v.appendChild(pc);
 
     v.appendChild(el('<h2 style="margin:22px 0 8px;font-size:1.15rem">Subscription</h2>'));
+
+    // ---- Your current plan: what you have + billing & refunds ----------------
+    var curPlan = CM.PLANS[s.profile.plan] || CM.PLANS.free;
+    var since = s.profile.plan_since || s.profile.planSince;
+    var sinceTxt = since ? new Date(since).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : null;
+    var curCard = el('<div class="card" style="border-color:var(--violet)"></div>');
+    curCard.appendChild(el('<div class="card-hd"><h3>Your plan: ' + esc(curPlan.name) +
+      (curPlan.price ? ' <span class="badge b-navy">₹' + curPlan.price + '/' + curPlan.cadence + '</span>' : ' <span class="badge b-navy">Free</span>') + '</h3></div>'));
+    curCard.appendChild(el('<p class="hint" style="margin:0 0 10px">' + (sinceTxt ? "Member since " + esc(sinceTxt) + ". " : "") +
+      (curPlan.price ? "A receipt is emailed to you on every payment." : "You're on the free plan — upgrade anytime below.") + '</p>'));
+    curCard.appendChild(el('<div style="font-weight:700;margin:6px 0 4px">What you get</div>'));
+    curCard.appendChild(el('<ul class="celebrate-feats" style="list-style:none;padding:0;margin:0;display:grid;gap:6px">' +
+      planFeatureList(s.profile.plan).map(function (f) { return '<li>✓ ' + esc(f) + '</li>'; }).join("") + '</ul>'));
+    // Billing & refunds row
+    var billRow = el('<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px"></div>');
+    var invBtn = el('<a class="btn btn-sm" href="../refund.html" target="_blank" rel="noopener">📄 Refund policy</a>');
+    var refBtn = el('<button class="btn btn-sm">↩ Request a refund / cancel</button>');
+    refBtn.addEventListener("click", function () {
+      dialog("Refund or cancel", '<p class="hint">Changed your mind? No problem.</p>' +
+        '<ul class="hint" style="padding-left:18px;margin:8px 0 12px;display:grid;gap:6px">' +
+        '<li>Email <b>support@chintasmoney.com</b> from your account email (' + esc((window.CMCloud && window.CMCloud.user && window.CMCloud.user.email) || "your registered email") + ') with your <b>payment ID</b>.</li>' +
+        '<li>Refunds are processed back to your original payment method (UPI/card), usually within 5–7 working days.</li>' +
+        '<li>To stop future renewals, just tell us in the same email — your plan stays active until the period ends.</li>' +
+        '</ul>' +
+        '<p class="hint">See the full <a href="../refund.html" target="_blank" rel="noopener">refund policy</a>.</p>',
+        function (b, close) {
+          var mail = el('<button class="btn btn-primary" style="margin-top:6px">✉ Email support now</button>');
+          mail.addEventListener("click", function () {
+            var email = (window.CMCloud && window.CMCloud.user && window.CMCloud.user.email) || "";
+            location.href = "mailto:support@chintasmoney.com?subject=" + encodeURIComponent("Refund / cancel request — ChintasMoney") +
+              "&body=" + encodeURIComponent("Hi ChintasMoney team,\n\nI'd like a refund / to cancel my subscription.\n\nAccount email: " + email + "\nPayment ID: \nReason (optional): \n\nThanks.");
+          });
+          b.appendChild(mail);
+        });
+    });
+    billRow.appendChild(invBtn); billRow.appendChild(refBtn);
+    curCard.appendChild(billRow);
+    v.appendChild(curCard);
+
     // 7-day Pro trial
     var trialLeft = s.profile.trialEndsAt ? Math.ceil((new Date(s.profile.trialEndsAt) - Date.now()) / 86400000) : 0;
     if (trialLeft > 0) {
@@ -2315,7 +2446,7 @@
       var p = CM.PLANS[id], cur = s.profile.plan === id;
       var card = el('<div class="plan' + (id === "plus" ? " feat" : "") + '">' + (id === "plus" ? '<span class="badge b-green" style="align-self:flex-start;margin-bottom:8px">Most popular</span>' : '') +
         '<h3>' + p.name + '</h3><div class="amt">' + (p.price ? "₹" + p.price : "Free") + '<span class="hint" style="font-size:.9rem;font-weight:500">' + (p.price ? "/" + p.cadence : "") + '</span></div><p class="hint">' + p.blurb + '</p>' +
-        '<ul>' + p.features.slice(0, 7).map(function (f) { return '<li>' + f.replace(/-/g, " ") + '</li>'; }).join("") + '</ul></div>');
+        '<ul>' + p.features.slice(0, 7).map(function (f) { return '<li>' + esc(featLabel(f)) + '</li>'; }).join("") + '</ul></div>');
       var payMode = window.CM_CONFIG && window.CM_CONFIG.cloud && window.CM_CONFIG.razorpayKeyId && id !== "free";
       var label = cur ? "Current plan" : (payMode ? "Subscribe · ₹" + Math.round((window.CM_CONFIG.planPrices[id] || 0) / 100) : "Switch to " + p.name);
       var b = el('<button class="btn ' + (cur ? "" : "btn-primary") + '"' + (cur ? " disabled" : "") + '>' + label + '</button>');
@@ -2323,7 +2454,7 @@
         if (cur) return;
         if (payMode) {
           // A real purchase must be tied to an account — sign in first, then check out.
-          signInThen(function () { window.CMCloud.checkout(id, function () { render(); }); });
+          signInThen(function () { window.CMCloud.checkout(id, function () { render(); celebrate("plan", id); }); });
         } else { CM.setProfile({ plan: id }); render(); }
       });
       card.appendChild(b); plans.appendChild(card);
@@ -2446,13 +2577,14 @@
     if (document.querySelector('[style*="z-index:120"]')) return; // a modal dialog is open
     var key = (e.key || "").toLowerCase();
     if (key === "?") { e.preventDefault(); showShortcuts(); return; }
+    if (key === "/") { e.preventDefault(); openSearch(); return; }
     for (var i = 0; i < SHORTCUTS.length; i++) {
       if (SHORTCUTS[i][0] === key) { e.preventDefault(); go(SHORTCUTS[i][1]); return; }
     }
   });
   function showShortcuts() {
     if (typeof dialog !== "function") return;
-    var rows = SHORTCUTS.concat([["?", "", "This help"]]).map(function (s) {
+    var rows = SHORTCUTS.concat([["/", "", "Search sections"], ["?", "", "This help"]]).map(function (s) {
       return '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line)"><span>' + s[2] + '</span><kbd class="kbd">' + s[0].toUpperCase() + '</kbd></div>';
     }).join("");
     dialog("Keyboard shortcuts", '<p class="hint" style="margin:0 0 10px">Press a key anywhere (outside a text field) to jump around.</p>' + rows);
