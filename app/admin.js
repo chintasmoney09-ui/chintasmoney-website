@@ -57,6 +57,69 @@
   }
   function liveOn() { return LIVE.state === "live"; }
 
+  // POST a JSON body to an admin endpoint with the session token. Returns a
+  // parsed JSON object (or {error} on failure) — never throws.
+  function adminPost(path, body) {
+    return fetch(path, { method: "POST", headers: { "content-type": "application/json", Authorization: "Bearer " + token() }, body: JSON.stringify(body || {}) })
+      .then(function (r) { return r.json().catch(function () { return { error: "bad_response" }; }); })
+      .catch(function () { return { error: "network" }; });
+  }
+
+  // Open a clean, printable invoice in a new window (customer can Save as PDF).
+  function printInvoice(i) {
+    var win = window.open("", "_blank");
+    if (!win) { alert("Allow pop-ups to open the invoice."); return; }
+    var html =
+      '<!doctype html><html><head><meta charset="utf-8"><title>Invoice ' + esc(i.id) + '</title>' +
+      '<style>body{font-family:system-ui,Segoe UI,Arial,sans-serif;color:#0f1730;max-width:640px;margin:32px auto;padding:0 20px}' +
+      'h1{margin:0 0 2px}.muted{color:#5b6b8c}table{width:100%;border-collapse:collapse;margin:20px 0}' +
+      'td,th{padding:10px 8px;border-bottom:1px solid #e6ebf5;text-align:left}.r{text-align:right}' +
+      '.tot{font-size:1.3rem;font-weight:800}.badge{display:inline-block;padding:3px 10px;border-radius:999px;background:#dcfce7;color:#166534;font-weight:700;font-size:.8rem}' +
+      '.btn{display:inline-block;margin-top:16px;padding:10px 16px;border:1px solid #cbd5e1;border-radius:8px;background:#8b5cf6;color:#fff;cursor:pointer;font-size:.9rem}</style></head><body>' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start"><div><h1>ChintasMoney</h1><div class="muted">Trader Report Card — educational software (SaaS)</div></div>' +
+      '<div class="r"><div style="font-weight:800">INVOICE</div><div class="muted">' + esc(i.date) + '</div></div></div>' +
+      '<table><tr><th>Bill to</th><td class="r">' + esc(i.email || "—") + '</td></tr>' +
+      '<tr><th>Invoice / Payment ID</th><td class="r">' + esc(i.id) + '</td></tr>' +
+      '<tr><th>Item</th><td class="r">' + esc(productName(i.product)) + '</td></tr>' +
+      '<tr><th>Method</th><td class="r">' + esc(i.method) + '</td></tr>' +
+      '<tr><th>Status</th><td class="r"><span class="badge">' + esc(i.status) + '</span></td></tr>' +
+      '<tr><th class="tot">Total paid</th><td class="r tot">' + money(i.amount) + '</td></tr></table>' +
+      '<div class="muted" style="font-size:.85rem">Thank you. This is a receipt for a software subscription. Not investment advice. ' +
+      'Refunds: support@chintasmoney.com · https://chintasmoney.com/refund.html</div>' +
+      '<button class="btn" onclick="window.print()">🖨 Print / Save as PDF</button>' +
+      '</body></html>';
+    win.document.write(html); win.document.close();
+  }
+
+  // Edit a user: name, plan, and grant/remove tokens. Writes via the server.
+  function openEditUser(u) {
+    var back = el('<div style="position:fixed;inset:0;background:rgba(11,21,51,.55);z-index:200;display:flex;align-items:flex-start;justify-content:center;padding:50px 16px;overflow:auto"></div>');
+    var box = el('<div style="background:#fff;border-radius:16px;width:100%;max-width:440px;box-shadow:0 24px 60px rgba(0,0,0,.35);padding:20px"></div>');
+    box.appendChild(el('<h3 style="margin:0 0 2px">Edit user</h3><div class="cm-uc-mail" style="margin-bottom:14px">' + esc(u.email) + '</div>'));
+    var nameF = el('<label class="cm-fld"><span>Name</span><input id="euName"/></label>'); nameF.querySelector("input").value = u.name || "";
+    var planF = el('<label class="cm-fld"><span>Plan</span><select id="euPlan">' +
+      ["free", "plus", "pro", "diamond"].map(function (p) { return '<option value="' + p + '"' + (u.plan === p ? " selected" : "") + '">' + CM.PLANS[p].name + '</option>'; }).join("") + '</select></label>');
+    var tokF = el('<label class="cm-fld"><span>Grant tokens (+) or remove (−)</span><input id="euTok" type="number" value="0" step="1"/></label>');
+    box.appendChild(nameF); box.appendChild(planF); box.appendChild(tokF);
+    var msg = el('<div class="cm-err" style="color:#475569"></div>'); box.appendChild(msg);
+    var row = el('<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px"></div>');
+    var cancel = el('<button class="cm-btn sm">Cancel</button>'); cancel.addEventListener("click", close);
+    var save = el('<button class="cm-btn sm p">Save changes</button>');
+    save.addEventListener("click", function () {
+      var body = { user_id: u.id, name: box.querySelector("#euName").value.trim(), plan: box.querySelector("#euPlan").value };
+      var td = parseInt(box.querySelector("#euTok").value, 10); if (td) body.tokensDelta = td;
+      save.disabled = true; save.textContent = "Saving…"; msg.style.color = "#475569"; msg.textContent = "";
+      adminPost("/api/admin/update-user", body).then(function (r) {
+        if (r.ok) { close(); fetchLive(); }
+        else { save.disabled = false; save.textContent = "Save changes"; msg.style.color = "#dc2626"; msg.textContent = r.detail || "Couldn't save. Try again."; }
+      });
+    });
+    row.appendChild(cancel); row.appendChild(save); box.appendChild(row);
+    back.appendChild(box); document.body.appendChild(back);
+    function close() { if (back.parentNode) document.body.removeChild(back); }
+    back.addEventListener("click", function (e) { if (e.target === back) close(); });
+  }
+
   // ---- inject admin-only styles (self-contained; no styles.css dependency) ---
   (function styles() {
     if (document.getElementById("cm-admin-css")) return;
@@ -531,6 +594,15 @@
           '<div><span class="k">AI questions</span><span class="v">' + u.ai + '</span></div>' +
           '<div><span class="k">Joined</span><span class="v">' + esc(u.joined) + '</span></div>' +
           '<div><span class="k">Last login</span><span class="v">' + esc(u.last) + '</span></div></div>'));
+        // Edit (live mode, real accounts only — needs the server user id).
+        if (liveOn() && u.id) {
+          var foot = el('<div class="cm-uc-foot"></div>');
+          foot.appendChild(el('<span class="cm-muted">Manage this user</span>'));
+          var editBtn = el('<button class="cm-btn sm">✎ Edit</button>');
+          editBtn.addEventListener("click", function () { openEditUser(u); });
+          foot.appendChild(editBtn);
+          card.appendChild(foot);
+        }
         grid.appendChild(card);
       });
       v.appendChild(grid);
@@ -610,6 +682,36 @@
           card.appendChild(el('<div style="font-size:.86rem"><b>' + esc(productName(i.product)) + '</b></div>'));
           card.appendChild(el('<div class="cm-uc-mail">' + esc(i.email) + '</div>'));
           card.appendChild(el('<div class="cm-uc-foot"><span class="cm-muted">' + esc(i.method) + '</span><span class="cm-muted">' + esc(i.date) + '</span></div>'));
+          // Action buttons (live mode only — they call the server).
+          if (liveOn()) {
+            var acts = el('<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div>');
+            var dlBtn = el('<button class="cm-btn sm">📄 Invoice</button>');
+            dlBtn.addEventListener("click", function () { printInvoice(i); });
+            acts.appendChild(dlBtn);
+            var mailBtn = el('<button class="cm-btn sm">✉ Email</button>');
+            mailBtn.addEventListener("click", function () {
+              mailBtn.disabled = true; mailBtn.textContent = "Sending…";
+              adminPost("/api/admin/send-invoice", { payment_id: i.id, email: i.email }).then(function (r) {
+                mailBtn.disabled = false; mailBtn.textContent = "✉ Email";
+                if (r.ok) alert("Invoice emailed to " + (r.sentTo || i.email));
+                else alert(r.detail || (r.error === "email_not_configured" ? "Email isn't set up yet (add RESEND_API_KEY in Cloudflare)." : "Couldn't send invoice."));
+              });
+            });
+            acts.appendChild(mailBtn);
+            if (i.status === "paid") {
+              var refBtn = el('<button class="cm-btn sm danger">↩ Refund</button>');
+              refBtn.addEventListener("click", function () {
+                if (!confirm("Refund " + money(i.amount) + " to " + (i.email || "the customer") + "? This sends the money back via Razorpay and cannot be undone.")) return;
+                refBtn.disabled = true; refBtn.textContent = "Refunding…";
+                adminPost("/api/admin/refund", { payment_id: i.id }).then(function (r) {
+                  if (r.ok) { alert("Refund processed ✓"); fetchLive(); }
+                  else { refBtn.disabled = false; refBtn.textContent = "↩ Refund"; alert(r.detail || "Refund failed."); }
+                });
+              });
+              acts.appendChild(refBtn);
+            }
+            card.appendChild(acts);
+          }
           ig.appendChild(card);
         });
         v.appendChild(ig);
