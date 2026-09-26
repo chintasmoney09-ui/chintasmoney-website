@@ -147,41 +147,96 @@ async function recordPayment(env, row) {
   } catch (e) { /* best effort — the webhook retries the canonical write */ }
 }
 
-// Send a receipt/invoice email via Resend (https://resend.com). No-op unless
-// RESEND_API_KEY (Worker secret) and RECEIPT_FROM (e.g. "ChintasMoney
-// <receipts@chintasmoney.com>") are set. Never throws into the caller.
-async function sendReceiptEmail(env, o) {
-  if (!env.RESEND_API_KEY || !env.RECEIPT_FROM || !o || !o.email) return;
-  const when = new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
-  const amt = rupees(o.amount);
-  const html =
-    '<div style="font-family:system-ui,Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto;color:#0f1730">' +
-    '<h2 style="margin:0 0 4px">Thanks for your purchase 🎉</h2>' +
-    '<p style="color:#5b6b8c;margin:0 0 18px">Here is your ChintasMoney receipt.</p>' +
-    '<div style="border:1px solid #e6ebf5;border-radius:12px;padding:16px 18px">' +
-    '<table style="width:100%;border-collapse:collapse;font-size:14px">' +
-    '<tr><td style="padding:6px 0;color:#5b6b8c">Item</td><td style="padding:6px 0;text-align:right;font-weight:700">' + esc(o.label || o.product || "ChintasMoney") + '</td></tr>' +
-    '<tr><td style="padding:6px 0;color:#5b6b8c">Amount paid</td><td style="padding:6px 0;text-align:right;font-weight:700">' + amt + '</td></tr>' +
-    '<tr><td style="padding:6px 0;color:#5b6b8c">Payment ID</td><td style="padding:6px 0;text-align:right">' + esc(o.paymentId || "—") + '</td></tr>' +
-    '<tr><td style="padding:6px 0;color:#5b6b8c">Date</td><td style="padding:6px 0;text-align:right">' + esc(when) + '</td></tr>' +
-    '</table></div>' +
-    '<p style="color:#5b6b8c;font-size:13px;margin:18px 0 0">Need a refund or have a question? Reply to this email or write to ' +
-    'support@chintasmoney.com. Refund policy: https://chintasmoney.com/refund.html</p>' +
-    '<p style="color:#98a6c4;font-size:12px;margin:14px 0 0">ChintasMoney is educational software (a trading journal &amp; behaviour analytics tool). ' +
-    'Not investment advice. No buy/sell tips.</p></div>';
+// ---- Branded email system (Resend) -----------------------------------------
+const SUPPORT_EMAIL = "chintasmoney@gmail.com";
+const LOGO_URL = "https://chintasmoney.com/assets/logo-full.png";
+const APP_URL = "https://chintasmoney.com/app/";
+const SITE_URL = "https://chintasmoney.com";
+
+// What each product really is — for a professional B2C receipt.
+function productDesc(product) {
+  const M = {
+    plus:    { name: "Go Plus", service: "Full trading-behaviour analytics, unlimited journaling & the AI Discipline Coach", duration: "1 month (renews monthly)" },
+    pro:     { name: "Platinum", service: "Everything in Go Plus, plus unlimited AI analyses, broker import, setup performance & weekly reports", duration: "1 month (renews monthly)" },
+    diamond: { name: "Diamond", service: "Everything in Platinum, plus priority AI, a monthly 1:1 discipline review & multi-year backtesting", duration: "1 month (renews monthly)" },
+    tok20:   { name: "Analysis Token Pack", service: "20 deep Trade Replay analyses of your own trades", duration: "No expiry — use anytime" },
+    tok60:   { name: "Analysis Token Pack", service: "60 deep Trade Replay analyses of your own trades", duration: "No expiry — use anytime" },
+    tok150:  { name: "Analysis Token Pack", service: "150 deep Trade Replay analyses of your own trades", duration: "No expiry — use anytime" },
+  };
+  return M[product] || { name: "ChintasMoney subscription", service: "Trading-behaviour analytics service", duration: "1 month" };
+}
+
+// Shared branded shell: logo header + warm footer with support + links.
+function emailShell(inner) {
+  return '<div style="background:#f4f6fb;padding:24px 0;font-family:system-ui,Segoe UI,Arial,sans-serif">' +
+    '<div style="max-width:560px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e6ebf5">' +
+    '<div style="background:linear-gradient(135deg,#0b1533,#1e2a5a);padding:22px 24px;text-align:center">' +
+    '<img src="' + LOGO_URL + '" alt="ChintasMoney" style="height:38px;max-width:220px" />' +
+    '<div style="color:#a9b6da;font-size:11px;letter-spacing:.14em;margin-top:6px">TRADER REPORT CARD</div></div>' +
+    '<div style="padding:26px 24px;color:#0f1730">' + inner + '</div>' +
+    '<div style="background:#0b1533;padding:18px 24px;color:#a9b6da;font-size:12px;line-height:1.7">' +
+    '<b style="color:#fff">ChintasMoney</b> · reduce your losses by understanding your behaviour.<br>' +
+    'Support: <a href="mailto:' + SUPPORT_EMAIL + '" style="color:#7cc7ff">' + SUPPORT_EMAIL + '</a> · ' +
+    '<a href="' + SITE_URL + '" style="color:#7cc7ff">chintasmoney.com</a> · ' +
+    '<a href="' + SITE_URL + '/refund.html" style="color:#7cc7ff">Refund policy</a><br>' +
+    '<span style="color:#6f83ab">Behaviour analysis of your own trades. Not investment advice — no buy/sell tips. F&amp;O is risky.</span>' +
+    '</div></div></div>';
+}
+
+async function sendEmail(env, o) {
+  if (!env.RESEND_API_KEY || !env.RECEIPT_FROM || !o || !o.to) return;
   try {
     await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "content-type": "application/json" },
-      body: JSON.stringify({
-        from: env.RECEIPT_FROM,
-        to: [o.email],
-        subject: "Your ChintasMoney receipt — " + amt,
-        html: html,
-        reply_to: "support@chintasmoney.com",
-      }),
+      body: JSON.stringify({ from: env.RECEIPT_FROM, to: [o.to], subject: o.subject, html: o.html, reply_to: SUPPORT_EMAIL }),
     });
-  } catch (e) { /* email is best-effort; payment is already recorded */ }
+  } catch (e) { /* best-effort */ }
+}
+
+// Professional invoice + warm welcome, in one email, on every purchase.
+async function sendReceiptEmail(env, o) {
+  if (!env.RESEND_API_KEY || !env.RECEIPT_FROM || !o || !o.email) return;
+  const d = new Date();
+  const when = d.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+  const amt = rupees(o.amount);
+  const desc = productDesc(o.product);
+  const invNo = "CM-" + d.getFullYear() + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0") + "-" + String(o.paymentId || "").slice(-6).toUpperCase();
+  const row = function (k, v) { return '<tr><td style="padding:9px 0;color:#5b6b8c;border-bottom:1px solid #eef2f7">' + k + '</td><td style="padding:9px 0;text-align:right;font-weight:600;border-bottom:1px solid #eef2f7">' + v + '</td></tr>'; };
+  const inner =
+    '<h2 style="margin:0 0 4px;font-size:1.35rem">Thank you for your purchase 🎉</h2>' +
+    '<p style="color:#5b6b8c;margin:0 0 6px">You just took a real step toward mastering your trading behaviour — and we\'re honoured to be part of that journey. Welcome aboard. You\'re officially a <b style="color:#0f1730">ChintasMoney star customer</b> ⭐</p>' +
+    '<p style="color:#5b6b8c;margin:0 0 20px">Here is your official receipt.</p>' +
+    '<div style="border:1px solid #e6ebf5;border-radius:12px;padding:4px 18px 10px">' +
+    '<table style="width:100%;border-collapse:collapse;font-size:14px">' +
+    row("Invoice number", esc(invNo)) +
+    row("Date", esc(when)) +
+    row("Billed to", esc(o.email)) +
+    row("Plan / product", '<b>' + esc(desc.name) + '</b>') +
+    row("Service", esc(desc.service)) +
+    row("Duration", esc(desc.duration)) +
+    row("Payment reference", esc(o.paymentId || "—")) +
+    '<tr><td style="padding:12px 0 4px;font-size:1.05rem;font-weight:800">Total paid</td><td style="padding:12px 0 4px;text-align:right;font-size:1.15rem;font-weight:800;color:#16a34a">' + amt + '</td></tr>' +
+    '</table></div>' +
+    '<div style="text-align:center;margin:22px 0 8px">' +
+    '<a href="' + APP_URL + '" style="display:inline-block;background:linear-gradient(135deg,#22e08a,#12b39a);color:#04231b;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:800">Open your app →</a></div>' +
+    '<p style="color:#5b6b8c;font-size:13px;text-align:center;margin:6px 0 0">Your account: <b>' + esc(o.email) + '</b> · sign in any time at <a href="' + APP_URL + '" style="color:#12b39a">chintasmoney.com/app</a></p>' +
+    '<p style="color:#5b6b8c;font-size:14px;margin:22px 0 0">Thank you for investing in your own discipline. This is the first step of a calmer, clearer trading journey — we\'re cheering you on. 💚<br><br>— Team ChintasMoney</p>';
+  await sendEmail(env, { to: o.email, subject: "Your ChintasMoney receipt — " + desc.name + " (" + amt + ")", html: emailShell(inner) });
+}
+
+// Warm welcome email on first sign-up / sign-in.
+async function sendWelcomeEmail(env, email) {
+  if (!email) return;
+  const inner =
+    '<h2 style="margin:0 0 6px;font-size:1.35rem">Welcome to ChintasMoney 👋</h2>' +
+    '<p style="color:#5b6b8c;margin:0 0 14px">We\'re so glad you\'re here. You\'ve just taken the first step most traders never take — choosing to understand <b style="color:#0f1730">why</b> you trade the way you do, not just what the market did.</p>' +
+    '<p style="color:#5b6b8c;margin:0 0 14px">ChintasMoney is your honest mirror: a Discipline Score, your Trader Personality, the exact habits costing you money, and a coach that keeps you accountable. No tips, no noise — just you, getting better.</p>' +
+    '<div style="text-align:center;margin:22px 0 10px">' +
+    '<a href="' + APP_URL + '" style="display:inline-block;background:linear-gradient(135deg,#22e08a,#12b39a);color:#04231b;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:800">Start your report card →</a></div>' +
+    '<p style="color:#5b6b8c;font-size:13px;text-align:center;margin:6px 0 0">Your account: <b>' + esc(email) + '</b></p>' +
+    '<p style="color:#5b6b8c;font-size:14px;margin:22px 0 0">You are our star ⭐ — thank you for supporting yourself on this trading-behaviour journey. We can\'t wait to see your discipline grow.<br><br>— Team ChintasMoney</p>';
+  await sendEmail(env, { to: email, subject: "Welcome to ChintasMoney ⭐ — your journey starts now", html: emailShell(inner) });
 }
 
 // Minimal HTML escape for email fields (worker has no shared esc for this).
@@ -563,26 +618,17 @@ function weekStats(trades) {
 async function sendWeeklyEmail(env, o) {
   if (!env.RESEND_API_KEY || !env.RECEIPT_FROM || !o.email) return;
   var s = o.stats;
-  var html =
-    '<div style="font-family:system-ui,Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto;color:#0f1730">' +
-    '<h2 style="margin:0 0 4px">Your week in trading 📊</h2>' +
-    '<p style="color:#5b6b8c;margin:0 0 18px">Hi ' + esc(o.name || "trader") + ', here\'s your ChintasMoney discipline summary for the last 7 days.</p>' +
-    '<div style="border:1px solid #e6ebf5;border-radius:12px;padding:16px 18px">' +
-    '<table style="width:100%;border-collapse:collapse;font-size:14px">' +
-    '<tr><td style="padding:6px 0;color:#5b6b8c">Discipline score</td><td style="padding:6px 0;text-align:right;font-weight:800">' + s.disc + ' / 100</td></tr>' +
-    '<tr><td style="padding:6px 0;color:#5b6b8c">Trades logged</td><td style="padding:6px 0;text-align:right;font-weight:700">' + s.n + '</td></tr>' +
-    '<tr><td style="padding:6px 0;color:#5b6b8c">Win rate</td><td style="padding:6px 0;text-align:right;font-weight:700">' + s.winRate + '%</td></tr>' +
-    '<tr><td style="padding:6px 0;color:#5b6b8c">Trades without a stop-loss</td><td style="padding:6px 0;text-align:right;font-weight:700">' + s.noSL + '</td></tr>' +
+  var rw = function (k, v) { return '<tr><td style="padding:9px 0;color:#5b6b8c;border-bottom:1px solid #eef2f7">' + k + '</td><td style="padding:9px 0;text-align:right;font-weight:700;border-bottom:1px solid #eef2f7">' + v + '</td></tr>'; };
+  var inner =
+    '<h2 style="margin:0 0 4px;font-size:1.3rem">Your week in trading 📊</h2>' +
+    '<p style="color:#5b6b8c;margin:0 0 18px">Hi ' + esc(o.name || "trader") + ', here\'s your discipline summary for the last 7 days.</p>' +
+    '<div style="border:1px solid #e6ebf5;border-radius:12px;padding:4px 18px 10px"><table style="width:100%;border-collapse:collapse;font-size:14px">' +
+    rw("Discipline score", '<span style="font-size:1.05rem">' + s.disc + ' / 100</span>') +
+    rw("Trades logged", s.n) + rw("Win rate", s.winRate + "%") + rw("Trades without a stop-loss", s.noSL) +
     '</table></div>' +
-    '<p style="margin:16px 0 0"><a href="https://chintasmoney.com/app/" style="display:inline-block;background:#8b5cf6;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:700">Open your full report →</a></p>' +
-    '<p style="color:#98a6c4;font-size:12px;margin:16px 0 0">Educational behaviour analysis of your own trades. Not investment advice. ' +
-    'To stop weekly emails, reply to this message.</p></div>';
-  try {
-    await fetch("https://api.resend.com/emails", {
-      method: "POST", headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "content-type": "application/json" },
-      body: JSON.stringify({ from: env.RECEIPT_FROM, to: [o.email], subject: "Your weekly discipline report — score " + s.disc + "/100", html: html, reply_to: "support@chintasmoney.com" }),
-    });
-  } catch (e) {}
+    '<div style="text-align:center;margin:22px 0 6px"><a href="' + APP_URL + '" style="display:inline-block;background:linear-gradient(135deg,#22e08a,#12b39a);color:#04231b;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:800">Open your full report →</a></div>' +
+    '<p style="color:#5b6b8c;font-size:13px;margin:18px 0 0">Keep showing up — discipline compounds. We\'re proud of you. 💚<br>— Team ChintasMoney</p>';
+  await sendEmail(env, { to: o.email, subject: "Your weekly discipline report — score " + s.disc + "/100", html: emailShell(inner) });
 }
 async function sendWeeklyReports(env) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY || !env.RESEND_API_KEY) return;
@@ -617,6 +663,15 @@ async function sendWeeklyReports(env) {
   } catch (e) {}
 }
 
+// Welcome email on first sign-in. Client calls this once per new account.
+async function handleWelcome(request, env) {
+  let b; try { b = await request.json(); } catch (e) { return aRes({ error: "bad_request" }, 400); }
+  const email = b && typeof b.email === "string" ? b.email.trim() : "";
+  if (!email || email.indexOf("@") === -1) return aRes({ error: "bad_email" }, 400);
+  await sendWelcomeEmail(env, email);
+  return aRes({ ok: true }, 200);
+}
+
 export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(sendWeeklyReports(env));
@@ -624,6 +679,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (request.method === "POST" && url.pathname === "/api/razorpay/webhook") return handleRzpWebhook(request, env);
+    if (request.method === "POST" && url.pathname === "/api/welcome") return handleWelcome(request, env);
     if (request.method === "GET" && url.pathname === "/api/admin/razorpay") return handleAdminRazorpay(request, env);
     if (request.method === "POST" && url.pathname === "/api/admin/login") return handleAdminLogin(request, env);
     if (request.method === "GET" && url.pathname === "/api/admin/data") return handleAdminData(request, env);
