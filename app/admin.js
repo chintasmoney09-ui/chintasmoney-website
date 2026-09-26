@@ -130,7 +130,20 @@
       ".cm-inv{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px}",
       ".cm-inv-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}",
       ".cm-inv-amt{font-size:1.35rem;font-weight:800}",
-      ".cm-inv .code{font-family:ui-monospace,monospace;font-size:.78rem;color:#475569}"
+      ".cm-inv .code{font-family:ui-monospace,monospace;font-size:.78rem;color:#475569}",
+      ".cm-cal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}",
+      ".cm-cal-hd h3{margin:0;font-size:1.1rem}",
+      ".cm-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}",
+      ".cm-cal .dow{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;text-align:center;padding:4px 0;font-weight:700}",
+      ".cm-day{min-height:74px;border:1px solid #e2e8f0;border-radius:10px;padding:6px;background:#fff;display:flex;flex-direction:column;gap:3px}",
+      ".cm-day.empty{background:transparent;border:none}",
+      ".cm-day.today{border-color:#8b5cf6;box-shadow:0 0 0 1px #8b5cf6 inset}",
+      ".cm-day .dn{font-size:.72rem;font-weight:700;color:#64748b}",
+      ".cm-pill{font-size:.66rem;font-weight:700;border-radius:6px;padding:1px 5px;display:inline-block}",
+      ".cm-pill.new{background:#dcfce7;color:#166534}.cm-pill.act{background:#ede9fe;color:#5b21b6}",
+      ".cm-day.plan{cursor:pointer}.cm-day.plan:hover{border-color:#8b5cf6}",
+      ".cm-chip{font-size:.66rem;background:#eef2ff;color:#3730a3;border-radius:6px;padding:1px 5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+      "@media(max-width:640px){.cm-day{min-height:58px}.cm-cal{gap:3px}}"
     ].join("");
     document.head.appendChild(s);
   })();
@@ -233,9 +246,24 @@
   // ===========================================================================
   //  SHELL
   // ===========================================================================
-  var TABTITLE = { overview: "Overview", people: "People Logged", catalogue: "Product Catalogue & Prices",
+  var TABTITLE = { overview: "Overview", people: "People Logged", calendar: "Activity Calendar",
+    content: "Content Calendar", catalogue: "Product Catalogue & Prices",
     revenue: "Revenue, Invoices & Refunds", gating: "Locked Sections & Gating", flags: "Feature Flags",
     exportt: "Export / Download", privacy: "Privacy & Security" };
+
+  // Month shown by the calendars (0 = current month, -1 = last month, etc.)
+  var CAL_OFFSET = 0;
+  function monthMeta(offset) {
+    var now = new Date();
+    var d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+    var y = d.getFullYear(), m = d.getMonth();
+    return { y: y, m: m, first: new Date(y, m, 1).getDay(), days: new Date(y, m + 1, 0).getDate(),
+      label: d.toLocaleString("en-US", { month: "long", year: "numeric" }) };
+  }
+  function ymd(y, m, day) { return y + "-" + String(m + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0"); }
+  // Content plan persists per-device via admin config.
+  function contentPlan() { var c = CM.adminConfig(); return c.contentPlan || {}; }
+  function saveContentPlan(p) { var c = CM.adminConfig(); c.contentPlan = p; CM.saveAdmin(c); }
 
   function render() {
     if (!isAuthed()) return renderLogin();
@@ -246,7 +274,8 @@
 
     var side = el('<aside class="cm-side"></aside>');
     side.appendChild(el('<a class="cm-brand" href="index.html"><img src="assets/logo.png" alt=""/><span>ChintasMoney<small>CONTROL PANEL</small></span></a>'));
-    [["overview", "▦ Overview"], ["people", "👥 People logged"], ["catalogue", "🏷️ Products & prices"],
+    [["overview", "▦ Overview"], ["people", "👥 People logged"], ["calendar", "📅 Activity calendar"],
+     ["content", "🗓️ Content calendar"], ["catalogue", "🏷️ Products & prices"],
      ["revenue", "₹ Revenue & invoices"], ["gating", "🔒 Locked sections"], ["flags", "⚑ Feature flags"],
      ["exportt", "⬇ Export everything"], ["privacy", "🛡️ Privacy & security"]].forEach(function (t) {
       var b = el('<button class="cm-nav' + (TAB === t[0] ? " on" : "") + '">' + t[1] + '</button>');
@@ -295,7 +324,105 @@
   // ===========================================================================
   //  TABS
   // ===========================================================================
+  function calMonthNav(v) {
+    var mm = monthMeta(CAL_OFFSET);
+    var hd = el('<div class="cm-cal-hd"></div>');
+    var prev = el('<button class="cm-btn sm">‹ Prev</button>');
+    var next = el('<button class="cm-btn sm">Next ›</button>');
+    prev.addEventListener("click", function () { CAL_OFFSET--; render(); });
+    next.addEventListener("click", function () { CAL_OFFSET++; render(); });
+    hd.appendChild(prev);
+    hd.appendChild(el('<h3>' + mm.label + '</h3>'));
+    hd.appendChild(next);
+    v.appendChild(hd);
+    return mm;
+  }
+  function calGrid() {
+    var g = el('<div class="cm-cal"></div>');
+    ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach(function (d) { g.appendChild(el('<div class="dow">' + d + '</div>')); });
+    return g;
+  }
+
   var TABS = {
+    // -------- ACTIVITY CALENDAR (signups + logins per day) -------------------
+    calendar: function () {
+      var v = el('<div></div>');
+      v.appendChild(el('<div class="cm-note" style="margin-bottom:14px">New signups and active users per day, from real accounts. Green = new signups, purple = users last active that day.</div>'));
+      var mm = calMonthNav(v);
+      var users = allUsers();
+      var newBy = {}, actBy = {};
+      users.forEach(function (u) {
+        if (u.joined) newBy[u.joined] = (newBy[u.joined] || 0) + 1;
+        if (u.last) actBy[u.last] = (actBy[u.last] || 0) + 1;
+      });
+      var todayStr = new Date().toISOString().slice(0, 10);
+      var g = calGrid();
+      for (var i = 0; i < mm.first; i++) g.appendChild(el('<div class="cm-day empty"></div>'));
+      var mNew = 0, mAct = 0;
+      for (var day = 1; day <= mm.days; day++) {
+        var key = ymd(mm.y, mm.m, day);
+        var cell = el('<div class="cm-day' + (key === todayStr ? " today" : "") + '"></div>');
+        cell.appendChild(el('<span class="dn">' + day + '</span>'));
+        if (newBy[key]) { cell.appendChild(el('<span class="cm-pill new">+' + newBy[key] + ' new</span>')); mNew += newBy[key]; }
+        if (actBy[key]) { cell.appendChild(el('<span class="cm-pill act">' + actBy[key] + ' active</span>')); mAct += actBy[key]; }
+        g.appendChild(cell);
+      }
+      v.appendChild(g);
+      var s = el('<div class="cm-grid cm-g3" style="margin-top:16px"></div>');
+      s.appendChild(stat("New signups", String(mNew), "this month"));
+      s.appendChild(stat("Active users", String(mAct), "last-active this month"));
+      s.appendChild(stat("Total users", String(users.length), liveOn() ? "live" : "demo"));
+      v.appendChild(s);
+      return v;
+    },
+
+    // -------- CONTENT CALENDAR (plan your posts) -----------------------------
+    content: function () {
+      var v = el('<div></div>');
+      v.appendChild(el('<div class="cm-note" style="margin-bottom:14px">Plan your posts/Reels. Tap a day to add or edit what goes out. Saved on this device.</div>'));
+      var tools = el('<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>');
+      var auto = el('<button class="cm-btn sm p">✨ Auto-plan 22 Reels from tomorrow</button>');
+      auto.addEventListener("click", function () {
+        if (!confirm("Add 'Reel #1..#22' to the next 22 days starting tomorrow? Existing entries on those days are kept.")) return;
+        var plan = contentPlan(); var d = new Date(); d.setDate(d.getDate() + 1);
+        for (var n = 1; n <= 22; n++) {
+          var key = d.toISOString().slice(0, 10);
+          plan[key] = (plan[key] || []).concat(["Reel #" + n]);
+          d.setDate(d.getDate() + 1);
+        }
+        saveContentPlan(plan); render();
+      });
+      var clear = el('<button class="cm-btn sm danger">Clear all planned</button>');
+      clear.addEventListener("click", function () { if (confirm("Remove all planned posts?")) { saveContentPlan({}); render(); } });
+      tools.appendChild(auto); tools.appendChild(clear);
+      v.appendChild(tools);
+      var mm = calMonthNav(v);
+      var plan = contentPlan();
+      var todayStr = new Date().toISOString().slice(0, 10);
+      var g = calGrid();
+      for (var i = 0; i < mm.first; i++) g.appendChild(el('<div class="cm-day empty"></div>'));
+      for (var day = 1; day <= mm.days; day++) {
+        (function (key) {
+          var cell = el('<div class="cm-day plan' + (key === todayStr ? " today" : "") + '"></div>');
+          cell.appendChild(el('<span class="dn">' + key.slice(8) + '</span>'));
+          (plan[key] || []).forEach(function (item) { cell.appendChild(el('<span class="cm-chip" title="' + esc(item) + '">' + esc(item) + '</span>')); });
+          cell.addEventListener("click", function () {
+            var cur = (plan[key] || []).join("; ");
+            var next = prompt("Posts for " + key + " (separate multiple with ; ). Leave blank to clear:", cur);
+            if (next === null) return;
+            var items = next.split(";").map(function (s) { return s.trim(); }).filter(Boolean);
+            if (items.length) plan[key] = items; else delete plan[key];
+            saveContentPlan(plan); render();
+          });
+          g.appendChild(cell);
+        })(ymd(mm.y, mm.m, day));
+      }
+      v.appendChild(g);
+      var count = Object.keys(plan).reduce(function (a, k) { return a + plan[k].length; }, 0);
+      v.appendChild(el('<div class="cm-hint" style="margin-top:12px">' + count + ' post(s) planned in total. Tip: use the button above to schedule your 22 videos in one tap, then tweak days.</div>'));
+      return v;
+    },
+
     overview: function () {
       var v = el('<div></div>');
       var users = allUsers();
