@@ -539,7 +539,88 @@ async function handleAdminRazorpay(request, env) {
   return aRes({ ok: true, resource: resource, items: j.items || [], count: j.count || 0 }, 200);
 }
 
+// ---- Weekly email report (Platinum/Diamond) --------------------------------
+// Runs on the cron trigger. Emails each paid user a short discipline summary of
+// their own last-7-days trades. Best-effort; needs Resend + Supabase configured.
+function tradePnl(t) { var dir = /sell/i.test(t.side || "") ? -1 : 1; return dir * ((+t.exit || 0) - (+t.entry || 0)) * (+t.qty || 0); }
+function tradeDisc(t) {
+  var s = 100;
+  if (t.plannedSL == null || t.plannedSL === "") s -= 40;
+  if (!/target|stop-loss/i.test(t.exit_reason || "")) s -= 25;
+  if (/revenge|fomo|fear|greed|bored/i.test((t.exit_reason || "") + (t.emotion || ""))) s -= 25;
+  return Math.max(0, s);
+}
+function weekStats(trades) {
+  var now = Date.now(), wk = 7 * 864e5;
+  var recent = (trades || []).filter(function (t) { var tm = new Date(t.date).getTime(); return isFinite(tm) && tm >= now - wk; });
+  if (!recent.length) return null;
+  var wins = recent.filter(function (t) { return tradePnl(t) > 0; }).length;
+  var disc = Math.round(recent.reduce(function (a, t) { return a + tradeDisc(t); }, 0) / recent.length);
+  var noSL = recent.filter(function (t) { return t.plannedSL == null || t.plannedSL === ""; }).length;
+  var pnl = recent.reduce(function (a, t) { return a + tradePnl(t); }, 0);
+  return { n: recent.length, wins: wins, winRate: Math.round(wins / recent.length * 100), disc: disc, noSL: noSL, pnl: Math.round(pnl) };
+}
+async function sendWeeklyEmail(env, o) {
+  if (!env.RESEND_API_KEY || !env.RECEIPT_FROM || !o.email) return;
+  var s = o.stats;
+  var html =
+    '<div style="font-family:system-ui,Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto;color:#0f1730">' +
+    '<h2 style="margin:0 0 4px">Your week in trading 📊</h2>' +
+    '<p style="color:#5b6b8c;margin:0 0 18px">Hi ' + esc(o.name || "trader") + ', here\'s your ChintasMoney discipline summary for the last 7 days.</p>' +
+    '<div style="border:1px solid #e6ebf5;border-radius:12px;padding:16px 18px">' +
+    '<table style="width:100%;border-collapse:collapse;font-size:14px">' +
+    '<tr><td style="padding:6px 0;color:#5b6b8c">Discipline score</td><td style="padding:6px 0;text-align:right;font-weight:800">' + s.disc + ' / 100</td></tr>' +
+    '<tr><td style="padding:6px 0;color:#5b6b8c">Trades logged</td><td style="padding:6px 0;text-align:right;font-weight:700">' + s.n + '</td></tr>' +
+    '<tr><td style="padding:6px 0;color:#5b6b8c">Win rate</td><td style="padding:6px 0;text-align:right;font-weight:700">' + s.winRate + '%</td></tr>' +
+    '<tr><td style="padding:6px 0;color:#5b6b8c">Trades without a stop-loss</td><td style="padding:6px 0;text-align:right;font-weight:700">' + s.noSL + '</td></tr>' +
+    '</table></div>' +
+    '<p style="margin:16px 0 0"><a href="https://chintasmoney.com/app/" style="display:inline-block;background:#8b5cf6;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:700">Open your full report →</a></p>' +
+    '<p style="color:#98a6c4;font-size:12px;margin:16px 0 0">Educational behaviour analysis of your own trades. Not investment advice. ' +
+    'To stop weekly emails, reply to this message.</p></div>';
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST", headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "content-type": "application/json" },
+      body: JSON.stringify({ from: env.RECEIPT_FROM, to: [o.email], subject: "Your weekly discipline report — score " + s.disc + "/100", html: html, reply_to: "support@chintasmoney.com" }),
+    });
+  } catch (e) {}
+}
+async function sendWeeklyReports(env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY || !env.RESEND_API_KEY) return;
+  const base = env.SUPABASE_URL.replace(/\/$/, "");
+  const h = { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: "Bearer " + env.SUPABASE_SERVICE_ROLE_KEY };
+  // Map user_id -> email from auth.
+  const emails = {};
+  try {
+    for (let page = 1; page <= 50; page++) {
+      const ur = await fetch(base + "/auth/v1/admin/users?page=" + page + "&per_page=200", { headers: h });
+      if (!ur.ok) break;
+      const uj = await ur.json(); const batch = uj.users || (Array.isArray(uj) ? uj : []);
+      if (!batch.length) break;
+      batch.forEach(function (u) { emails[u.id] = u.email; });
+      if (batch.length < 200) break;
+    }
+  } catch (e) {}
+  // Paid users' state → weekly stats → email.
+  try {
+    const sr = await fetch(base + "/rest/v1/user_state?select=user_id,data", { headers: h });
+    if (!sr.ok) return;
+    const rows = await sr.json();
+    for (const row of rows) {
+      const data = row.data || {}; const prof = data.profile || {};
+      if (prof.plan !== "pro" && prof.plan !== "diamond") continue;
+      const stats = weekStats(data.trades || []);
+      if (!stats) continue; // nothing logged this week
+      const email = emails[row.user_id];
+      if (!email) continue;
+      await sendWeeklyEmail(env, { email: email, name: prof.name, stats: stats });
+    }
+  } catch (e) {}
+}
+
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(sendWeeklyReports(env));
+  },
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (request.method === "POST" && url.pathname === "/api/razorpay/webhook") return handleRzpWebhook(request, env);
