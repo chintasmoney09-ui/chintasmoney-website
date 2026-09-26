@@ -1420,9 +1420,13 @@
         '<div style="margin-top:12px">' + svgLine(p.series, { id: "dream", color: "#22e08a", h: 170, zeroBase: true }) + '</div>' +
         '<div class="' + (reached ? "" : "notice") + '" style="margin-top:10px;font-weight:600;color:' + (reached ? "var(--green)" : "") + '">' +
           (reached ? "🎉 You reach your " + esc(name) + " goal" + (reachM ? " in about " + Math.floor(reachM / 12) + "y " + (reachM % 12) + "m." : ".") : "At this pace you fall short of " + money(target) + ". Increase monthly investing or time.") + '</div>';
-      var save = el('<button class="btn btn-primary" style="margin-top:12px">💾 Save this dream</button>');
+      var btnRow = el('<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"></div>');
+      var save = el('<button class="btn btn-primary">💾 Save this dream</button>');
       save.addEventListener("click", function () { CM.addDream({ name: name, emoji: emoji, target: target, start: start, monthly: monthly, rate: rate, years: years }); go("dreams"); render(); });
-      out.appendChild(save);
+      var dl = el('<button class="btn">⬇ Download plan</button>');
+      dl.addEventListener("click", function () { printDreamPlan({ name: name, emoji: emoji, target: target, start: start, monthly: monthly, rate: rate, years: years, fv: p.fv, invested: p.invested, growth: growth, reachM: reachM, reached: reached }); });
+      btnRow.appendChild(save); btnRow.appendChild(dl);
+      out.appendChild(btnRow);
       out.appendChild(el('<p class="hint" style="margin-top:10px"><span class="mock-tag">ILLUSTRATIVE</span> A projection using your assumed return — not a guarantee. Markets go up and down. Discipline + time is the real edge.</p>'));
     }
     v.appendChild(resultsCard);   // chart above
@@ -1436,8 +1440,11 @@
         var p = CM.project(d.start, d.monthly, d.rate, d.years);
         var pct = Math.min(100, Math.round(p.fv / d.target * 100));
         var row = el('<div style="margin:12px 0"><div style="display:flex;justify-content:space-between;align-items:center"><div><b>' + esc(d.emoji) + ' ' + esc(d.name) + '</b> <span class="hint">· ₹' + (d.monthly).toLocaleString("en-IN") + '/mo · ' + d.years + 'y</span></div><span class="mono ' + (pct >= 100 ? "pos" : "") + '">' + pct + '% of ' + fmtShortMoney(d.target) + '</span></div><div class="bar" style="margin-top:6px"><i style="width:' + pct + '%"></i></div></div>');
-        var del = el('<button class="btn btn-sm btn-ghost" style="margin-top:2px">remove</button>'); del.addEventListener("click", function () { CM.deleteDream(d.id); render(); });
-        row.appendChild(del); sc.appendChild(row);
+        var acts = el('<div style="display:flex;gap:8px;margin-top:2px"></div>');
+        var dld = el('<button class="btn btn-sm">⬇ Download plan</button>');
+        dld.addEventListener("click", function () { var pp = CM.project(d.start, d.monthly, d.rate, d.years); var rm = CM.monthsToTarget(d.start, d.monthly, d.rate, d.target); printDreamPlan({ name: d.name, emoji: d.emoji, target: d.target, start: d.start, monthly: d.monthly, rate: d.rate, years: d.years, fv: pp.fv, invested: pp.invested, growth: pp.fv - pp.invested, reachM: rm, reached: pp.fv >= d.target }); });
+        var del = el('<button class="btn btn-sm btn-ghost">remove</button>'); del.addEventListener("click", function () { CM.deleteDream(d.id); render(); });
+        acts.appendChild(dld); acts.appendChild(del); row.appendChild(acts); sc.appendChild(row);
       });
       sc.appendChild(el('<p class="hint" style="margin-top:8px"><b>Plus</b> sends you a monthly dream-progress report so you stay on track.</p>'));
       v.appendChild(sc);
@@ -1446,6 +1453,57 @@
     return v;
   };
   function fmtShortMoney(n) { var a = Math.abs(n); return a >= 1e7 ? "₹" + (n / 1e7).toFixed(1) + "Cr" : a >= 1e5 ? "₹" + (n / 1e5).toFixed(1) + "L" : money(n); }
+
+  // Branded, printable dream plan (Save as PDF). Opens in a new window.
+  function printDreamPlan(o) {
+    var win = window.open("", "_blank");
+    if (!win) { toast("Allow pop-ups to download your plan", "err"); return; }
+    var yrs = Math.max(1, o.years || 1);
+    var reachTxt = o.reached ? (o.reachM ? "You reach this goal in about " + Math.floor(o.reachM / 12) + " years " + (o.reachM % 12) + " months." : "You reach this goal within your timeline.") : "At this pace you fall a little short — nudge up the monthly amount or the years and you'll get there.";
+    var rowP = function (k, v) { return '<tr><td style="padding:11px 0;color:#5b6b8c;border-bottom:1px solid #eef2f7">' + k + '</td><td style="padding:11px 0;text-align:right;font-weight:700;border-bottom:1px solid #eef2f7">' + v + '</td></tr>'; };
+    var html =
+      '<!doctype html><html><head><meta charset="utf-8"><title>' + esc(o.name) + ' — ChintasMoney plan</title>' +
+      '<style>@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap");' +
+      'body{font-family:"Plus Jakarta Sans",system-ui,Arial,sans-serif;color:#0f1730;margin:0;background:#f4f6fb}' +
+      '.wrap{max-width:640px;margin:24px auto;background:#fff;border-radius:18px;overflow:hidden;border:1px solid #e6ebf5}' +
+      '.hd{background:linear-gradient(135deg,#0b1533,#1e2a5a);padding:26px;text-align:center;color:#fff}' +
+      '.hd img{height:40px}.hd .t{font-size:.8rem;letter-spacing:.14em;color:#a9b6da;margin-top:6px}' +
+      '.body{padding:26px}.big{font-size:2.6rem;text-align:center;margin:6px 0}' +
+      '.goal{text-align:center;font-size:1.5rem;font-weight:800;margin:0 0 2px}' +
+      '.sub{text-align:center;color:#5b6b8c;margin:0 0 18px}' +
+      'table{width:100%;border-collapse:collapse;font-size:15px}' +
+      '.corpus{background:linear-gradient(135deg,#eafff5,#e6fbf6);border:1px solid #b8f0dd;border-radius:14px;padding:16px;text-align:center;margin:18px 0}' +
+      '.corpus .n{font-size:1.9rem;font-weight:800;color:#12b39a}' +
+      '.note{background:#f8fafc;border:1px dashed #cbd5e1;border-radius:12px;padding:12px 14px;color:#475569;font-size:13px;margin-top:16px}' +
+      '.ft{background:#0b1533;color:#a9b6da;padding:18px 26px;font-size:12px;line-height:1.7}.ft a{color:#7cc7ff}' +
+      '.btn{display:inline-block;margin:18px auto 0;padding:11px 20px;border:none;border-radius:10px;background:#8b5cf6;color:#fff;cursor:pointer;font-weight:700;font-size:.95rem}' +
+      '@media print{.btn{display:none}body{background:#fff}.wrap{border:none;margin:0}}</style></head><body>' +
+      '<div class="wrap"><div class="hd"><img src="https://chintasmoney.com/assets/logo-full.png" alt="ChintasMoney"/><div class="t">DREAM PLANNER</div></div>' +
+      '<div class="body">' +
+      '<div class="big">' + esc(o.emoji || "🎯") + '</div>' +
+      '<div class="goal">' + esc(o.name) + '</div>' +
+      '<p class="sub">Your personal ' + yrs + '-year plan · made ' + new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) + '</p>' +
+      '<div class="corpus"><div style="color:#0f7a5f;font-size:.85rem;font-weight:700">In ' + yrs + ' years you could have</div><div class="n">' + money(o.fv) + '</div></div>' +
+      '<table>' +
+      rowP("Your goal", money(o.target)) +
+      rowP("Starting capital", money(o.start)) +
+      rowP("Invest every month", money(o.monthly)) +
+      rowP("Assumed return", o.rate + "% / year") +
+      rowP("Time horizon", yrs + " years") +
+      rowP("Total you invest", money(o.invested)) +
+      rowP("Growth from compounding", money(o.growth)) +
+      '<tr><td style="padding:13px 0 0;font-weight:800;font-size:1.05rem">Projected corpus</td><td style="padding:13px 0 0;text-align:right;font-weight:800;font-size:1.15rem;color:#12b39a">' + money(o.fv) + '</td></tr>' +
+      '</table>' +
+      '<div class="note"><b>' + esc(o.name) + '</b> — ' + esc(reachTxt) + '<br><br>Your dream is built on <b>discipline + time</b>, not luck. Size every trade, protect your capital, and let compounding do the quiet work. We believe in you. 💚</div>' +
+      '<div class="note" style="border-style:solid;border-color:#e6ebf5;background:#fff;color:#0f1730"><b>Thank you</b> for planning your future with ChintasMoney. This is what disciplined trading is really for — turning good habits into the life you want.</div>' +
+      '<div style="text-align:center"><button class="btn" onclick="window.print()">🖨 Save as PDF / Print</button></div>' +
+      '</div>' +
+      '<div class="ft"><b style="color:#fff">ChintasMoney</b> · reduce your losses by understanding your behaviour.<br>' +
+      'chintasmoney.com · support: chintasmoney@gmail.com<br>' +
+      '<span style="color:#6f83ab">Illustrative projection using your assumed return — not a guarantee. Markets rise and fall. Not investment advice.</span></div>' +
+      '</div></body></html>';
+    win.document.write(html); win.document.close();
+  }
 
   // ---- Modal dialog --------------------------------------------------------
   function dialog(title, bodyHtml, onMount) {

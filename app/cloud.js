@@ -21,6 +21,17 @@
   }
   function rerender() { if (window.__cmRender) window.__cmRender(); }
 
+  // Send the welcome email exactly once per account (tracked per-user locally).
+  function maybeWelcome(user) {
+    try {
+      if (!user || !user.email) return;
+      var k = "cm.welcomed." + user.id;
+      if (localStorage.getItem(k) === "1") return;
+      localStorage.setItem(k, "1");
+      fetch("/api/welcome", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: user.email }) }).catch(function () {});
+    } catch (e) {}
+  }
+
   // ---- state sync ----------------------------------------------------------
   var pushTimer = null;
   function schedulePush() {
@@ -153,11 +164,11 @@
     patchSave();
     Cloud.client.auth.getSession().then(function (r) {
       var session = r && r.data && r.data.session;
-      if (session) { Cloud.user = session.user; Cloud.state = "authed"; pull().then(rerender); }
+      if (session) { Cloud.user = session.user; Cloud.state = "authed"; maybeWelcome(session.user); pull().then(rerender); }
       else { Cloud.state = "anon"; rerender(); }
     });
     Cloud.client.auth.onAuthStateChange(function (_evt, session) {
-      if (session && session.user) { Cloud.user = session.user; Cloud.state = "authed"; pull().then(rerender); }
+      if (session && session.user) { Cloud.user = session.user; Cloud.state = "authed"; maybeWelcome(session.user); pull().then(rerender); }
       else { Cloud.user = null; Cloud.state = "anon"; rerender(); }
     });
   }).catch(function () { Cloud.state = "error"; rerender(); });
