@@ -2126,7 +2126,22 @@
       } else {
         var planId = price === 199 ? "plus" : price === 499 ? "pro" : price === 999 ? "diamond" : null;
         if (!planId) { toast("Unknown plan", "err"); return; }
-        window.CMCloud.checkout(planId, function () { render(); celebrate("plan", planId); });
+        // Guard against accidental double-payment / unnecessary changes.
+        var RANK = { free: 0, plus: 1, pro: 2, diamond: 3 };
+        var cur = CM.load().profile.plan || "free";
+        if (planId === cur) {
+          dialog("You're already on " + CM.PLANS[cur].name, '<p class="hint">You already have this plan active — no need to pay again. You can manage or cancel it from <b>Profile &amp; Plan</b>.</p><div style="margin-top:14px"><button class="btn btn-primary" id="okCur">Got it</button></div>', function (b, close) { b.querySelector("#okCur").addEventListener("click", close); });
+          return;
+        }
+        var doIt = function () { window.CMCloud.checkout(planId, function () { render(); celebrate("plan", planId); }); };
+        if (RANK[planId] < RANK[cur]) {
+          dialog("Switch down to " + CM.PLANS[planId].name + "?", '<p class="hint">You\'re currently on <b>' + CM.PLANS[cur].name + '</b>. Switching to <b>' + CM.PLANS[planId].name + '</b> (₹' + CM.PLANS[planId].price + '/mo) is a downgrade — you\'ll lose the higher-plan features. Continue?</p><div style="display:flex;gap:10px;margin-top:16px"><button class="btn btn-primary" id="dOk">Yes, switch</button><button class="btn btn-ghost" id="dNo">Cancel</button></div>', function (b, close) {
+            b.querySelector("#dOk").addEventListener("click", function () { close(); doIt(); });
+            b.querySelector("#dNo").addEventListener("click", close);
+          });
+          return;
+        }
+        doIt();
       }
     });
   }
@@ -2160,13 +2175,30 @@
       card.appendChild(buy); packs.appendChild(card);
     });
     c.appendChild(packs);
-    c.appendChild(el('<h3 style="margin:18px 0 8px">Or subscribe</h3>'));
-    c.appendChild(el('<div class="tok-sub"><div><div style="font-weight:800">⚡ Go Plus — ₹199 / month</div><p class="hint" style="margin:4px 0 0">Unlimited trades &amp; full mistake analysis, plus <b>50 AI tokens a month</b>. Best for regular loggers.</p></div><button class="btn" id="tPlus">Go Plus · ₹199</button></div>'));
-    c.querySelector("#tPlus").addEventListener("click", function () { buyTokens(0, 199); });
-    c.appendChild(el('<div class="tok-sub" style="border-color:rgba(34,224,138,.35);background:rgba(34,224,138,.07)"><div><div style="font-weight:800">💎 Platinum — ₹499 / month <span class="badge b-green">Most popular</span></div><p class="hint" style="margin:4px 0 0"><b>Unlimited AI tokens</b>, unlimited Trade Replays, broker import, setup performance and weekly reports.</p></div><button class="btn btn-primary" id="tPlat">Go unlimited · ₹499</button></div>'));
-    c.querySelector("#tPlat").addEventListener("click", function () { buyTokens(0, 499); });
-    c.appendChild(el('<div class="tok-sub" style="border-color:rgba(245,184,73,.35);background:rgba(245,184,73,.07)"><div><div style="font-weight:800">👑 Diamond — ₹999 / month</div><p class="hint" style="margin:4px 0 0">Everything in Platinum, plus priority AI, a monthly 1:1 discipline review, multi-year backtesting and early access.</p></div><button class="btn" id="tDia">Go Diamond · ₹999</button></div>'));
-    c.querySelector("#tDia").addEventListener("click", function () { buyTokens(0, 999); });
+    // ---- Your subscription: always show what the user is on ----------------
+    var RANK = { free: 0, plus: 1, pro: 2, diamond: 3 };
+    var curId = CM.load().profile.plan || "free";
+    var curP = CM.PLANS[curId];
+    c.appendChild(el('<h3 style="margin:18px 0 8px">Your subscription</h3>'));
+    var banner = el('<div class="tok-sub" style="border-color:var(--violet);background:rgba(139,92,246,.10);align-items:center"><div><div style="font-weight:800">✓ You\'re on ' + curP.name + (curP.price ? ' — ₹' + curP.price + '/month' : ' (free)') + '</div><p class="hint" style="margin:4px 0 0">' + (ts.unlimited ? "Unlimited analyses included on your plan." : curId === "plus" ? "50 AI tokens a month + unlimited logging." : "You have " + (ts.unlimited ? "∞" : ts.total) + " analyses available. Upgrade for more.") + '</p></div><button class="btn btn-sm" id="tManage">Manage</button></div>');
+    c.appendChild(banner);
+    banner.querySelector("#tManage").addEventListener("click", function () { go("profile"); render(); });
+
+    c.appendChild(el('<h3 style="margin:18px 0 8px">' + (curId === "free" ? "Subscribe" : "Change plan") + '</h3>'));
+    [["plus", "⚡", "Go Plus", "Unlimited trades &amp; full mistake analysis, plus <b>50 AI tokens a month</b>."],
+     ["pro", "💎", "Platinum", "<b>Unlimited AI tokens</b>, unlimited Trade Replays, broker import, setup performance &amp; weekly reports."],
+     ["diamond", "👑", "Diamond", "Everything in Platinum, plus priority AI, a monthly 1:1 review, multi-year backtesting &amp; early access."]
+    ].forEach(function (p) {
+      var id = p[0], price = CM.PLANS[id].price, isCur = id === curId, lower = RANK[id] < RANK[curId];
+      var tag = isCur ? ' <span class="badge b-navy">Current</span>' : (id === "pro" ? ' <span class="badge b-green">Most popular</span>' : "");
+      var style = isCur ? ' style="border-color:var(--violet);background:rgba(139,92,246,.08)"' : (id === "pro" ? ' style="border-color:rgba(34,224,138,.35);background:rgba(34,224,138,.07)"' : "");
+      var row = el('<div class="tok-sub"' + style + '><div><div style="font-weight:800">' + p[1] + ' ' + p[2] + ' — ₹' + price + ' / month' + tag + '</div><p class="hint" style="margin:4px 0 0">' + p[3] + '</p></div></div>');
+      var btn;
+      if (isCur) { btn = el('<button class="btn" disabled>✓ Current plan</button>'); }
+      else if (lower) { btn = el('<button class="btn btn-ghost btn-sm">Downgrade</button>'); btn.addEventListener("click", function () { buyTokens(0, price); }); }
+      else { btn = el('<button class="btn btn-primary">Upgrade · ₹' + price + '</button>'); btn.addEventListener("click", function () { buyTokens(0, price); }); }
+      row.appendChild(btn); c.appendChild(row);
+    });
     c.appendChild(el('<p class="hint" style="margin-top:14px">1 token = one deep analysis (Trade Replay of one past trade). The ' + CM.FREE_TOKENS + ' free tokens are one-time per account; purchased tokens stay until used.</p>'));
     v.appendChild(c);
     // Walkthrough video sits at the bottom (below the balance & plans).
@@ -2448,13 +2480,16 @@
         '<h3>' + p.name + '</h3><div class="amt">' + (p.price ? "₹" + p.price : "Free") + '<span class="hint" style="font-size:.9rem;font-weight:500">' + (p.price ? "/" + p.cadence : "") + '</span></div><p class="hint">' + p.blurb + '</p>' +
         '<ul>' + p.features.slice(0, 7).map(function (f) { return '<li>' + esc(featLabel(f)) + '</li>'; }).join("") + '</ul></div>');
       var payMode = window.CM_CONFIG && window.CM_CONFIG.cloud && window.CM_CONFIG.razorpayKeyId && id !== "free";
-      var label = cur ? "Current plan" : (payMode ? "Subscribe · ₹" + Math.round((window.CM_CONFIG.planPrices[id] || 0) / 100) : "Switch to " + p.name);
-      var b = el('<button class="btn ' + (cur ? "" : "btn-primary") + '"' + (cur ? " disabled" : "") + '>' + label + '</button>');
+      var RANKP = { free: 0, plus: 1, pro: 2, diamond: 3 };
+      var lower = RANKP[id] < RANKP[s.profile.plan];
+      var priceR = p.price || Math.round((window.CM_CONFIG.planPrices[id] || 0) / 100);
+      var label = cur ? "✓ Current plan" : (id === "free" ? "Switch to Free" : (lower ? "Downgrade to " + p.name : (payMode ? "Upgrade · ₹" + priceR : "Switch to " + p.name)));
+      var b = el('<button class="btn ' + (cur ? "" : (lower ? "btn-ghost" : "btn-primary")) + '"' + (cur ? " disabled" : "") + '>' + label + '</button>');
       b.addEventListener("click", function () {
         if (cur) return;
         if (payMode) {
-          // A real purchase must be tied to an account — sign in first, then check out.
-          signInThen(function () { window.CMCloud.checkout(id, function () { render(); celebrate("plan", id); }); });
+          // Reuse the guarded buy flow (handles same-plan / downgrade confirmations).
+          signInThen(function () { buyTokens(0, p.price); });
         } else { CM.setProfile({ plan: id }); render(); }
       });
       card.appendChild(b); plans.appendChild(card);
