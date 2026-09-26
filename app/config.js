@@ -13,7 +13,7 @@ window.CM_CONFIG = {
   supabaseAnonKey: "sb_publishable_gOYAKgseiCmhO8hW8v5G5w_4S2PFWsa", // public "publishable" key — safe in the browser
 
   // From Razorpay → Settings → API Keys (use the Key ID, NOT the secret)
-  razorpayKeyId: "rzp_test_TdCzS1NuNM4aQJ", // TEST Key ID (public). Swap to rzp_live_… to go live. Secret lives only in the Cloudflare Worker.
+  razorpayKeyId: "rzp_live_TghHwuaNLfCqIx", // LIVE Key ID (public). Secret lives ONLY in the Cloudflare Worker, never here.
 
   // Subscription prices in paise (₹199 = 19900). Editable anytime.
   planPrices: { plus: 19900, pro: 49900, diamond: 99900 },
