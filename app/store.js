@@ -34,8 +34,8 @@
   };
   var FEATURE_MATRIX = {
     home: "free", log: "free", trades: "free", card: "free", profile: "free", calc: "free", analytics: "free", markets: "free", today: "free", report: "free", dreams: "free",
-    insights: "plus", coach: "plus", badges: "plus", leaderboard: "plus",
-    strategy: "pro", replay: "pro"
+    insights: "plus", coach: "plus", badges: "plus", leaderboard: "plus", timing: "plus",
+    strategy: "pro", replay: "pro", rules: "pro"
   };
   var PLAN_RANK = { free: 0, plus: 1, pro: 2, diamond: 3 };
   function planAllows(p, area) { return PLAN_RANK[p] >= PLAN_RANK[FEATURE_MATRIX[area] || "free"]; }
