@@ -27,7 +27,9 @@
     { sep: true, group: "Understand yourself" },
     { id: "replay", label: "Trade Replay", ic: "🎬" },
     { id: "insights", label: "Mistake Insights", ic: "🔍" },
+    { id: "timing", label: "Time & Day Edge", ic: "🕐" },
     { id: "strategy", label: "Setup Performance", ic: "▦" },
+    { id: "rules", label: "Rules & Adherence", ic: "📏" },
     { id: "coach", label: "Discipline Coach", ic: "✦" },
     { sep: true, group: "Play" },
     { id: "badges", label: "Streaks & Badges", ic: "🏅" },
@@ -53,7 +55,9 @@
     dreams: "Set a money goal (a bike, a trip) and see how disciplined trading gets you there.",
     replay: "Replay any trade on the real market for its actual dates — see what would have happened, and whether you exited too early or too late.",
     insights: "Your repeating mistakes, ranked by how often they cost you — so you know exactly what to fix first.",
+    timing: "Discover the exact days and hours you trade your best — and the danger windows where discipline slips.",
     strategy: "See which of your setups actually make money, and which quietly bleed your account.",
+    rules: "Set your own trading rules and see, honestly, how often you actually follow them.",
     coach: "Ask the AI coach about your own trading and get an honest, data-based verdict.",
     badges: "Earn streaks and badges for disciplined habits — keep your streak alive.",
     leaderboard: "See how your discipline ranks against other traders. We reward discipline, never profit.",
@@ -309,6 +313,8 @@
     badges: { em: "🏅", title: "Streaks & Badges", tag: "Turn discipline into a game you want to win.", feats: ["Earn badges for real discipline habits — not for winning", "A 12-week activity heatmap of your consistency", "Daily streaks that keep you logging"] },
     leaderboard: { em: "🏆", title: "Discipline League", tag: "Climb from Bronze to Diamond vs traders like you.", feats: ["Ranked on discipline, never on luck or P&L", "Weekly promotion & relegation zones", "A shareable rank card to flex your consistency"] },
     strategy: { em: "▦", title: "Setup Performance", tag: "Find the setups that actually pay.", feats: ["Win-rate & net P&L for every setup you trade", "Spot the strategy quietly bleeding your account", "R-multiples & time-of-day edge"] },
+    timing: { em: "🕐", title: "Time & Day Edge", tag: "When are you at your best — and your worst?", feats: ["Your discipline & win-rate by day of week", "The hours you should (and shouldn't) trade", "Spot the danger windows where you leak money"] },
+    rules: { em: "📏", title: "Rules & Adherence", tag: "Set your rules — then see if you keep them.", feats: ["Pick the discipline rules that matter to you", "An honest adherence score for each rule", "Catch the rule you keep breaking before it costs you"] },
     replay: { em: "🎬", title: "Trade Replay", tag: "Replay any trade on the real market — see what would have happened.", feats: ["Your entry, stop & exit drawn on the actual market for that trade's dates", "Did the market hit your stop or target? How much did you leave on the table?", "Your behaviour & emotion vs what the market really did — the honest verdict"] }
   };
   function paywall(area) {
@@ -2268,6 +2274,86 @@
       c.appendChild(el('<div style="margin:10px 0"><div style="display:flex;justify-content:space-between"><b>' + esc(m.name) + '</b><span class="muted">×' + m.n + '</span></div><div class="bar coral" style="margin:6px 0"><i style="width:' + Math.round(m.n / max * 100) + '%"></i></div><div class="hint">' + esc(m.tip) + '</div></div>'));
     });
     v.appendChild(c);
+    return v;
+  };
+
+  // ---- TIME & DAY EDGE (Plus) ----------------------------------------------
+  VIEWS.timing = function () {
+    var v = el('<div></div>');
+    v.appendChild(topbar("Time & Day Edge", "When you trade your best — and the danger windows where discipline slips."));
+    var trades = CM.load().trades.filter(function (t) { var tm = new Date(t.date).getTime(); return isFinite(tm); });
+    if (trades.length < 3) { var e = el('<div class="card paywall"><div class="lock-ic">🕐</div><h3>Not enough trades yet</h3><p class="hint">Log a few more trades (with times) and your day/hour edge appears here.</p></div>'); var eb = el('<button class="btn btn-primary" style="margin-top:8px">＋ Log a trade</button>'); eb.addEventListener("click", function () { go("log"); }); e.appendChild(eb); v.appendChild(e); return v; }
+    var DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    function bucket() { return { n: 0, disc: 0, wins: 0, pnl: 0 }; }
+    var byDay = DOW.map(bucket), byHour = {};
+    trades.forEach(function (t) {
+      var d = new Date(t.date), day = d.getDay(), hr = d.getHours();
+      var bd = byDay[day]; bd.n++; bd.disc += CM.tradeDiscipline(t); if (CM.isWin(t)) bd.wins++; bd.pnl += CM.pnl(t);
+      var bh = byHour[hr] || (byHour[hr] = bucket()); bh.n++; bh.disc += CM.tradeDiscipline(t); if (CM.isWin(t)) bh.wins++; bh.pnl += CM.pnl(t);
+    });
+    function avg(b) { return b.n ? Math.round(b.disc / b.n) : 0; }
+    // Best / worst day by discipline (min 1 trade)
+    var dayRows = DOW.map(function (name, i) { return { name: name, b: byDay[i] }; }).filter(function (r) { return r.b.n > 0; });
+    var bestDay = dayRows.slice().sort(function (a, b) { return avg(b.b) - avg(a.b); })[0];
+    var worstDay = dayRows.slice().sort(function (a, b) { return avg(a.b) - avg(b.b); })[0];
+    if (bestDay && worstDay && bestDay.name !== worstDay.name) {
+      v.appendChild(el('<div class="notice" style="margin-bottom:14px">🏆 Your most disciplined day is <b>' + bestDay.name + '</b> (score ' + avg(bestDay.b) + '). ⚠️ Your leakiest is <b>' + worstDay.name + '</b> (score ' + avg(worstDay.b) + ') — trade lighter then.</div>'));
+    }
+    // By day of week
+    var dc = el('<div class="card"><div class="card-hd"><h3>By day of week</h3><span class="hint">discipline · win rate · net</span></div></div>');
+    dayRows.forEach(function (r) {
+      var a = avg(r.b), wr = Math.round(r.b.wins / r.b.n * 100);
+      dc.appendChild(el('<div style="margin:10px 0"><div style="display:flex;justify-content:space-between"><b>' + r.name + '</b><span class="muted">' + a + ' · ' + wr + '% win · <span class="' + (r.b.pnl >= 0 ? "pos" : "neg") + '">' + money(r.b.pnl) + '</span></span></div><div class="bar" style="margin:6px 0"><i style="width:' + a + '%;background:' + scoreColor(a) + '"></i></div></div>'));
+    });
+    v.appendChild(dc);
+    // By hour
+    var hc = el('<div class="card"><div class="card-hd"><h3>By hour of day</h3><span class="hint">when you\'re sharp vs slipping</span></div></div>');
+    Object.keys(byHour).map(Number).sort(function (a, b) { return a - b; }).forEach(function (hr) {
+      var b = byHour[hr], a = avg(b), wr = Math.round(b.wins / b.n * 100);
+      var label = (hr % 12 || 12) + (hr < 12 ? "am" : "pm");
+      hc.appendChild(el('<div style="margin:8px 0"><div style="display:flex;justify-content:space-between"><b>' + label + '</b><span class="muted">' + b.n + ' trade' + (b.n === 1 ? "" : "s") + ' · ' + a + ' · ' + wr + '% win</span></div><div class="bar" style="margin:5px 0"><i style="width:' + a + '%;background:' + scoreColor(a) + '"></i></div></div>'));
+    });
+    v.appendChild(hc);
+    return v;
+  };
+
+  // ---- RULES & ADHERENCE (Platinum) ----------------------------------------
+  var RULE_DEFS = [
+    { id: "sl", label: "Always set a stop-loss", test: function (t) { return CM.hasSL(t); } },
+    { id: "planned", label: "Exit by my plan (target or stop)", test: function (t) { return /target|stop-loss/i.test(t.exit_reason || ""); } },
+    { id: "norevenge", label: "No revenge trades", test: function (t) { return !/revenge/i.test((t.exit_reason || "") + (t.emotion || "")); } },
+    { id: "calm", label: "Trade only when calm", test: function (t) { return !/fomo|fear|greed|revenge|overconfident/i.test(t.emotion || ""); } },
+    { id: "target", label: "Book winners at target", test: function (t) { return !/held too long|greed/i.test((t.exit_reason || "") + (t.emotion || "")); } }
+  ];
+  VIEWS.rules = function () {
+    var v = el('<div></div>');
+    v.appendChild(topbar("Rules & Adherence", "Set your rules — then face how often you actually keep them."));
+    var prof = CM.load().profile;
+    var on = prof.rules || { sl: true, planned: true, norevenge: true, calm: false, target: false };
+    var trades = CM.load().trades;
+    // Rule picker
+    var pick = el('<div class="card"><div class="card-hd"><h3>Your rules</h3><span class="hint">pick what matters to you</span></div></div>');
+    RULE_DEFS.forEach(function (r) {
+      var row = el('<label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer"><input type="checkbox"' + (on[r.id] ? " checked" : "") + ' /> <span>' + esc(r.label) + '</span></label>');
+      row.querySelector("input").addEventListener("change", function (e) { on[r.id] = e.target.checked; CM.setProfile({ rules: on }); render(); });
+      pick.appendChild(row);
+    });
+    v.appendChild(pick);
+    // Adherence
+    var active = RULE_DEFS.filter(function (r) { return on[r.id]; });
+    if (!trades.length) { v.appendChild(el('<div class="card cm-muted" style="margin-top:14px"><p class="hint" style="margin:0">Log trades and your adherence to each rule shows up here.</p></div>')); return v; }
+    var overall = 0, counted = 0;
+    var ac = el('<div class="card" style="margin-top:14px"><div class="card-hd"><h3>How well you keep them</h3><span class="hint">last ' + trades.length + ' trades</span></div></div>');
+    active.forEach(function (r) {
+      var kept = trades.filter(r.test).length, pct = Math.round(kept / trades.length * 100);
+      overall += pct; counted++;
+      ac.appendChild(el('<div style="margin:10px 0"><div style="display:flex;justify-content:space-between"><b>' + esc(r.label) + '</b><span class="muted">' + pct + '% kept</span></div><div class="bar" style="margin:6px 0"><i style="width:' + pct + '%;background:' + scoreColor(pct) + '"></i></div><div class="hint">' + (trades.length - kept) + ' trade(s) broke this rule.</div></div>'));
+    });
+    if (counted) {
+      var score = Math.round(overall / counted);
+      v.appendChild(el('<div class="notice" style="margin-bottom:14px">📏 Your overall rule-adherence is <b>' + score + '%</b>. ' + (score >= 85 ? "Elite discipline — protect it." : score >= 60 ? "Solid, but one rule keeps slipping. Fix that one." : "This is where your money leaks. Pick the weakest rule and guard it this week.") + '</div>'));
+    }
+    v.appendChild(ac);
     return v;
   };
 
