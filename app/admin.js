@@ -91,6 +91,60 @@
     win.document.write(html); win.document.close();
   }
 
+  // Process a refund (full or partial) through Razorpay, then reload the view.
+  function doRefund(paymentId, maxPaise, email, after) {
+    var msg = "Refund how much to " + (email || "the customer") + "?\n\nEnter an amount in ₹ (max ₹" + (maxPaise / 100) + "), or leave as-is for a FULL refund.";
+    var input = prompt(msg, String(maxPaise / 100));
+    if (input === null) return; // cancelled
+    var rupees = parseFloat(input);
+    if (isNaN(rupees) || rupees <= 0 || rupees > maxPaise / 100) { alert("Enter a valid amount up to ₹" + (maxPaise / 100) + "."); return; }
+    var body = { payment_id: paymentId };
+    if (Math.round(rupees * 100) !== maxPaise) body.amount = Math.round(rupees * 100); // partial
+    if (!confirm("Refund ₹" + rupees + " to " + (email || "the customer") + "? This cannot be undone.")) return;
+    adminPost("/api/admin/refund", body).then(function (r) {
+      if (r.ok) { alert("Refund of ₹" + rupees + " processed ✓"); RZP_CACHE = {}; fetchLive(); if (after) after(); }
+      else alert(r.detail || "Refund failed.");
+    });
+  }
+
+  // Render one Razorpay item (payment / refund / settlement / dispute).
+  function rzpCard(it, kind) {
+    var card = el('<div class="cm-inv"></div>');
+    var amt = money((it.amount || 0) / 100);
+    var when = it.created_at ? new Date(it.created_at * 1000).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "";
+    if (kind === "payments") {
+      var sb = it.status === "captured" ? "b-ok" : it.status === "refunded" ? "b-warn" : it.status === "failed" ? "b-bad" : "b-warn";
+      card.appendChild(el('<div class="cm-inv-top"><span class="code">' + esc(it.id) + '</span><span class="cm-badge ' + sb + '">' + esc(it.status || "") + '</span></div>'));
+      card.appendChild(el('<div class="cm-inv-amt">' + amt + '</div>'));
+      card.appendChild(el('<div class="cm-uc-mail">' + esc(it.email || it.contact || "—") + '</div>'));
+      card.appendChild(el('<div class="cm-uc-foot"><span class="cm-muted">' + esc(it.method || "") + '</span><span class="cm-muted">' + esc(when) + '</span></div>'));
+      var refunded = (it.amount_refunded || 0);
+      if (it.status === "captured" && refunded < it.amount) {
+        var acts = el('<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div>');
+        var refBtn = el('<button class="cm-btn sm danger">↩ Refund' + (refunded ? " remaining" : "") + '</button>');
+        refBtn.addEventListener("click", function () { doRefund(it.id, it.amount - refunded, it.email || it.contact); });
+        acts.appendChild(refBtn);
+        card.appendChild(acts);
+      } else if (refunded >= it.amount && it.amount > 0) {
+        card.appendChild(el('<div style="font-size:.8rem;color:#854d0e;margin-top:6px">Fully refunded</div>'));
+      }
+    } else if (kind === "refunds") {
+      card.appendChild(el('<div class="cm-inv-top"><span class="code">' + esc(it.id) + '</span><span class="cm-badge b-warn">' + esc(it.status || "refund") + '</span></div>'));
+      card.appendChild(el('<div class="cm-inv-amt">' + amt + '</div>'));
+      card.appendChild(el('<div class="cm-uc-mail">for ' + esc(it.payment_id || "") + '</div>'));
+      card.appendChild(el('<div class="cm-uc-foot"><span class="cm-muted">' + esc((it.notes && it.notes.reason) || "refund") + '</span><span class="cm-muted">' + esc(when) + '</span></div>'));
+    } else if (kind === "settlements") {
+      card.appendChild(el('<div class="cm-inv-top"><span class="code">' + esc(it.id) + '</span><span class="cm-badge b-ok">' + esc(it.status || "") + '</span></div>'));
+      card.appendChild(el('<div class="cm-inv-amt">' + amt + '</div>'));
+      card.appendChild(el('<div class="cm-uc-foot"><span class="cm-muted">fees ' + money((it.fees || 0) / 100) + ' · tax ' + money((it.tax || 0) / 100) + '</span><span class="cm-muted">' + esc(when) + '</span></div>'));
+    } else { // disputes
+      card.appendChild(el('<div class="cm-inv-top"><span class="code">' + esc(it.id) + '</span><span class="cm-badge b-bad">' + esc(it.status || "dispute") + '</span></div>'));
+      card.appendChild(el('<div class="cm-inv-amt">' + amt + '</div>'));
+      card.appendChild(el('<div class="cm-uc-foot"><span class="cm-muted">' + esc(it.reason_code || "") + '</span><span class="cm-muted">' + esc(when) + '</span></div>'));
+    }
+    return card;
+  }
+
   // Edit a user: name, plan, and grant/remove tokens. Writes via the server.
   function openEditUser(u) {
     var back = el('<div style="position:fixed;inset:0;background:rgba(11,21,51,.55);z-index:200;display:flex;align-items:flex-start;justify-content:center;padding:50px 16px;overflow:auto"></div>');
@@ -266,6 +320,8 @@
   // ---- filter state (persist across re-render within session) ---------------
   var FILTER = { plan: "", status: "", q: "" };
   var TAB = "overview";
+  var RZP_SUB = "payments";      // which Razorpay resource is shown
+  var RZP_CACHE = {};            // resource -> items | {error} | null(reload)
 
   // ===========================================================================
   //  LOGIN SCREEN
@@ -311,7 +367,7 @@
   // ===========================================================================
   var TABTITLE = { overview: "Overview", people: "People Logged", calendar: "Activity Calendar",
     content: "Content Calendar", catalogue: "Product Catalogue & Prices",
-    revenue: "Revenue, Invoices & Refunds", gating: "Locked Sections & Gating", flags: "Feature Flags",
+    revenue: "Revenue, Invoices & Refunds", razorpay: "Razorpay (live)", gating: "Locked Sections & Gating", flags: "Feature Flags",
     exportt: "Export / Download", privacy: "Privacy & Security" };
 
   // Month shown by the calendars (0 = current month, -1 = last month, etc.)
@@ -336,6 +392,7 @@
     ["content", "🗓️ Content calendar", "plan your posts and reels"],
     ["catalogue", "🏷️ Products & prices", "edit plan and token prices"],
     ["revenue", "₹ Revenue & invoices", "money made, invoices, refunds"],
+    ["razorpay", "💳 Razorpay (live)", "live payments, refunds, settlements from razorpay"],
     ["gating", "🔒 Locked sections", "which plan unlocks each feature"],
     ["flags", "⚑ Feature flags", "turn features on or off"],
     ["exportt", "⬇ Export everything", "download users, invoices, refunds"],
@@ -382,7 +439,7 @@
     side.appendChild(el('<a class="cm-brand" href="index.html"><img src="assets/logo.png" alt=""/><span>ChintasMoney<small>CONTROL PANEL</small></span></a>'));
     [["overview", "▦ Overview"], ["people", "👥 People logged"], ["calendar", "📅 Activity calendar"],
      ["content", "🗓️ Content calendar"], ["catalogue", "🏷️ Products & prices"],
-     ["revenue", "₹ Revenue & invoices"], ["gating", "🔒 Locked sections"], ["flags", "⚑ Feature flags"],
+     ["revenue", "₹ Revenue & invoices"], ["razorpay", "💳 Razorpay (live)"], ["gating", "🔒 Locked sections"], ["flags", "⚑ Feature flags"],
      ["exportt", "⬇ Export everything"], ["privacy", "🛡️ Privacy & security"]].forEach(function (t) {
       var b = el('<button class="cm-nav' + (TAB === t[0] ? " on" : "") + '">' + t[1] + '</button>');
       b.addEventListener("click", function () { TAB = t[0]; render(); });
@@ -700,14 +757,7 @@
             acts.appendChild(mailBtn);
             if (i.status === "paid") {
               var refBtn = el('<button class="cm-btn sm danger">↩ Refund</button>');
-              refBtn.addEventListener("click", function () {
-                if (!confirm("Refund " + money(i.amount) + " to " + (i.email || "the customer") + "? This sends the money back via Razorpay and cannot be undone.")) return;
-                refBtn.disabled = true; refBtn.textContent = "Refunding…";
-                adminPost("/api/admin/refund", { payment_id: i.id }).then(function (r) {
-                  if (r.ok) { alert("Refund processed ✓"); fetchLive(); }
-                  else { refBtn.disabled = false; refBtn.textContent = "↩ Refund"; alert(r.detail || "Refund failed."); }
-                });
-              });
+              refBtn.addEventListener("click", function () { doRefund(i.id, Math.round(i.amount * 100), i.email); });
               acts.appendChild(refBtn);
             }
             card.appendChild(acts);
@@ -740,6 +790,36 @@
       v.appendChild(el('<div class="cm-note" style="margin-top:14px">' + (liveOn()
         ? '🟢 <b>Live figures</b> — real verified payments &amp; refunds from Razorpay, stored in your database. Tap 🔄 Refresh to pull the latest.'
         : 'Real invoices &amp; refunds appear here once you are signed in via the server. These are demo figures.') + '</div>'));
+      return v;
+    },
+
+    // -------- RAZORPAY (LIVE MIRROR) ----------------------------------------
+    razorpay: function () {
+      var v = el('<div></div>');
+      v.appendChild(el('<div class="cm-note" style="margin-bottom:14px">💳 <b>Live from Razorpay</b> — this mirrors your Razorpay dashboard exactly. Refund (full or partial) right here; it processes through Razorpay and updates your records.</div>'));
+      // Sub-nav for the Razorpay resources.
+      var subs = [["payments", "Payments"], ["refunds", "Refunds"], ["settlements", "Settlements"], ["disputes", "Disputes"]];
+      var bar = el('<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px"></div>');
+      subs.forEach(function (s) {
+        var b = el('<button class="cm-btn sm' + (RZP_SUB === s[0] ? " p" : "") + '">' + s[1] + '</button>');
+        b.addEventListener("click", function () { RZP_SUB = s[0]; RZP_CACHE[s[0]] = null; render(); });
+        bar.appendChild(b);
+      });
+      v.appendChild(bar);
+      var host = el('<div></div>'); v.appendChild(host);
+      var cached = RZP_CACHE[RZP_SUB];
+      if (cached === undefined || cached === null) {
+        host.appendChild(el('<div class="cm-card cm-muted">Loading live ' + RZP_SUB + ' from Razorpay…</div>'));
+        fetch("/api/admin/razorpay?resource=" + RZP_SUB, { headers: { Authorization: "Bearer " + token() } })
+          .then(function (r) { return r.json().catch(function () { return { error: "bad" }; }); })
+          .then(function (d) { RZP_CACHE[RZP_SUB] = d.ok ? (d.items || []) : { error: d.detail || d.error || "Couldn't load" }; render(); });
+        return v;
+      }
+      if (cached && cached.error) { host.appendChild(el('<div class="cm-card b-bad" style="padding:14px">⚠ ' + esc(cached.error) + '</div>')); return v; }
+      if (!cached.length) { host.appendChild(el('<div class="cm-card cm-muted">No ' + RZP_SUB + ' found in Razorpay.</div>')); return v; }
+      var grid = el('<div class="cm-cards"></div>');
+      cached.forEach(function (it) { grid.appendChild(rzpCard(it, RZP_SUB)); });
+      host.appendChild(grid);
       return v;
     },
 

@@ -522,10 +522,28 @@ async function handleAdminSendInvoice(request, env) {
   return aRes({ ok: true, sentTo: email }, 200);
 }
 
+// Live Razorpay mirror — read straight from Razorpay so the admin always
+// matches Razorpay exactly. GET /api/admin/razorpay?resource=payments|refunds|settlements|disputes
+async function handleAdminRazorpay(request, env) {
+  const gate = await requireAdmin(request, env); if (gate.err) return gate.err;
+  if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) return aRes({ error: "payments_not_configured" }, 501);
+  const url = new URL(request.url);
+  const resource = url.searchParams.get("resource") || "payments";
+  const allowed = { payments: "payments", refunds: "refunds", settlements: "settlements", disputes: "disputes" };
+  const path = allowed[resource];
+  if (!path) return aRes({ error: "bad_resource" }, 400);
+  const auth = "Basic " + btoa(env.RAZORPAY_KEY_ID + ":" + env.RAZORPAY_KEY_SECRET);
+  const r = await fetch("https://api.razorpay.com/v1/" + path + "?count=100", { headers: { Authorization: auth } });
+  const j = await r.json().catch(function () { return {}; });
+  if (!r.ok) return aRes({ error: "razorpay_error", detail: (j && j.error && j.error.description) || "Razorpay request failed" }, 400);
+  return aRes({ ok: true, resource: resource, items: j.items || [], count: j.count || 0 }, 200);
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (request.method === "POST" && url.pathname === "/api/razorpay/webhook") return handleRzpWebhook(request, env);
+    if (request.method === "GET" && url.pathname === "/api/admin/razorpay") return handleAdminRazorpay(request, env);
     if (request.method === "POST" && url.pathname === "/api/admin/login") return handleAdminLogin(request, env);
     if (request.method === "GET" && url.pathname === "/api/admin/data") return handleAdminData(request, env);
     if (request.method === "POST" && url.pathname === "/api/admin/refund") return handleAdminRefund(request, env);
