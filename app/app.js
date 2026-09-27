@@ -42,6 +42,7 @@
     { id: "card", label: "Shareable Card", ic: "↗" },
     { sep: true },
     { id: "tokens", label: "Analysis Tokens", ic: "🎟️" },
+    { id: "refer", label: "Refer & Earn", ic: "🎁" },
     { id: "profile", label: "Profile & Plan", ic: "☰" },
     { id: "about", label: "About Us", ic: "ℹ️" }
   ];
@@ -73,6 +74,7 @@
     leaderboard: "See how your discipline ranks against other traders. We reward discipline, never profit.",
     card: "Create a shareable card of your discipline score to post or send to friends.",
     tokens: "1 token = 1 deep Trade Replay. Every account gets 2 free — one time. After that, top up to keep analysing.",
+    refer: "Invite a trader friend — you BOTH get 10 free analysis tokens when they join. Free growth for everyone.",
     profile: "Your account, plan and data — manage your subscription and keep your journal safe."
   };
   function helpDismissed(id) { try { return localStorage.getItem("cm.help." + id) === "1"; } catch (e) { return false; } }
@@ -2432,6 +2434,40 @@
     return v;
   };
 
+  // ---- REFER & EARN --------------------------------------------------------
+  function referLink() {
+    var uid = window.CMCloud && window.CMCloud.user && window.CMCloud.user.id;
+    return uid ? "https://chintasmoney.com/app/?ref=" + uid : null;
+  }
+  VIEWS.refer = function () {
+    var v = el('<div></div>');
+    v.appendChild(topbar("Refer & Earn", "Invite a trader friend — you BOTH get 10 free analysis tokens. 🎁"));
+    var link = referLink();
+    if (!link) {
+      var card0 = el('<div class="card paywall"><div class="lock-ic">🎁</div><h3>Sign in to get your link</h3><p class="hint">Create a free account to unlock your personal referral link and start earning tokens.</p></div>');
+      var sb = el('<button class="btn btn-primary" style="margin-top:8px">Create free account</button>'); sb.addEventListener("click", function () { openAuth("signup"); });
+      card0.appendChild(sb); v.appendChild(card0); return v;
+    }
+    var refs = (CM.load().profile.referrals) || 0;
+    var hero = el('<div class="today-hero" style="max-width:none"><div class="th-row"><div><div class="th-hi">🎁 Give 10, get 10</div><div class="th-sub">Every friend who joins with your link gives you both 10 free analysis tokens. No limit — invite as many as you like.</div></div><div class="th-rank">' + refs + ' joined</div></div></div>');
+    v.appendChild(hero);
+    var c = el('<div class="card" style="margin-top:14px"></div>');
+    c.appendChild(el('<div style="font-weight:700;margin-bottom:6px">Your referral link</div>'));
+    var box = el('<div style="display:flex;gap:8px;flex-wrap:wrap"><input readonly value="' + esc(link) + '" style="flex:1;min-width:200px;padding:10px 12px;border:1px solid var(--line-2);border-radius:10px;background:var(--bg);color:var(--ink);font-size:.85rem"/></div>');
+    var copy = el('<button class="btn btn-primary">📋 Copy</button>');
+    copy.addEventListener("click", function () { try { navigator.clipboard.writeText(link); toast("Link copied ✓", "ok"); } catch (e) { toast("Copy failed", "err"); } });
+    box.appendChild(copy); c.appendChild(box);
+    var msg = "I'm using ChintasMoney to fix my trading discipline — it scores how disciplined you trade (not tips). Join free with my link and we both get bonus analyses: " + link;
+    var row = el('<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"></div>');
+    var wa = el('<a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(msg) + '">💬 WhatsApp</a>');
+    var tw = el('<a class="btn" target="_blank" rel="noopener" href="https://twitter.com/intent/tweet?text=' + encodeURIComponent(msg) + '">𝕏 Share</a>');
+    var tg = el('<a class="btn" target="_blank" rel="noopener" href="https://t.me/share/url?url=' + encodeURIComponent(link) + '&text=' + encodeURIComponent("Fix your trading discipline — free tool") + '">✈️ Telegram</a>');
+    row.appendChild(wa); row.appendChild(tw); row.appendChild(tg); c.appendChild(row);
+    v.appendChild(c);
+    v.appendChild(el('<div class="notice" style="margin-top:12px">💡 Tip: share your Discipline Score card and drop your link — "beat my score." Friendly competition brings the most signups.</div>'));
+    return v;
+  };
+
   // ---- MISTAKE INSIGHTS ----------------------------------------------------
   VIEWS.insights = function () {
     var v = el('<div></div>');
@@ -2946,13 +2982,14 @@
       '<div class="sc-foot">chintasmoney.com · discipline over profit</div>';
     v.appendChild(card);
     var share = el('<div style="display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap"><button class="btn btn-primary" id="scShare">📤 Share my card</button><button class="btn" id="scChallenge">🏆 Challenge a friend</button></div>');
+    var shareUrl = referLink() || "https://chintasmoney.com";
     share.querySelector("#scShare").addEventListener("click", function () {
-      var text = "My ChintasMoney Discipline Score: " + st.discipline + "/100 — " + p.key + " · " + leagueOf(st.discipline).em + " " + leagueOf(st.discipline).n + " League. Top " + topPct + "% this week. Beat me 👉 chintasmoney.com";
-      if (navigator.share) navigator.share({ title: "My Trader Report Card", text: text, url: "https://chintasmoney.com" }).catch(function () {});
+      var text = "My ChintasMoney Discipline Score: " + st.discipline + "/100 — " + p.key + " · " + leagueOf(st.discipline).em + " " + leagueOf(st.discipline).n + " League. Top " + topPct + "% this week. Beat me 👉 " + shareUrl;
+      if (navigator.share) navigator.share({ title: "My Trader Report Card", text: text, url: shareUrl }).catch(function () {});
       else { try { navigator.clipboard.writeText(text); this.textContent = "✓ Copied!"; toast("Card text copied — paste it anywhere 📋", "ok"); } catch (er) {} }
     });
     share.querySelector("#scChallenge").addEventListener("click", function () {
-      var text = "I scored " + st.discipline + "/100 on discipline (Top " + topPct + "%). Think you're more disciplined? Prove it 👉 chintasmoney.com";
+      var text = "I scored " + st.discipline + "/100 on discipline (Top " + topPct + "%). Think you're more disciplined? Prove it 👉 " + shareUrl;
       if (navigator.share) navigator.share({ title: "Discipline challenge", text: text }).catch(function () {});
       else { try { navigator.clipboard.writeText(text); this.textContent = "✓ Copied!"; toast("Challenge copied — send it to a trader 🔥", "ok"); } catch (er) {} }
     });

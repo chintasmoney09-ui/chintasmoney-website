@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Position Size Calculator (Free) — Risk per Trade | ChintasMoney</title>
+  <link rel="canonical" href="https://chintasmoney.com/position-size-calculator.html" />
+  <meta name="description" content="Free position size calculator for Indian traders. Enter your capital, risk % and stop-loss to get the exact quantity to trade. Never risk too much on one trade again." />
+  <meta name="keywords" content="position size calculator, risk per trade calculator, how many shares to buy, stop loss quantity calculator, F&O risk calculator India, lot size calculator" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <meta property="og:title" content="Free Position Size Calculator — ChintasMoney" />
+  <meta property="og:description" content="Work out exactly how much to trade so one bad trade never blows up your account." />
+  <meta property="og:url" content="https://chintasmoney.com/position-size-calculator.html" />
+  <meta property="og:type" content="website" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/assets/favicon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/logo-icon.png" />
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1462824307424705" crossorigin="anonymous"></script>
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+    {"@type":"Question","name":"How do I calculate position size?","acceptedAnswer":{"@type":"Answer","text":"Decide how much money you are willing to lose on the trade (risk amount = capital × risk %). Divide that by the per-share risk (entry price − stop-loss price). The result is the quantity to trade."}},
+    {"@type":"Question","name":"How much should I risk per trade?","acceptedAnswer":{"@type":"Answer","text":"Most disciplined traders risk 1–2% of their capital per trade. Risking 1% means you can be wrong 20 times in a row and still survive; risking 10% means one bad day can end you."}}
+  ]}
+  </script>
+</head>
+<body>
+  <header class="hdr">
+    <div class="container nav" style="min-height:80px">
+      <a href="/" class="brand"><img src="assets/logo-tile.png" alt="ChintasMoney" style="height:56px" /><span class="brand-name" style="font-size:.95rem">Chinta's <span class="brand-emoji">🤑</span> <b>Money</b></span></a>
+    </div>
+  </header>
+  <main class="legal"><div class="legal-inner">
+    <h1>Position Size Calculator</h1>
+    <p class="hint" style="font-size:1.02rem;line-height:1.7">The #1 way traders blow up their accounts is risking too much on one trade. This free calculator tells you <b>exactly how many shares/lots to buy</b> so a single loss can never sink you. Built for Indian equity &amp; F&amp;O traders.</p>
+
+    <div class="card" style="margin:18px 0;padding:18px">
+      <label class="fld"><span>Trading capital (₹)</span><input id="cap" type="number" value="100000" /></label>
+      <label class="fld"><span>Risk per trade (%)</span><input id="rp" type="number" value="1" step="0.5" /></label>
+      <label class="fld"><span>Entry price (₹)</span><input id="entry" type="number" value="500" /></label>
+      <label class="fld"><span>Stop-loss price (₹)</span><input id="sl" type="number" value="490" /></label>
+      <div id="out" style="margin-top:14px"></div>
+    </div>
+
+    <div style="text-align:center;margin:22px 0">
+      <a class="btn btn-primary" href="/app/" style="display:inline-block;padding:12px 22px">Track your discipline free →</a>
+      <p class="hint" style="margin-top:8px">ChintasMoney scores how disciplined you actually trade — not tips. 100% free to start.</p>
+    </div>
+
+    <h2>How to calculate position size</h2>
+    <p>Position sizing has three steps: (1) decide your <b>risk amount</b> = capital × risk %. (2) Find your <b>per-share risk</b> = entry price − stop-loss. (3) <b>Quantity</b> = risk amount ÷ per-share risk. Example: ₹1,00,000 capital, 1% risk = ₹1,000 to lose. Entry ₹500, stop ₹490 = ₹10 risk per share. Quantity = 1,000 ÷ 10 = <b>100 shares</b>.</p>
+    <h2>How much should you risk per trade?</h2>
+    <p>Risk 1% and you can be wrong 20 times in a row and survive. Risk 10% and one bad day can end you. Position sizing — not prediction — is what keeps traders alive. That is discipline, and discipline is what <a href="/app/">ChintasMoney</a> measures.</p>
+
+    <a class="back" href="/">← Back to ChintasMoney</a>
+  </div></main>
+  <script>
+    (function () {
+      function n(id) { var x = parseFloat(document.getElementById(id).value); return isNaN(x) ? 0 : x; }
+      function money(v) { v = Math.round(v); return "₹" + Math.abs(v).toLocaleString("en-IN"); }
+      function run() {
+        var cap = n("cap"), rp = n("rp"), entry = n("entry"), sl = n("sl");
+        var riskAmt = cap * rp / 100;
+        var perShare = Math.abs(entry - sl);
+        var out = document.getElementById("out");
+        if (!perShare) { out.innerHTML = '<p class="hint">Enter an entry and a different stop-loss to see your position size.</p>'; return; }
+        var qty = Math.floor(riskAmt / perShare);
+        var deploy = qty * entry;
+        out.innerHTML =
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
+          '<div class="card" style="padding:12px"><div class="hint">You risk</div><div style="font-size:1.3rem;font-weight:800">' + money(riskAmt) + '</div></div>' +
+          '<div class="card" style="padding:12px"><div class="hint">Risk per share</div><div style="font-size:1.3rem;font-weight:800">' + money(perShare) + '</div></div>' +
+          '<div class="card" style="padding:12px;border-color:var(--emerald)"><div class="hint">Quantity to trade</div><div style="font-size:1.5rem;font-weight:800;color:var(--emerald,#12b39a)">' + qty.toLocaleString("en-IN") + '</div></div>' +
+          '<div class="card" style="padding:12px"><div class="hint">Capital deployed</div><div style="font-size:1.3rem;font-weight:800">' + money(deploy) + '</div></div>' +
+          '</div>';
+      }
+      ["cap", "rp", "entry", "sl"].forEach(function (id) { document.getElementById(id).addEventListener("input", run); });
+      run();
+    })();
+  </script>
+  <script src="consent.js"></script>
+  <script src="analytics.js"></script>
+</body>
+</html>

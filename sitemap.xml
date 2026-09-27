@@ -20,4 +20,6 @@
   <url><loc>https://chintasmoney.com/terms.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://chintasmoney.com/refund.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://chintasmoney.com/disclaimer.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://chintasmoney.com/position-size-calculator.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://chintasmoney.com/partners.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
 </urlset>
