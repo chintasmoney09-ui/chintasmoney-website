@@ -698,6 +698,47 @@ async function sendWeeklyReports(env) {
   } catch (e) {}
 }
 
+// AI Discipline Coach — a real LLM coach that knows the user's own trading data.
+// Requires ANTHROPIC_API_KEY (Worker secret). Verifies a Supabase session so
+// only signed-in users can call it. Never gives buy/sell tips.
+async function handleCoach(request, env) {
+  if (!env.ANTHROPIC_API_KEY) return aRes({ error: "ai_not_configured" }, 501);
+  let b; try { b = await request.json(); } catch (e) { return aRes({ error: "bad_request" }, 400); }
+  // Verify the caller is a real signed-in user (guards API spend).
+  const token = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  if (!token || !env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return aRes({ error: "unauthorized" }, 401);
+  try {
+    const ur = await fetch(env.SUPABASE_URL.replace(/\/$/, "") + "/auth/v1/user", { headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: "Bearer " + token } });
+    if (!ur.ok) return aRes({ error: "unauthorized" }, 401);
+  } catch (e) { return aRes({ error: "unauthorized" }, 401); }
+  const question = String((b && b.question) || "").slice(0, 600);
+  const context = String((b && b.context) || "").slice(0, 2500);
+  const history = Array.isArray(b && b.history) ? b.history.slice(-6) : [];
+  if (!question) return aRes({ error: "empty" }, 400);
+  const system =
+    "You are Chintamani, ChintasMoney's calm, wise trading-discipline coach for Indian retail traders. " +
+    "You coach BEHAVIOUR and DISCIPLINE using ONLY the trader's own data provided below. " +
+    "Absolute rules: never give buy/sell calls, tips, price targets, predictions, or specific trade recommendations; " +
+    "never recommend instruments or say what to trade. If asked for tips/calls, gently refuse and redirect to their discipline. " +
+    "Be warm, direct, specific and encouraging. Use ₹ and Indian context. Keep replies under 130 words, plain text, no markdown headings. " +
+    "Base every claim on the numbers given; if data is thin, say so and encourage more logging.";
+  const msgs = [];
+  history.forEach(function (h) { if (h && (h.role === "user" || h.role === "assistant") && typeof h.text === "string") msgs.push({ role: h.role, content: h.text.slice(0, 800) }); });
+  msgs.push({ role: "user", content: "MY TRADING DATA (from my own logged trades):\n" + context + "\n\nMY QUESTION: " + question });
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({ model: env.COACH_MODEL || "claude-haiku-4-5", max_tokens: 700, system: system, messages: msgs }),
+    });
+    const j = await r.json().catch(function () { return {}; });
+    if (!r.ok) return aRes({ error: "ai_error", detail: (j && j.error && j.error.message) || "AI request failed" }, 400);
+    var text = "";
+    if (j && Array.isArray(j.content)) j.content.forEach(function (blk) { if (blk && blk.type === "text") text += blk.text; });
+    return aRes({ text: text.trim() || "I couldn't put that into words just now — try asking a bit differently." }, 200);
+  } catch (e) { return aRes({ error: "ai_error" }, 400); }
+}
+
 // Welcome email on first sign-in. Client calls this once per new account.
 async function handleWelcome(request, env) {
   let b; try { b = await request.json(); } catch (e) { return aRes({ error: "bad_request" }, 400); }
@@ -715,6 +756,7 @@ export default {
     const url = new URL(request.url);
     if (request.method === "POST" && url.pathname === "/api/razorpay/webhook") return handleRzpWebhook(request, env);
     if (request.method === "POST" && url.pathname === "/api/welcome") return handleWelcome(request, env);
+    if (request.method === "POST" && url.pathname === "/api/coach") return handleCoach(request, env);
     if (request.method === "GET" && url.pathname === "/api/admin/razorpay") return handleAdminRazorpay(request, env);
     if (request.method === "POST" && url.pathname === "/api/admin/login") return handleAdminLogin(request, env);
     if (request.method === "GET" && url.pathname === "/api/admin/data") return handleAdminData(request, env);

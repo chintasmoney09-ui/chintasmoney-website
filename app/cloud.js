@@ -164,12 +164,12 @@
     patchSave();
     Cloud.client.auth.getSession().then(function (r) {
       var session = r && r.data && r.data.session;
-      if (session) { Cloud.user = session.user; Cloud.state = "authed"; maybeWelcome(session.user); pull().then(rerender); }
+      if (session) { Cloud.user = session.user; Cloud.token = session.access_token; Cloud.state = "authed"; maybeWelcome(session.user); pull().then(rerender); }
       else { Cloud.state = "anon"; rerender(); }
     });
     Cloud.client.auth.onAuthStateChange(function (_evt, session) {
-      if (session && session.user) { Cloud.user = session.user; Cloud.state = "authed"; maybeWelcome(session.user); pull().then(rerender); }
-      else { Cloud.user = null; Cloud.state = "anon"; rerender(); }
+      if (session && session.user) { Cloud.user = session.user; Cloud.token = session.access_token; Cloud.state = "authed"; maybeWelcome(session.user); pull().then(rerender); }
+      else { Cloud.user = null; Cloud.token = null; Cloud.state = "anon"; rerender(); }
     });
   }).catch(function () { Cloud.state = "error"; rerender(); });
 })();
