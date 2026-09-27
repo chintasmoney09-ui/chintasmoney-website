@@ -739,6 +739,44 @@ async function handleCoach(request, env) {
   } catch (e) { return aRes({ error: "ai_error" }, 400); }
 }
 
+// Referral: when a new user signs in with ?ref=<referrer user id>, grant BOTH
+// the new user and the referrer bonus analysis tokens (once per new account).
+async function handleReferral(request, env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return aRes({ error: "not_configured" }, 501);
+  let b; try { b = await request.json(); } catch (e) { return aRes({ error: "bad_request" }, 400); }
+  const ref = b && typeof b.ref === "string" ? b.ref.trim() : "";
+  if (!ref) return aRes({ error: "no_ref" }, 400);
+  const token = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  if (!token) return aRes({ error: "unauthorized" }, 401);
+  const base = env.SUPABASE_URL.replace(/\/$/, "");
+  // Identify the new user from their session token.
+  let newUserId = "";
+  try {
+    const ur = await fetch(base + "/auth/v1/user", { headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: "Bearer " + token } });
+    if (!ur.ok) return aRes({ error: "unauthorized" }, 401);
+    const uj = await ur.json(); newUserId = uj && uj.id;
+  } catch (e) { return aRes({ error: "unauthorized" }, 401); }
+  if (!newUserId || ref === newUserId) return aRes({ ok: true, granted: 0 }, 200); // no self-referral
+  const BONUS = 10;
+  async function loadData(uid) {
+    const r = await fetch(base + "/rest/v1/user_state?user_id=eq." + encodeURIComponent(uid) + "&select=data", { headers: await sbHeaders(env) });
+    if (!r.ok) return null; const arr = await r.json(); return (arr && arr[0] && arr[0].data) || { profile: {} };
+  }
+  async function saveData(uid, data) {
+    await fetch(base + "/rest/v1/user_state?on_conflict=user_id", { method: "POST", headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" }), body: JSON.stringify({ user_id: uid, data: data, updated_at: new Date().toISOString() }) });
+  }
+  const nd = await loadData(newUserId); if (!nd) return aRes({ error: "lookup_failed" }, 400);
+  if (!nd.profile) nd.profile = {};
+  if (nd.profile.referredBy) return aRes({ ok: true, granted: 0, already: true }, 200); // dedupe
+  nd.profile.referredBy = ref;
+  nd.profile.tokens = Math.max(0, (nd.profile.tokens || 0) + BONUS);
+  await saveData(newUserId, nd);
+  // Credit the referrer.
+  const rd = await loadData(ref);
+  if (rd) { if (!rd.profile) rd.profile = {}; rd.profile.tokens = Math.max(0, (rd.profile.tokens || 0) + BONUS); rd.profile.referrals = (rd.profile.referrals || 0) + 1; await saveData(ref, rd); }
+  return aRes({ ok: true, granted: BONUS }, 200);
+}
+
 // Welcome email on first sign-in. Client calls this once per new account.
 async function handleWelcome(request, env) {
   let b; try { b = await request.json(); } catch (e) { return aRes({ error: "bad_request" }, 400); }
@@ -757,6 +795,7 @@ export default {
     if (request.method === "POST" && url.pathname === "/api/razorpay/webhook") return handleRzpWebhook(request, env);
     if (request.method === "POST" && url.pathname === "/api/welcome") return handleWelcome(request, env);
     if (request.method === "POST" && url.pathname === "/api/coach") return handleCoach(request, env);
+    if (request.method === "POST" && url.pathname === "/api/referral") return handleReferral(request, env);
     if (request.method === "GET" && url.pathname === "/api/admin/razorpay") return handleAdminRazorpay(request, env);
     if (request.method === "POST" && url.pathname === "/api/admin/login") return handleAdminLogin(request, env);
     if (request.method === "GET" && url.pathname === "/api/admin/data") return handleAdminData(request, env);

@@ -21,6 +21,24 @@
   }
   function rerender() { if (window.__cmRender) window.__cmRender(); }
 
+  // Capture a referral code from the URL (?ref=...) and remember it until sign-in.
+  try {
+    var _rp = new URLSearchParams(location.search).get("ref");
+    if (_rp) localStorage.setItem("cm.ref", _rp);
+  } catch (e) {}
+  // Once signed in, if we have a stored ref, claim the referral bonus (server dedupes).
+  function maybeReferral(user) {
+    try {
+      if (!user || !user.id) return;
+      var ref = localStorage.getItem("cm.ref");
+      if (!ref || ref === user.id) return;
+      if (localStorage.getItem("cm.ref.done") === "1") return;
+      localStorage.setItem("cm.ref.done", "1");
+      fetch("/api/referral", { method: "POST", headers: { "content-type": "application/json", Authorization: "Bearer " + (Cloud.token || "") }, body: JSON.stringify({ ref: ref }) })
+        .then(function (r) { return r.json(); }).then(function (d) { if (d && d.granted) { try { window.CM && window.CM.addTokens(d.granted); } catch (e) {} pull().then(rerender); } }).catch(function () {});
+    } catch (e) {}
+  }
+
   // Send the welcome email exactly once per account (tracked per-user locally).
   function maybeWelcome(user) {
     try {
@@ -164,11 +182,11 @@
     patchSave();
     Cloud.client.auth.getSession().then(function (r) {
       var session = r && r.data && r.data.session;
-      if (session) { Cloud.user = session.user; Cloud.token = session.access_token; Cloud.state = "authed"; maybeWelcome(session.user); pull().then(rerender); }
+      if (session) { Cloud.user = session.user; Cloud.token = session.access_token; Cloud.state = "authed"; maybeWelcome(session.user); maybeReferral(session.user); pull().then(rerender); }
       else { Cloud.state = "anon"; rerender(); }
     });
     Cloud.client.auth.onAuthStateChange(function (_evt, session) {
-      if (session && session.user) { Cloud.user = session.user; Cloud.token = session.access_token; Cloud.state = "authed"; maybeWelcome(session.user); pull().then(rerender); }
+      if (session && session.user) { Cloud.user = session.user; Cloud.token = session.access_token; Cloud.state = "authed"; maybeWelcome(session.user); maybeReferral(session.user); pull().then(rerender); }
       else { Cloud.user = null; Cloud.token = null; Cloud.state = "anon"; rerender(); }
     });
   }).catch(function () { Cloud.state = "error"; rerender(); });
