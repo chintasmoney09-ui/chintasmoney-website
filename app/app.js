@@ -28,8 +28,11 @@
     { id: "replay", label: "Trade Replay", ic: "🎬" },
     { id: "insights", label: "Mistake Insights", ic: "🔍" },
     { id: "timing", label: "Time & Day Edge", ic: "🕐" },
+    { id: "leak", label: "Money Leak Report", ic: "💸" },
     { id: "strategy", label: "Setup Performance", ic: "▦" },
     { id: "rules", label: "Rules & Adherence", ic: "📏" },
+    { id: "grade", label: "Trade Grades", ic: "🎓" },
+    { id: "whatif", label: "What-If Simulator", ic: "🔮" },
     { id: "coach", label: "Discipline Coach", ic: "✦" },
     { sep: true, group: "Play" },
     { id: "badges", label: "Streaks & Badges", ic: "🏅" },
@@ -56,8 +59,11 @@
     replay: "Replay any trade on the real market for its actual dates — see what would have happened, and whether you exited too early or too late.",
     insights: "Your repeating mistakes, ranked by how often they cost you — so you know exactly what to fix first.",
     timing: "Discover the exact days and hours you trade your best — and the danger windows where discipline slips.",
+    leak: "See the real rupee cost of each bad habit — exactly how much your indiscipline is costing you.",
     strategy: "See which of your setups actually make money, and which quietly bleed your account.",
     rules: "Set your own trading rules and see, honestly, how often you actually follow them.",
+    grade: "Every trade graded A to F with a one-line verdict — your personal report card, trade by trade.",
+    whatif: "See what your P&L and discipline would be if you fixed one habit — the money you leave on the table.",
     coach: "Ask the AI coach about your own trading and get an honest, data-based verdict.",
     badges: "Earn streaks and badges for disciplined habits — keep your streak alive.",
     leaderboard: "See how your discipline ranks against other traders. We reward discipline, never profit.",
@@ -272,6 +278,9 @@
     "everything-free": "Everything in Free", "unlimited-history": "Unlimited trade history",
     "full-mistake-analysis": "Full mistake analysis", "setup-and-time-insights": "Setup & time-of-day insights",
     "streaks-and-badges": "Streaks & badges", "ai-discipline-coach": "AI Discipline Coach", "pro-shareable-card": "Pro shareable card",
+    "money-leak-report": "💸 Money Leak Report (₹ cost of habits)", "time-day-edge": "Time & Day Edge",
+    "trade-grades": "🎓 Trade Grades (A–F per trade)", "rules-adherence": "📏 Rules & Adherence tracker",
+    "monthly-deep-dive": "📅 Monthly deep-dive report", "what-if-simulator": "🔮 What-If Simulator",
     "everything-plus": "Everything in Go Plus", "strategy-performance": "Setup performance analytics",
     "csv-import-export": "CSV / broker import & export", "risk-and-r-multiples": "Risk & R-multiple analytics",
     "weekly-report": "Weekly report", "goal-rules-engine": "Goal & rules engine",
@@ -291,9 +300,15 @@
       ["AI Discipline Coach", "—", "✓", "✓", "✓"],
       ["AI analysis tokens", "5 free (once)", "50 / month", "Unlimited", "Unlimited"],
       ["Trade Replay", "5 free (once)", "50 / month", "Unlimited", "Unlimited"],
+      ["Time & Day Edge", "—", "✓", "✓", "✓"],
+      ["💸 Money Leak Report", "—", "✓", "✓", "✓"],
       ["Setup performance", "—", "—", "✓", "✓"],
+      ["📏 Rules & Adherence", "—", "—", "✓", "✓"],
+      ["🎓 Trade Grades (A–F)", "—", "—", "✓", "✓"],
       ["Broker CSV import", "—", "—", "✓", "✓"],
       ["Weekly email report", "—", "—", "✓", "✓"],
+      ["🔮 What-If Simulator", "—", "—", "—", "✓"],
+      ["📅 Monthly deep-dive report", "—", "—", "✓", "✓"],
       ["Priority AI + monthly 1:1 review", "—", "—", "—", "✓"],
       ["Multi-year backtesting", "—", "—", "—", "✓"]
     ];
@@ -315,6 +330,9 @@
     leaderboard: { em: "🏆", title: "Discipline League", tag: "Climb from Bronze to Diamond vs traders like you.", feats: ["Ranked on discipline, never on luck or P&L", "Weekly promotion & relegation zones", "A shareable rank card to flex your consistency"] },
     strategy: { em: "▦", title: "Setup Performance", tag: "Find the setups that actually pay.", feats: ["Win-rate & net P&L for every setup you trade", "Spot the strategy quietly bleeding your account", "R-multiples & time-of-day edge"] },
     timing: { em: "🕐", title: "Time & Day Edge", tag: "When are you at your best — and your worst?", feats: ["Your discipline & win-rate by day of week", "The hours you should (and shouldn't) trade", "Spot the danger windows where you leak money"] },
+    leak: { em: "💸", title: "Money Leak Report", tag: "The real ₹ cost of your bad habits.", feats: ["Exactly how many rupees each mistake has cost you", "Your single most expensive habit, in money", "The refund you give the market every month — and how to stop it"] },
+    grade: { em: "🎓", title: "Trade Grades", tag: "Every trade graded A–F, like a report card.", feats: ["An instant A–F grade on every trade you log", "A one-line verdict: what you did right or wrong", "Your grade average trending over time"] },
+    whatif: { em: "🔮", title: "What-If Simulator", tag: "See the money your discipline leaves on the table.", feats: ["What your P&L would be if you'd always used a stop", "The rupees revenge trading is costing you", "Your 'disciplined self' score vs your real one"] },
     rules: { em: "📏", title: "Rules & Adherence", tag: "Set your rules — then see if you keep them.", feats: ["Pick the discipline rules that matter to you", "An honest adherence score for each rule", "Catch the rule you keep breaking before it costs you"] },
     replay: { em: "🎬", title: "Trade Replay", tag: "Replay any trade on the real market — see what would have happened.", feats: ["Your entry, stop & exit drawn on the actual market for that trade's dates", "Did the market hit your stop or target? How much did you leave on the table?", "Your behaviour & emotion vs what the market really did — the honest verdict"] }
   };
@@ -2497,6 +2515,126 @@
       v.appendChild(el('<div class="notice" style="margin-bottom:14px">📏 Your overall rule-adherence is <b>' + score + '%</b>. ' + (score >= 85 ? "Elite discipline — protect it." : score >= 60 ? "Solid, but one rule keeps slipping. Fix that one." : "This is where your money leaks. Pick the weakest rule and guard it this week.") + '</div>'));
     }
     v.appendChild(ac);
+    return v;
+  };
+
+  // ---- MONEY LEAK REPORT (Plus) --------------------------------------------
+  // The rupee cost of each bad habit — losses on trades that broke discipline.
+  var LEAK_DEFS = [
+    { id: "nosl", label: "Trading without a stop-loss", ic: "🛡️", test: function (t) { return !CM.hasSL(t); }, tip: "A stop is not optional. Decide your exit before you enter." },
+    { id: "revenge", label: "Revenge trading after a loss", ic: "😤", test: function (t) { return /revenge/i.test((t.exit_reason || "") + (t.emotion || "")); }, tip: "After a red trade, step away 10 minutes before the next." },
+    { id: "fear", label: "Cutting winners early (fear)", ic: "🐇", test: function (t) { return /fear|booked early/i.test((t.exit_reason || "") + (t.emotion || "")); }, tip: "Let winners run to target. Trust the plan." },
+    { id: "greed", label: "Holding losers too long (greed)", ic: "💎", test: function (t) { return /greed|held too long/i.test((t.exit_reason || "") + (t.emotion || "")); }, tip: "Your target was the plan. Book it." },
+    { id: "fomo", label: "FOMO entries", ic: "🏃", test: function (t) { return /fomo/i.test((t.exit_reason || "") + (t.emotion || "")); }, tip: "If you're chasing, you're late. Wait for your setup." }
+  ];
+  VIEWS.leak = function () {
+    var v = el('<div></div>');
+    v.appendChild(topbar("Money Leak Report", "The real rupee cost of your bad habits — so you can plug the leaks."));
+    var tr = CM.load().trades;
+    if (!tr.length) { var e = el('<div class="card paywall"><div class="lock-ic">💸</div><h3>No trades yet</h3><p class="hint">Log your trades and we\'ll show exactly what each habit costs you.</p></div>'); var eb = el('<button class="btn btn-primary" style="margin-top:8px">＋ Log a trade</button>'); eb.addEventListener("click", function () { go("log"); }); e.appendChild(eb); v.appendChild(e); return v; }
+    // Cost = sum of losses (negative pnl) on trades matching each habit.
+    var rows = LEAK_DEFS.map(function (d) {
+      var hits = tr.filter(d.test);
+      var loss = hits.reduce(function (a, t) { var p = CM.pnl(t); return a + (p < 0 ? p : 0); }, 0);
+      return { d: d, n: hits.length, loss: Math.abs(loss) };
+    }).filter(function (r) { return r.n > 0; }).sort(function (a, b) { return b.loss - a.loss; });
+    var totalLeak = rows.reduce(function (a, r) { return a + r.loss; }, 0);
+    // Headline
+    var hero = el('<div class="today-hero" style="max-width:none;background:linear-gradient(135deg,#3a0d12,#5a1620)"></div>');
+    hero.innerHTML = '<div class="th-row"><div><div class="th-hi" style="color:#ff8a95">💸 ' + money(totalLeak) + ' leaked</div>' +
+      '<div class="th-sub">This is the money your indiscipline handed back to the market. Every rupee here was avoidable.</div></div></div>';
+    v.appendChild(hero);
+    if (!rows.length) { v.appendChild(el('<div class="card"><p class="hint">No costly habits detected — your losses aren\'t coming from indiscipline. Clean trading. 👏</p></div>')); return v; }
+    var c = el('<div class="card"><div class="card-hd"><h3>Where the money goes</h3><span class="hint">cost · occurrences</span></div></div>');
+    var max = rows[0].loss || 1;
+    rows.forEach(function (r) {
+      c.appendChild(el('<div style="margin:12px 0"><div style="display:flex;justify-content:space-between;align-items:center"><b>' + r.d.ic + ' ' + esc(r.d.label) + '</b><span class="neg mono" style="font-weight:800">-' + money(r.loss) + '</span></div>' +
+        '<div class="bar coral" style="margin:6px 0"><i style="width:' + Math.round(r.loss / max * 100) + '%"></i></div>' +
+        '<div class="hint">×' + r.n + ' trade(s) · ' + esc(r.d.tip) + '</div></div>'));
+    });
+    v.appendChild(c);
+    v.appendChild(el('<div class="notice" style="margin-top:12px">Fixing just your <b>#1 leak</b> (' + esc(rows[0].d.label) + ') would have saved you <b>' + money(rows[0].loss) + '</b>. That\'s the fastest money you\'ll ever make. 💪</div>'));
+    v.appendChild(el('<p class="hint" style="margin-top:10px"><span class="mock-tag">FROM YOUR TRADES</span> Costs are the realised losses on trades where this habit showed up. Educational — not advice.</p>'));
+    return v;
+  };
+
+  // ---- TRADE GRADES (Platinum) ---------------------------------------------
+  function gradeLetter(d) { return d >= 90 ? "A+" : d >= 80 ? "A" : d >= 70 ? "B" : d >= 55 ? "C" : d >= 35 ? "D" : "F"; }
+  function gradeColor(d) { return d >= 70 ? "var(--emerald)" : d >= 45 ? "var(--gold)" : "var(--red)"; }
+  function tradeVerdict(t) {
+    var bits = [];
+    if (!CM.hasSL(t)) bits.push("no stop-loss — biggest risk");
+    if (/revenge/i.test((t.exit_reason || "") + (t.emotion || ""))) bits.push("revenge trade");
+    if (/fomo/i.test((t.exit_reason || "") + (t.emotion || ""))) bits.push("FOMO entry");
+    if (/fear|booked early/i.test((t.exit_reason || "") + (t.emotion || ""))) bits.push("cut a winner early");
+    if (/greed|held too long/i.test((t.exit_reason || "") + (t.emotion || ""))) bits.push("held a loser too long");
+    if (!bits.length) return CM.hasSL(t) && /target|stop-loss/i.test(t.exit_reason || "") ? "Textbook — stop set, exited by plan. Do more of this." : "Solid, disciplined trade.";
+    return "Fix: " + bits.join(", ") + ".";
+  }
+  VIEWS.grade = function () {
+    var v = el('<div></div>');
+    v.appendChild(topbar("Trade Grades", "Every trade graded A–F with an honest one-line verdict — your report card, trade by trade."));
+    var tr = CM.load().trades.slice().sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
+    if (!tr.length) { var e = el('<div class="card paywall"><div class="lock-ic">🎓</div><h3>No trades to grade yet</h3><p class="hint">Log a trade and it gets graded instantly.</p></div>'); var eb = el('<button class="btn btn-primary" style="margin-top:8px">＋ Log a trade</button>'); eb.addEventListener("click", function () { go("log"); }); e.appendChild(eb); v.appendChild(e); return v; }
+    var avg = Math.round(tr.reduce(function (a, t) { return a + CM.tradeDiscipline(t); }, 0) / tr.length);
+    var hero = el('<div class="today-hero" style="max-width:none"></div>');
+    hero.innerHTML = '<div class="th-row"><div><div class="th-hi">🎓 Your grade average: ' + gradeLetter(avg) + '</div><div class="th-sub">Across ' + tr.length + ' graded trade(s). Aim to turn every C and D into an A.</div></div><div class="th-rank" style="color:' + gradeColor(avg) + '">' + gradeLetter(avg) + '</div></div>';
+    v.appendChild(hero);
+    var c = el('<div class="card" style="margin-top:14px"></div>');
+    tr.slice(0, 80).forEach(function (t) {
+      var d = CM.tradeDiscipline(t), p = CM.pnl(t);
+      c.appendChild(el('<div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)">' +
+        '<div style="width:44px;height:44px;flex:none;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;color:#fff;background:' + gradeColor(d) + '">' + gradeLetter(d) + '</div>' +
+        '<div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + esc(t.symbol) + ' <span class="hint" style="font-weight:400">' + esc(t.side) + ' ' + t.qty + '</span></b><span class="' + (p >= 0 ? "pos" : "neg") + ' mono">' + money(p) + '</span></div>' +
+        '<div class="hint" style="margin-top:2px">' + esc(tradeVerdict(t)) + '</div>' +
+        '<div class="hint" style="font-size:.72rem;margin-top:2px">' + new Date(t.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" }) + '</div></div></div>'));
+    });
+    v.appendChild(c);
+    return v;
+  };
+
+  // ---- WHAT-IF SIMULATOR (Diamond) -----------------------------------------
+  VIEWS.whatif = function () {
+    var v = el('<div></div>');
+    v.appendChild(topbar("What-If Simulator", "See the money and discipline your better self would have — the cost of your habits, simulated."));
+    var tr = CM.load().trades;
+    if (tr.length < 3) { var e = el('<div class="card paywall"><div class="lock-ic">🔮</div><h3>Log a few more trades</h3><p class="hint">The simulator needs a bit of history to model your better self.</p></div>'); var eb = el('<button class="btn btn-primary" style="margin-top:8px">＋ Log a trade</button>'); eb.addEventListener("click", function () { go("log"); }); e.appendChild(eb); v.appendChild(e); return v; }
+    var realPnl = tr.reduce(function (a, t) { return a + CM.pnl(t); }, 0);
+    var realDisc = Math.round(tr.reduce(function (a, t) { return a + CM.tradeDiscipline(t); }, 0) / tr.length);
+    // Scenario helper: remove trades matching a predicate, recompute P&L & discipline.
+    function scenario(pred) {
+      var kept = tr.filter(function (t) { return !pred(t); });
+      var pnl = kept.reduce(function (a, t) { return a + CM.pnl(t); }, 0);
+      var disc = kept.length ? Math.round(kept.reduce(function (a, t) { return a + CM.tradeDiscipline(t); }, 0) / kept.length) : 0;
+      var removed = tr.length - kept.length;
+      return { pnl: pnl, disc: disc, removed: removed, delta: pnl - realPnl };
+    }
+    var scenarios = [
+      { id: "revenge", label: "If you never revenge-traded", ic: "😤", pred: function (t) { return /revenge/i.test((t.exit_reason || "") + (t.emotion || "")); } },
+      { id: "nosl", label: "If you always set a stop-loss", ic: "🛡️", pred: function (t) { return !CM.hasSL(t); } },
+      { id: "fomo", label: "If you skipped FOMO entries", ic: "🏃", pred: function (t) { return /fomo/i.test((t.exit_reason || "") + (t.emotion || "")); } },
+      { id: "emo", label: "If you only traded when calm", ic: "🧘", pred: function (t) { return /fomo|fear|greed|revenge|overconfident/i.test(t.emotion || ""); } }
+    ];
+    var hero = el('<div class="today-hero" style="max-width:none"></div>');
+    hero.innerHTML = '<div class="th-row"><div><div class="th-hi">🔮 Your real P&L: <span class="mono">' + money(realPnl) + '</span></div><div class="th-sub">Discipline ' + realDisc + '. Below: what each habit is costing your bottom line.</div></div></div>';
+    v.appendChild(hero);
+    var g = el('<div class="grid g2" style="margin-top:14px"></div>');
+    scenarios.forEach(function (sc) {
+      var r = scenario(sc.pred);
+      if (!r.removed) { g.appendChild(el('<div class="card" style="padding:14px"><div style="font-weight:800">' + sc.ic + ' ' + esc(sc.label) + '</div><div class="hint" style="margin-top:6px">✓ You already do this — nothing to fix here. 👏</div></div>')); return; }
+      var better = r.delta > 0;
+      g.appendChild(el('<div class="card" style="padding:14px;border-color:' + (better ? "rgba(34,224,138,.4)" : "var(--line)") + '">' +
+        '<div style="font-weight:800">' + sc.ic + ' ' + esc(sc.label) + '</div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px"><span class="hint">P&L would be</span><b class="mono" style="font-size:1.15rem">' + money(r.pnl) + '</b></div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:baseline"><span class="hint">Difference</span><b class="mono ' + (better ? "pos" : "neg") + '">' + (better ? "+" : "") + money(r.delta) + '</b></div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:baseline"><span class="hint">Discipline</span><b>' + realDisc + ' → ' + r.disc + '</b></div>' +
+        '<div class="hint" style="margin-top:6px">Based on ' + r.removed + ' trade(s) with this habit.</div></div>'));
+    });
+    v.appendChild(g);
+    // Best opportunity
+    var best = scenarios.map(function (sc) { return { sc: sc, r: scenario(sc.pred) }; }).filter(function (x) { return x.r.removed; }).sort(function (a, b) { return b.r.delta - a.r.delta; })[0];
+    if (best && best.r.delta > 0) v.appendChild(el('<div class="notice" style="margin-top:12px">🎯 Your biggest opportunity: <b>' + esc(best.sc.label.toLowerCase().replace("if you ", "")) + '</b> — worth about <b class="pos">+' + money(best.r.delta) + '</b> to your P&L. Start there.</div>'));
+    v.appendChild(el('<p class="hint" style="margin-top:10px"><span class="mock-tag">SIMULATION</span> Models your history with those trades removed — illustrative, not a promise. Your real edge is not making them in the first place.</p>'));
     return v;
   };
 
