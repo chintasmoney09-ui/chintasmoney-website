@@ -2659,7 +2659,7 @@
   var chat = [];
   VIEWS.coach = function () {
     var v = el('<div></div>');
-    v.appendChild(topbar("Discipline Coach", "Asks about YOUR data. Coaches behaviour — never gives buy/sell tips."));
+    v.appendChild(topbar("AI Discipline Coach", "A real AI that reads YOUR trading data and coaches your behaviour — never buy/sell tips."));
     var c = el('<div class="card"></div>');
     var box = el('<div class="chat"></div>');
     if (!chat.length) chat.push({ r: "a", t: "I'm your discipline coach. I won't tell you what to trade — I'll show you how you trade. Ask me something." });
@@ -2675,7 +2675,38 @@
     c.appendChild(comp); v.appendChild(c); return v;
   };
   function bubble(m) { var e = el('<div class="msg ' + m.r + '">' + esc(m.t).replace(/\n/g, "<br>") + '</div>'); if (m.ev) e.appendChild(el('<div class="ev"><b>From your data:</b> ' + esc(m.ev) + '</div>')); return e; }
-  function ask(q, box) { chat.push({ r: "u", t: q }); box.appendChild(bubble(chat[chat.length - 1])); var a = coach(q); chat.push({ r: "a", t: a.t, ev: a.ev }); box.appendChild(bubble(chat[chat.length - 1])); box.scrollTop = box.scrollHeight; CM.load().usage.aiQuestions++; CM.save(); }
+  // Compact snapshot of the user's real data for the AI coach.
+  function coachContext() {
+    var st = CM.stats(), ms = CM.mistakes(), sp = CM.setupPerformance(), e = CM.engagement(), p = st.personality;
+    var lines = [
+      "Trades logged: " + st.count,
+      "Discipline score: " + st.discipline + "/100 (" + scoreLabel(st.discipline) + ")",
+      "Win rate: " + st.winRate + "%; risk:reward: " + (st.rr ? st.rr.toFixed(2) + "x" : "n/a"),
+      "Total P&L: ₹" + Math.round(st.totalPnl),
+      "Trades with no stop-loss: " + st.noSL + "; emotional exits: " + st.emotional + "; overtrading days: " + st.overtradeDays,
+      "Trader personality: " + p.key,
+      "Current streak: " + e.streak + " days; level " + e.level + " " + e.title
+    ];
+    if (ms.length) lines.push("Top repeating mistakes: " + ms.slice(0, 3).map(function (m) { return m.name + " x" + m.n; }).join("; "));
+    if (sp.length) lines.push("Best setup: " + sp[0].setup + " (" + sp[0].winRate + "% win); weakest: " + sp[sp.length - 1].setup);
+    return lines.join("\n");
+  }
+  var _coachAI = null; // null=unknown, true=online, false=use local
+  function ask(q, box) {
+    chat.push({ r: "u", t: q }); box.appendChild(bubble(chat[chat.length - 1]));
+    CM.load().usage.aiQuestions++; CM.save();
+    // Typing indicator
+    var typing = el('<div class="msg a">…</div>'); box.appendChild(typing); box.scrollTop = box.scrollHeight;
+    var token = window.CMCloud && window.CMCloud.token;
+    if (_coachAI === false || !token) { typing.remove(); return localAnswer(q, box); }
+    var history = chat.slice(-7, -1).map(function (m) { return { role: m.r === "u" ? "user" : "assistant", text: m.t }; });
+    fetch("/api/coach", { method: "POST", headers: { "content-type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify({ question: q, context: coachContext(), history: history }) })
+      .then(function (r) { return r.ok ? r.json() : r.json().then(function (j) { throw j; }); })
+      .then(function (d) { _coachAI = true; typing.remove(); chat.push({ r: "a", t: d.text }); box.appendChild(bubble(chat[chat.length - 1])); box.scrollTop = box.scrollHeight; })
+      .catch(function (err) { if (err && err.error === "ai_not_configured") _coachAI = false; typing.remove(); localAnswer(q, box); });
+  }
+  function localAnswer(q, box) { var a = coach(q); chat.push({ r: "a", t: a.t, ev: a.ev }); box.appendChild(bubble(chat[chat.length - 1])); box.scrollTop = box.scrollHeight; }
   function coach(q) {
     var st = CM.stats(), lc = q.toLowerCase(), ms = CM.mistakes();
     if (/discipline|score|low|why/.test(lc)) return { t: "Your discipline score is " + st.discipline + " (" + scoreLabel(st.discipline) + "). The biggest drags: " + (st.noSL ? st.noSL + " trades with no stop-loss, " : "") + st.emotional + " emotional exits" + (st.overtradeDays ? ", and " + st.overtradeDays + " overtrading day(s)" : "") + ". Fix stops first — it's the fastest 40-point swing.", ev: st.count + " trades analysed" };
