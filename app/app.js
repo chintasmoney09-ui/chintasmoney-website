@@ -32,8 +32,10 @@
     { id: "strategy", label: "Setup Performance", ic: "▦" },
     { id: "rules", label: "Rules & Adherence", ic: "📏" },
     { id: "grade", label: "Trade Grades", ic: "🎓" },
+    { id: "edge", label: "Edge & Expectancy", ic: "📐" },
     { id: "whatif", label: "What-If Simulator", ic: "🔮" },
-    { id: "coach", label: "Discipline Coach", ic: "✦" },
+    { id: "playbook", label: "My Trading Playbook", ic: "📖" },
+    { id: "coach", label: "AI Discipline Coach", ic: "✦" },
     { sep: true, group: "Play" },
     { id: "badges", label: "Streaks & Badges", ic: "🏅" },
     { id: "leaderboard", label: "Leaderboard", ic: "🏆" },
@@ -63,7 +65,9 @@
     strategy: "See which of your setups actually make money, and which quietly bleed your account.",
     rules: "Set your own trading rules and see, honestly, how often you actually follow them.",
     grade: "Every trade graded A to F with a one-line verdict — your personal report card, trade by trade.",
+    edge: "Your true edge in numbers — expectancy per trade, R-multiples, profit factor and avg win vs loss.",
     whatif: "See what your P&L and discipline would be if you fixed one habit — the money you leave on the table.",
+    playbook: "Your own trading rulebook, written from your data — download it and trade by it.",
     coach: "Ask the AI coach about your own trading and get an honest, data-based verdict.",
     badges: "Earn streaks and badges for disciplined habits — keep your streak alive.",
     leaderboard: "See how your discipline ranks against other traders. We reward discipline, never profit.",
@@ -281,6 +285,7 @@
     "money-leak-report": "💸 Money Leak Report (₹ cost of habits)", "time-day-edge": "Time & Day Edge",
     "trade-grades": "🎓 Trade Grades (A–F per trade)", "rules-adherence": "📏 Rules & Adherence tracker",
     "monthly-deep-dive": "📅 Monthly deep-dive report", "what-if-simulator": "🔮 What-If Simulator",
+    "edge-expectancy": "📐 Edge & Expectancy analytics", "trading-playbook": "📖 Personal Trading Playbook",
     "everything-plus": "Everything in Go Plus", "strategy-performance": "Setup performance analytics",
     "csv-import-export": "CSV / broker import & export", "risk-and-r-multiples": "Risk & R-multiple analytics",
     "weekly-report": "Weekly report", "goal-rules-engine": "Goal & rules engine",
@@ -305,9 +310,11 @@
       ["Setup performance", "—", "—", "✓", "✓"],
       ["📏 Rules & Adherence", "—", "—", "✓", "✓"],
       ["🎓 Trade Grades (A–F)", "—", "—", "✓", "✓"],
+      ["📐 Edge & Expectancy", "—", "—", "✓", "✓"],
       ["Broker CSV import", "—", "—", "✓", "✓"],
       ["Weekly email report", "—", "—", "✓", "✓"],
       ["🔮 What-If Simulator", "—", "—", "—", "✓"],
+      ["📖 Personal Trading Playbook", "—", "—", "—", "✓"],
       ["📅 Monthly deep-dive report", "—", "—", "✓", "✓"],
       ["Priority AI + monthly 1:1 review", "—", "—", "—", "✓"],
       ["Multi-year backtesting", "—", "—", "—", "✓"]
@@ -333,6 +340,8 @@
     leak: { em: "💸", title: "Money Leak Report", tag: "The real ₹ cost of your bad habits.", feats: ["Exactly how many rupees each mistake has cost you", "Your single most expensive habit, in money", "The refund you give the market every month — and how to stop it"] },
     grade: { em: "🎓", title: "Trade Grades", tag: "Every trade graded A–F, like a report card.", feats: ["An instant A–F grade on every trade you log", "A one-line verdict: what you did right or wrong", "Your grade average trending over time"] },
     whatif: { em: "🔮", title: "What-If Simulator", tag: "See the money your discipline leaves on the table.", feats: ["What your P&L would be if you'd always used a stop", "The rupees revenge trading is costing you", "Your 'disciplined self' score vs your real one"] },
+    edge: { em: "📐", title: "Edge & Expectancy", tag: "Do you actually have an edge? The maths, on your trades.", feats: ["Expectancy — how many ₹ you make per trade on average", "Profit factor & R-multiple distribution", "Average win vs average loss, and what it means"] },
+    playbook: { em: "📖", title: "My Trading Playbook", tag: "Your own rulebook, written from your data.", feats: ["Personalised rules built from your real mistakes & edges", "The setups to trade more and the ones to drop", "A branded playbook you can download and trade by"] },
     rules: { em: "📏", title: "Rules & Adherence", tag: "Set your rules — then see if you keep them.", feats: ["Pick the discipline rules that matter to you", "An honest adherence score for each rule", "Catch the rule you keep breaking before it costs you"] },
     replay: { em: "🎬", title: "Trade Replay", tag: "Replay any trade on the real market — see what would have happened.", feats: ["Your entry, stop & exit drawn on the actual market for that trade's dates", "Did the market hit your stop or target? How much did you leave on the table?", "Your behaviour & emotion vs what the market really did — the honest verdict"] }
   };
@@ -2635,6 +2644,101 @@
     var best = scenarios.map(function (sc) { return { sc: sc, r: scenario(sc.pred) }; }).filter(function (x) { return x.r.removed; }).sort(function (a, b) { return b.r.delta - a.r.delta; })[0];
     if (best && best.r.delta > 0) v.appendChild(el('<div class="notice" style="margin-top:12px">🎯 Your biggest opportunity: <b>' + esc(best.sc.label.toLowerCase().replace("if you ", "")) + '</b> — worth about <b class="pos">+' + money(best.r.delta) + '</b> to your P&L. Start there.</div>'));
     v.appendChild(el('<p class="hint" style="margin-top:10px"><span class="mock-tag">SIMULATION</span> Models your history with those trades removed — illustrative, not a promise. Your real edge is not making them in the first place.</p>'));
+    return v;
+  };
+
+  // ---- EDGE & EXPECTANCY (Platinum) ----------------------------------------
+  VIEWS.edge = function () {
+    var v = el('<div></div>');
+    v.appendChild(topbar("Edge & Expectancy", "The maths that tells you if you actually have an edge — from your own trades."));
+    var st = CM.stats(), tr = st.trades || [];
+    if (tr.length < 3) { var e = el('<div class="card paywall"><div class="lock-ic">📐</div><h3>Log a few more trades</h3><p class="hint">Expectancy needs a bit of history to be meaningful.</p></div>'); var eb = el('<button class="btn btn-primary" style="margin-top:8px">＋ Log a trade</button>'); eb.addEventListener("click", function () { go("log"); }); e.appendChild(eb); v.appendChild(e); return v; }
+    var wins = tr.filter(CM.isWin), losses = tr.filter(function (t) { return !CM.isWin(t); });
+    var grossWin = wins.reduce(function (a, t) { return a + CM.pnl(t); }, 0);
+    var grossLoss = Math.abs(losses.reduce(function (a, t) { return a + CM.pnl(t); }, 0));
+    var p = st.winRate / 100;
+    var avgWin = st.avgWin, avgLoss = Math.abs(st.avgLoss);
+    var expectancy = (p * avgWin) - ((1 - p) * avgLoss); // ₹ per trade
+    var pf = grossLoss ? grossWin / grossLoss : (grossWin > 0 ? Infinity : 0);
+    // R-multiples for trades that had a stop (risk = |entry-SL|*qty)
+    var rs = [];
+    tr.forEach(function (t) { if (CM.hasSL(t)) { var risk = Math.abs((+t.entry) - (+t.plannedSL)) * (+t.qty); if (risk > 0) rs.push(CM.pnl(t) / risk); } });
+    var avgR = rs.length ? rs.reduce(function (a, b) { return a + b; }, 0) / rs.length : null;
+    var g = el('<div class="cm-grid grid g2"></div>');
+    function stat2(l, val, hint, cls) { return el('<div class="card" style="padding:14px"><div class="hint">' + l + '</div><div class="mono ' + (cls || "") + '" style="font-size:1.5rem;font-weight:800">' + val + '</div><div class="hint" style="font-size:.78rem">' + (hint || "") + '</div></div>'); }
+    g.appendChild(stat2("Expectancy / trade", (expectancy >= 0 ? "+" : "") + money(expectancy), "avg ₹ you make per trade", expectancy >= 0 ? "pos" : "neg"));
+    g.appendChild(stat2("Profit factor", pf === Infinity ? "∞" : pf.toFixed(2), pf >= 1.5 ? "strong" : pf >= 1 ? "profitable" : "losing money", pf >= 1 ? "pos" : "neg"));
+    g.appendChild(stat2("Avg win", money(avgWin), wins.length + " winning trades", "pos"));
+    g.appendChild(stat2("Avg loss", money(-avgLoss), losses.length + " losing trades", "neg"));
+    g.appendChild(stat2("Win rate", st.winRate + "%", "of " + tr.length + " trades"));
+    g.appendChild(stat2("Avg R-multiple", avgR == null ? "—" : (avgR >= 0 ? "+" : "") + avgR.toFixed(2) + "R", avgR == null ? "set stops to unlock" : "reward vs risk per trade", avgR != null && avgR >= 0 ? "pos" : "neg"));
+    v.appendChild(g);
+    // Verdict
+    var verdict = expectancy > 0 ? "✅ You have a positive edge: on average you make " + money(expectancy) + " per trade. Protect it — more trades of the same quality compound." :
+      "⚠️ Your expectancy is negative (" + money(expectancy) + "/trade). More trades will lose more money until you fix it. Focus on cutting losers faster and letting winners run.";
+    v.appendChild(el('<div class="notice" style="margin-top:14px">' + verdict + '</div>'));
+    if (avgWin && avgLoss) v.appendChild(el('<div class="card" style="margin-top:12px"><p class="hint" style="margin:0">Your average winner is <b class="pos">' + money(avgWin) + '</b> and average loser <b class="neg">' + money(-avgLoss) + '</b> — a reward:risk of <b>' + (avgLoss ? (avgWin / avgLoss).toFixed(2) : "—") + '×</b>. ' + ((avgWin / (avgLoss || 1)) >= 1.5 ? "That ratio means you can be wrong often and still win." : "Aim to let winners run to at least 1.5× your average loss.") + '</p></div>'));
+    v.appendChild(el('<p class="hint" style="margin-top:10px"><span class="mock-tag">FROM YOUR TRADES</span> Educational analytics on your own logged trades. Not advice.</p>'));
+    return v;
+  };
+
+  // ---- MY TRADING PLAYBOOK (Diamond) ---------------------------------------
+  function playbookRules() {
+    var st = CM.stats(), ms = CM.mistakes(), sp = CM.setupPerformance(), tr = st.trades || [], rules = [];
+    if (st.noSL > 0) rules.push({ r: "Set a stop-loss on EVERY trade — no exceptions.", why: "You skipped it on " + st.noSL + " trade(s). It's your single biggest risk." });
+    else rules.push({ r: "Keep setting a stop on every trade.", why: "You've done this consistently — it's your best habit." });
+    if (sp.length) rules.push({ r: "Trade more of your \"" + sp[0].setup + "\" setup.", why: "It's your money-maker (" + sp[0].winRate + "% win, " + money(sp[0].pnl) + ")." });
+    if (sp.length > 1 && sp[sp.length - 1].pnl < 0) rules.push({ r: "Stop trading your \"" + sp[sp.length - 1].setup + "\" setup.", why: "It's bleeding you (" + money(sp[sp.length - 1].pnl) + ")." });
+    if (st.overtradeDays > 0) rules.push({ r: "Cap yourself at 3 trades per day.", why: "You overtraded on " + st.overtradeDays + " day(s) — more trades ≠ more money." });
+    var revenge = tr.filter(function (t) { return /revenge/i.test((t.exit_reason || "") + (t.emotion || "")); }).length;
+    if (revenge > 0) rules.push({ r: "After any loss, step away for 10 minutes before the next trade.", why: revenge + " revenge trade(s) detected — the account-killer." });
+    rules.push({ r: "Book winners at your planned target; hold losers only to your stop.", why: "Discipline is doing what you planned, not what you feel." });
+    rules.push({ r: "Log every trade honestly — even the ugly ones.", why: "What gets measured gets managed. Your score depends on it." });
+    return rules;
+  }
+  function printPlaybook() {
+    var win = window.open("", "_blank"); if (!win) { toast("Allow pop-ups to open your playbook", "err"); return; }
+    var st = CM.stats(), p = st.personality, e = CM.engagement(), name = CM.load().profile.name || "Trader";
+    var rules = playbookRules();
+    var rulesHtml = rules.map(function (x, i) { return '<div class="rule"><div class="n">' + (i + 1) + '</div><div><div class="rt">' + esc(x.r) + '</div><div class="rw">' + esc(x.why) + '</div></div></div>'; }).join("");
+    var html =
+      '<!doctype html><html><head><meta charset="utf-8"><title>My Trading Playbook — ChintasMoney</title>' +
+      '<style>@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap");' +
+      'body{font-family:"Plus Jakarta Sans",system-ui,Arial,sans-serif;color:#0f1730;margin:0;background:#f4f6fb}' +
+      '.wrap{max-width:660px;margin:24px auto;background:#fff;border-radius:18px;overflow:hidden;border:1px solid #e6ebf5}' +
+      '.hd{background:linear-gradient(135deg,#0b1533,#1e2a5a);padding:26px;text-align:center;color:#fff}.hd img{height:40px}.hd .t{font-size:.8rem;letter-spacing:.14em;color:#a9b6da;margin-top:6px}' +
+      '.body{padding:26px}h1{font-size:1.5rem;margin:0 0 2px;text-align:center}.sub{text-align:center;color:#5b6b8c;margin:0 0 16px}' +
+      '.pers{background:#eef2ff;border-radius:12px;padding:14px;text-align:center;margin-bottom:18px}.pers b{color:#3730a3}' +
+      '.rule{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid #eef2f7}' +
+      '.rule .n{width:30px;height:30px;flex:none;border-radius:50%;background:#8b5cf6;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center}' +
+      '.rt{font-weight:700}.rw{color:#5b6b8c;font-size:.9rem;margin-top:2px}' +
+      '.vow{background:linear-gradient(135deg,#eafff5,#e6fbf6);border:1px solid #b8f0dd;border-radius:12px;padding:14px;margin-top:16px;text-align:center;font-weight:700;color:#0f7a5f}' +
+      '.ft{background:#0b1533;color:#a9b6da;padding:18px 26px;font-size:12px;line-height:1.7}.ft a{color:#7cc7ff}' +
+      '.btn{display:inline-block;margin:16px auto 0;padding:11px 20px;border:none;border-radius:10px;background:#8b5cf6;color:#fff;cursor:pointer;font-weight:700}@media print{.btn{display:none}body{background:#fff}.wrap{border:none;margin:0}}</style></head><body>' +
+      '<div class="wrap"><div class="hd"><img src="https://chintasmoney.com/assets/logo-full.png" alt="ChintasMoney"/><div class="t">MY TRADING PLAYBOOK</div></div>' +
+      '<div class="body"><h1>' + esc(name) + '\'s Playbook</h1><p class="sub">Written from your own trades · ' + new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) + '</p>' +
+      '<div class="pers">You trade like <b>' + esc(p.key) + '</b> ' + esc(p.em) + '<br><span style="color:#5b6b8c;font-weight:400;font-size:.9rem">' + esc(p.line) + '</span></div>' +
+      '<h3>Your rules</h3>' + rulesHtml +
+      '<div class="vow">My promise to myself: I trade my plan, not my feelings. Discipline over profit.</div>' +
+      '<div style="text-align:center"><button class="btn" onclick="window.print()">🖨 Save as PDF / Print</button></div></div>' +
+      '<div class="ft"><b style="color:#fff">ChintasMoney</b> · reduce your losses by understanding your behaviour.<br>chintasmoney.com · support: chintasmoney@gmail.com<br><span style="color:#6f83ab">Built from your own logged trades. Not investment advice.</span></div></div></body></html>';
+    win.document.write(html); win.document.close();
+  }
+  VIEWS.playbook = function () {
+    var v = el('<div></div>');
+    v.appendChild(topbar("My Trading Playbook", "Your own rulebook, written from your data. Print it. Trade by it."));
+    var st = CM.stats();
+    if (!st.count) { var e = el('<div class="card paywall"><div class="lock-ic">📖</div><h3>No trades yet</h3><p class="hint">Log your trades and we\'ll write your personal playbook.</p></div>'); var eb = el('<button class="btn btn-primary" style="margin-top:8px">＋ Log a trade</button>'); eb.addEventListener("click", function () { go("log"); }); e.appendChild(eb); v.appendChild(e); return v; }
+    var p = st.personality;
+    v.appendChild(el('<div class="today-hero" style="max-width:none"><div class="th-row"><div><div class="th-hi">📖 Your personal playbook</div><div class="th-sub">You trade like ' + p.em + ' <b>' + esc(p.key) + '</b>. Here are the rules your data says you must follow.</div></div></div></div>'));
+    var c = el('<div class="card" style="margin-top:14px"></div>');
+    playbookRules().forEach(function (x, i) {
+      c.appendChild(el('<div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)"><div style="width:28px;height:28px;flex:none;border-radius:50%;background:var(--violet);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center">' + (i + 1) + '</div><div><b>' + esc(x.r) + '</b><div class="hint" style="margin-top:2px">' + esc(x.why) + '</div></div></div>'));
+    });
+    var dl = el('<button class="btn btn-primary" style="margin-top:14px">⬇ Download my playbook</button>');
+    dl.addEventListener("click", printPlaybook);
+    c.appendChild(dl);
+    v.appendChild(c);
     return v;
   };
 

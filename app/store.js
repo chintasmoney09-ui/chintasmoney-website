@@ -25,18 +25,18 @@
       limits: { history: Infinity } },
     pro:   { id: "pro",   name: "Platinum",   price: 499, cadence: "month",
       blurb: "For serious, systematic traders.",
-      features: ["everything-plus", "strategy-performance", "trade-grades", "rules-adherence", "csv-import-export", "weekly-report", "monthly-deep-dive"],
+      features: ["everything-plus", "strategy-performance", "trade-grades", "edge-expectancy", "rules-adherence", "csv-import-export", "weekly-report", "monthly-deep-dive"],
       limits: { history: Infinity } },
     diamond: { id: "diamond", name: "Diamond", price: 999, cadence: "month",
       blurb: "Everything, white-glove.",
-      features: ["everything-pro", "what-if-simulator", "priority-ai", "monthly-1-1-review", "multi-year-backtest", "early-access"],
+      features: ["everything-pro", "what-if-simulator", "trading-playbook", "priority-ai", "monthly-1-1-review", "multi-year-backtest", "early-access"],
       limits: { history: Infinity } }
   };
   var FEATURE_MATRIX = {
     home: "free", log: "free", trades: "free", card: "free", profile: "free", calc: "free", analytics: "free", markets: "free", today: "free", report: "free", dreams: "free",
     insights: "plus", coach: "plus", badges: "plus", leaderboard: "plus", timing: "plus", leak: "plus",
-    strategy: "pro", replay: "pro", rules: "pro", grade: "pro",
-    whatif: "diamond"
+    strategy: "pro", replay: "pro", rules: "pro", grade: "pro", edge: "pro",
+    whatif: "diamond", playbook: "diamond"
   };
   var PLAN_RANK = { free: 0, plus: 1, pro: 2, diamond: 3 };
   function planAllows(p, area) { return PLAN_RANK[p] >= PLAN_RANK[FEATURE_MATRIX[area] || "free"]; }
