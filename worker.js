@@ -149,9 +149,17 @@ async function recordPayment(env, row) {
 
 // ---- Branded email system (Resend) -----------------------------------------
 const SUPPORT_EMAIL = "chintasmoney@gmail.com";
+const OWNER_EMAIL = "chintasmoney@gmail.com"; // where owner alerts go (override with env.OWNER_EMAIL)
 const LOGO_URL = "https://chintasmoney.com/assets/logo-full.png";
 const APP_URL = "https://chintasmoney.com/app/";
 const SITE_URL = "https://chintasmoney.com";
+
+// Alert the owner (you) by email — new signups, new payments — so you never
+// have to check the admin panel. No-op unless Resend is configured.
+async function sendOwnerAlert(env, subject, innerHtml) {
+  var to = (env && env.OWNER_EMAIL) || OWNER_EMAIL;
+  await sendEmail(env, { to: to, subject: subject, html: emailShell(innerHtml) });
+}
 
 // What each product really is — for a professional B2C receipt.
 function productDesc(product) {
@@ -455,6 +463,15 @@ async function handleRzpWebhook(request, env) {
         };
         await fetch(base + "/rest/v1/payments?on_conflict=razorpay_payment_id",
           { method: "POST", headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=merge-duplicates" }), body: JSON.stringify(row) });
+        // Alert the owner instantly.
+        await sendOwnerAlert(env, "💰 New payment " + rupees(p.amount) + " — ChintasMoney",
+          '<h2 style="margin:0 0 6px">💰 You got paid!</h2>' +
+          '<p style="color:#5b6b8c;margin:0 0 12px">A new payment just came in.</p>' +
+          '<div style="border:1px solid #e6ebf5;border-radius:12px;padding:14px 16px;font-size:14px">' +
+          '<b style="font-size:1.3rem;color:#16a34a">' + rupees(p.amount) + '</b><br>' +
+          'Plan/product: <b>' + esc((product && productDesc(product).name) || "—") + '</b><br>' +
+          'Customer: ' + esc(p.email || p.contact || "—") + '<br>Method: ' + esc(p.method || "Razorpay") + '<br>Payment ID: ' + esc(p.id) + '</div>' +
+          '<p style="margin:14px 0 0"><a href="' + SITE_URL + '/app/admin.html" style="color:#12b39a;font-weight:700">Open admin →</a></p>');
       }
     } else if (type === "refund.created" || type === "refund.processed") {
       const r = (ev.payload && ev.payload.refund && ev.payload.refund.entity) || null;
@@ -783,6 +800,12 @@ async function handleWelcome(request, env) {
   const email = b && typeof b.email === "string" ? b.email.trim() : "";
   if (!email || email.indexOf("@") === -1) return aRes({ error: "bad_email" }, 400);
   await sendWelcomeEmail(env, email);
+  // Alert the owner of a new signup.
+  await sendOwnerAlert(env, "🆕 New signup — ChintasMoney",
+    '<h2 style="margin:0 0 6px">🆕 New user just joined!</h2>' +
+    '<p style="color:#5b6b8c;margin:0 0 12px">Someone created an account.</p>' +
+    '<div style="border:1px solid #e6ebf5;border-radius:12px;padding:14px 16px;font-size:14px">Email: <b>' + esc(email) + '</b><br>When: ' + esc(new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })) + '</div>' +
+    '<p style="margin:14px 0 0"><a href="' + SITE_URL + '/app/admin.html" style="color:#12b39a;font-weight:700">Open admin →</a></p>');
   return aRes({ ok: true }, 200);
 }
 
