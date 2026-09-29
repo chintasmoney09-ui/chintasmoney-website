@@ -402,6 +402,11 @@ async function handleAdminData(request, env) {
     const rr = await fetch(base + "/rest/v1/refunds?select=*&order=created_at.desc", { headers: h });
     if (rr.ok) refundRows = await rr.json();
   } catch (e) {}
+  let leadRows = [];
+  try {
+    const lr = await fetch(base + "/rest/v1/leads?select=*&order=created_at.desc&limit=1000", { headers: h });
+    if (lr.ok) leadRows = await lr.json();
+  } catch (e) {}
 
   const outUsers = users.map(function (u) {
     const st = (states[u.id] && states[u.id].data) || {};
@@ -428,7 +433,10 @@ async function handleAdminData(request, env) {
       email: r.email || "", product: r.product || "", amount: Math.round((r.amount || 0) / 100),
       reason: r.reason || "", date: (r.created_at || "").slice(0, 10) };
   });
-  return aRes({ users: outUsers, invoices: invoices, refunds: refunds, totalUsers: outUsers.length }, 200);
+  const leads = leadRows.map(function (l) {
+    return { email: l.email || "", source: l.source || "—", note: l.note || "", date: (l.created_at || "").slice(0, 10) };
+  });
+  return aRes({ users: outUsers, invoices: invoices, refunds: refunds, leads: leads, totalUsers: outUsers.length }, 200);
 }
 
 // ---- Razorpay webhook: record verified payments/refunds into Supabase -------
@@ -794,6 +802,71 @@ async function handleReferral(request, env) {
   return aRes({ ok: true, granted: BONUS }, 200);
 }
 
+// Capture a lead (opted-in email from the site/free tools). Public endpoint.
+async function handleLead(request, env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return aRes({ error: "not_configured" }, 501);
+  let b; try { b = await request.json(); } catch (e) { return aRes({ error: "bad_request" }, 400); }
+  const email = b && typeof b.email === "string" ? b.email.trim().toLowerCase() : "";
+  if (!email || email.indexOf("@") === -1 || email.length > 200) return aRes({ error: "bad_email" }, 400);
+  const source = (b && typeof b.source === "string" ? b.source : "site").slice(0, 60);
+  const note = (b && typeof b.note === "string" ? b.note : "").slice(0, 300);
+  const base = env.SUPABASE_URL.replace(/\/$/, "");
+  try {
+    await fetch(base + "/rest/v1/leads?on_conflict=email", {
+      method: "POST", headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=merge-duplicates" }),
+      body: JSON.stringify({ email: email, source: source, note: note, created_at: new Date().toISOString() }),
+    });
+  } catch (e) {}
+  return aRes({ ok: true }, 200);
+}
+
+// Admin email broadcast (marketing to your own users / opted-in leads).
+// body: { subject, message, segment, emails? }
+async function handleAdminBroadcast(request, env) {
+  const gate = await requireAdmin(request, env); if (gate.err) return gate.err;
+  if (!env.RESEND_API_KEY || !env.RECEIPT_FROM) return aRes({ error: "email_not_configured", detail: "Add RESEND_API_KEY and RECEIPT_FROM in Cloudflare." }, 501);
+  let b; try { b = await request.json(); } catch (e) { return aRes({ error: "bad_request" }, 400); }
+  const subject = String((b && b.subject) || "").slice(0, 200);
+  const message = String((b && b.message) || "");
+  const segment = String((b && b.segment) || "leads");
+  if (!subject || !message) return aRes({ error: "missing", detail: "Subject and message are required." }, 400);
+  const base = gate.base;
+  const h = { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: "Bearer " + env.SUPABASE_SERVICE_ROLE_KEY };
+  // Build recipient list.
+  let recipients = [];
+  try {
+    if (segment === "custom") {
+      recipients = (Array.isArray(b.emails) ? b.emails : String(b.emails || "").split(/[\s,;]+/)).map(function (e) { return String(e).trim().toLowerCase(); });
+    } else if (segment === "leads") {
+      const lr = await fetch(base + "/rest/v1/leads?select=email&limit=2000", { headers: h });
+      if (lr.ok) recipients = (await lr.json()).map(function (r) { return r.email; });
+    } else {
+      // users, or a plan segment (plus/pro/diamond/free): join auth users + user_state
+      const states = {};
+      try { const sr = await fetch(base + "/rest/v1/user_state?select=user_id,data", { headers: h }); if (sr.ok) (await sr.json()).forEach(function (r) { states[r.user_id] = (r.data && r.data.profile && r.data.profile.plan) || "free"; }); } catch (e) {}
+      let users = [];
+      for (let page = 1; page <= 50; page++) {
+        const ur = await fetch(base + "/auth/v1/admin/users?page=" + page + "&per_page=200", { headers: h });
+        if (!ur.ok) break; const uj = await ur.json(); const batch = uj.users || (Array.isArray(uj) ? uj : []);
+        if (!batch.length) break; users = users.concat(batch); if (batch.length < 200) break;
+      }
+      users.forEach(function (u) {
+        if (!u.email) return;
+        if (segment === "users" || states[u.id] === segment) recipients.push(u.email);
+      });
+    }
+  } catch (e) { return aRes({ error: "list_failed" }, 400); }
+  // Dedupe + validate + cap (protect sender reputation & Resend limits).
+  const seen = {}; recipients = recipients.filter(function (e) { if (!e || e.indexOf("@") === -1 || seen[e]) return false; seen[e] = 1; return true; });
+  const CAP = 300; const list = recipients.slice(0, CAP);
+  const inner = '<div style="font-size:15px;line-height:1.7;color:#0f1730">' + esc(message).replace(/\n/g, "<br>") + '</div>' +
+    '<p style="color:#98a6c4;font-size:12px;margin:18px 0 0">You are receiving this because you signed up or opted in at chintasmoney.com. Reply "unsubscribe" to stop.</p>';
+  const html = emailShell(inner);
+  let sent = 0;
+  for (const to of list) { await sendEmail(env, { to: to, subject: subject, html: html }); sent++; }
+  return aRes({ ok: true, sent: sent, total: recipients.length, capped: recipients.length > CAP }, 200);
+}
+
 // Welcome email on first sign-in. Client calls this once per new account.
 async function handleWelcome(request, env) {
   let b; try { b = await request.json(); } catch (e) { return aRes({ error: "bad_request" }, 400); }
@@ -819,6 +892,8 @@ export default {
     if (request.method === "POST" && url.pathname === "/api/welcome") return handleWelcome(request, env);
     if (request.method === "POST" && url.pathname === "/api/coach") return handleCoach(request, env);
     if (request.method === "POST" && url.pathname === "/api/referral") return handleReferral(request, env);
+    if (request.method === "POST" && url.pathname === "/api/lead") return handleLead(request, env);
+    if (request.method === "POST" && url.pathname === "/api/admin/broadcast") return handleAdminBroadcast(request, env);
     if (request.method === "GET" && url.pathname === "/api/admin/razorpay") return handleAdminRazorpay(request, env);
     if (request.method === "POST" && url.pathname === "/api/admin/login") return handleAdminLogin(request, env);
     if (request.method === "GET" && url.pathname === "/api/admin/data") return handleAdminData(request, env);

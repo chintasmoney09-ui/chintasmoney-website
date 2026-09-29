@@ -64,3 +64,17 @@ create table if not exists public.refunds (
 create unique index if not exists refunds_rzp_refund_id_key on public.refunds(razorpay_refund_id);
 -- RLS on with no policy = only the service-role (Worker) can read/write it.
 alter table public.refunds enable row level security;
+
+-- Leads captured from opt-in forms (free tools, newsletter box) — permission-based
+-- prospects the owner can email from the admin panel. Never used for scraped lists.
+create table if not exists public.leads (
+  id          bigint generated always as identity primary key,
+  email       text not null,
+  source      text,
+  note        text,
+  created_at  timestamptz not null default now()
+);
+-- One row per email (lets /api/lead upsert on repeat opt-ins).
+create unique index if not exists leads_email_key on public.leads(email);
+-- RLS on with no policy = only the service-role (Worker) can read/write it.
+alter table public.leads enable row level security;

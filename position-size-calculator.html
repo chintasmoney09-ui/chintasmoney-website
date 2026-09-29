@@ -50,6 +50,16 @@
       <p class="hint" style="margin-top:8px">ChintasMoney scores how disciplined you actually trade — not tips. 100% free to start.</p>
     </div>
 
+    <div class="card" id="leadBox" style="margin-top:18px;padding:16px;border-color:var(--emerald,#12b39a)">
+      <h2 style="margin-top:0">Get the free Trader Discipline checklist</h2>
+      <p class="hint" style="margin-top:0">Drop your email and we'll send the 1-page checklist top traders use to size every trade — plus occasional tips. No spam, unsubscribe anytime.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input id="leadEmail" type="email" placeholder="you@email.com" style="flex:1;min-width:200px;padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:1rem;font-family:inherit"/>
+        <button id="leadBtn" style="padding:11px 18px;border:0;border-radius:10px;background:var(--emerald,#12b39a);color:#fff;font-weight:700;font-size:1rem;cursor:pointer;font-family:inherit">Send it to me</button>
+      </div>
+      <div id="leadMsg" style="font-size:.85rem;color:#64748b;margin-top:8px;min-height:16px"></div>
+    </div>
+
     <h2>How to calculate position size</h2>
     <p>Position sizing has three steps: (1) decide your <b>risk amount</b> = capital × risk %. (2) Find your <b>per-share risk</b> = entry price − stop-loss. (3) <b>Quantity</b> = risk amount ÷ per-share risk. Example: ₹1,00,000 capital, 1% risk = ₹1,000 to lose. Entry ₹500, stop ₹490 = ₹10 risk per share. Quantity = 1,000 ÷ 10 = <b>100 shares</b>.</p>
     <h2>How much should you risk per trade?</h2>
@@ -79,6 +89,24 @@
       }
       ["cap", "rp", "entry", "sl"].forEach(function (id) { document.getElementById(id).addEventListener("input", run); });
       run();
+
+      // Lead capture — opt-in only, posts to the Worker which stores it in Supabase.
+      var lb = document.getElementById("leadBtn"), le = document.getElementById("leadEmail"), lm = document.getElementById("leadMsg");
+      function submitLead() {
+        var email = (le.value || "").trim();
+        if (!email || email.indexOf("@") < 1) { lm.style.color = "#dc2626"; lm.textContent = "Please enter a valid email."; return; }
+        lb.disabled = true; lb.textContent = "Sending…"; lm.style.color = "#64748b"; lm.textContent = "";
+        fetch("/api/lead", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: email, source: "position-calculator" }) })
+          .then(function (r) { return r.json().catch(function () { return {}; }); })
+          .then(function (r) {
+            lb.disabled = false; lb.textContent = "Send it to me";
+            if (r && r.ok) { lm.style.color = "#12b39a"; lm.textContent = "✓ You're in! Check your inbox soon."; le.value = ""; }
+            else { lm.style.color = "#dc2626"; lm.textContent = "Hmm, that didn't work — please try again."; }
+          })
+          .catch(function () { lb.disabled = false; lb.textContent = "Send it to me"; lm.style.color = "#dc2626"; lm.textContent = "Network error — please try again."; });
+      }
+      lb.addEventListener("click", submitLead);
+      le.addEventListener("keydown", function (e) { if (e.key === "Enter") submitLead(); });
     })();
   </script>
   <script src="consent.js"></script>
