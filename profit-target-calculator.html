@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profit Target Calculator (Free) — Target Price &amp; Return | ChintasMoney</title>
+  <link rel="canonical" href="https://chintasmoney.com/profit-target-calculator" />
+  <meta name="description" content="Free profit target calculator. Enter your entry price, quantity and target (price or %) to see your profit, return % and total exit value. Plan your exit before you enter." />
+  <meta name="keywords" content="profit target calculator, target price calculator, trade profit calculator, return calculator, exit price calculator India" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <meta property="og:title" content="Free Profit Target Calculator — ChintasMoney" />
+  <meta property="og:description" content="See your profit and return before you enter — plan the exit, not just the entry." />
+  <meta property="og:url" content="https://chintasmoney.com/profit-target-calculator" />
+  <meta property="og:type" content="website" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/assets/favicon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/logo-icon.png" />
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1462824307424705" crossorigin="anonymous"></script>
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+    {"@type":"Question","name":"How do I set a profit target?","acceptedAnswer":{"@type":"Answer","text":"Decide your target as a price or a percentage before you enter. Profit = (target price − entry) × quantity. Setting the target in advance stops you from exiting on emotion and helps you keep a healthy risk-reward ratio."}}
+  ]}
+  </script>
+</head>
+<body>
+  <header class="hdr">
+    <div class="container nav" style="min-height:80px">
+      <a href="/" class="brand"><img src="assets/logo-tile.png" alt="ChintasMoney" style="height:56px" /><span class="brand-name" style="font-size:.95rem">Chinta's <span class="brand-emoji">🤑</span> <b>Money</b></span></a>
+    </div>
+  </header>
+  <main class="legal"><div class="legal-inner">
+    <h1>Profit Target Calculator</h1>
+    <p class="hint" style="font-size:1.02rem;line-height:1.7">Plan the exit before you enter. Enter your price, quantity and a target — as a price or a % — to see exactly what you'll make and your return. Traders who pre-set targets exit with discipline instead of hope.</p>
+
+    <div class="card" style="margin:18px 0;padding:18px">
+      <label class="fld"><span>Entry price (₹)</span><input id="entry" type="number" value="100" /></label>
+      <label class="fld"><span>Quantity</span><input id="qty" type="number" value="100" /></label>
+      <label class="fld"><span>Target type</span><select id="mode"><option value="pct">Target return (%)</option><option value="price">Target price (₹)</option></select></label>
+      <label class="fld"><span id="tlbl">Target return (%)</span><input id="tgt" type="number" value="5" /></label>
+      <div id="out" style="margin-top:14px"></div>
+    </div>
+
+    <div style="text-align:center;margin:22px 0">
+      <a class="btn btn-primary" href="/app/" style="display:inline-block;padding:12px 22px">Track your discipline free →</a>
+      <p class="hint" style="margin-top:8px">ChintasMoney scores how disciplined you actually trade — not tips. 100% free to start.</p>
+    </div>
+
+    <div class="card" style="margin-top:18px;padding:16px;text-align:center">
+      <div style="font-weight:700;margin-bottom:8px">📢 Useful? Send it to a trading friend.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+        <a id="shTg" target="_blank" rel="noopener" style="padding:10px 16px;border-radius:10px;background:#229ED9;color:#fff;font-weight:700;text-decoration:none">✈️ Telegram</a>
+        <a id="shWa" target="_blank" rel="noopener" style="padding:10px 16px;border-radius:10px;background:#25D366;color:#fff;font-weight:700;text-decoration:none">💬 WhatsApp</a>
+        <button id="shCopy" style="padding:10px 16px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;color:#0f172a;font-weight:700;cursor:pointer;font-family:inherit">🔗 Copy link</button>
+      </div>
+    </div>
+
+    <h2>Why pre-set your target?</h2>
+    <p>Most traders plan the entry and wing the exit — then greed or fear takes over. Deciding your target in advance turns exits into a rule, not a feeling. Pair it with a stop-loss to lock a healthy <a href="/risk-reward-calculator">risk-reward ratio</a>, and size correctly with the <a href="/position-size-calculator">position size calculator</a>. See all <a href="/tools">free trading tools</a>.</p>
+
+    <a class="back" href="/">← Back to ChintasMoney</a>
+  </div></main>
+  <script>
+    (function () {
+      function n(id) { var x = parseFloat(document.getElementById(id).value); return isNaN(x) ? 0 : x; }
+      function money(v) { v = Math.round(v * 100) / 100; return "₹" + v.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+      var modeEl = document.getElementById("mode"), tlbl = document.getElementById("tlbl");
+      function run() {
+        var entry = n("entry"), qty = n("qty"), mode = modeEl.value, t = n("tgt");
+        var out = document.getElementById("out");
+        if (entry <= 0 || qty <= 0) { out.innerHTML = '<p class="hint">Enter a price and quantity to see your profit.</p>'; return; }
+        var targetPrice = mode === "pct" ? entry * (1 + t / 100) : t;
+        var pct = mode === "pct" ? t : (entry ? (t - entry) / entry * 100 : 0);
+        var profit = (targetPrice - entry) * qty;
+        var invested = entry * qty, exitVal = targetPrice * qty;
+        out.innerHTML =
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
+          '<div class="card" style="padding:12px;border-color:var(--emerald)"><div class="hint">Profit</div><div style="font-size:1.5rem;font-weight:800;color:' + (profit >= 0 ? "var(--emerald,#12b39a)" : "#dc2626") + '">' + money(profit) + '</div></div>' +
+          '<div class="card" style="padding:12px"><div class="hint">Return</div><div style="font-size:1.3rem;font-weight:800;color:' + (pct >= 0 ? "#12b39a" : "#dc2626") + '">' + (pct >= 0 ? "+" : "") + (Math.round(pct * 100) / 100) + '%</div></div>' +
+          '<div class="card" style="padding:12px"><div class="hint">Target price</div><div style="font-size:1.3rem;font-weight:800">' + money(targetPrice) + '</div></div>' +
+          '<div class="card" style="padding:12px"><div class="hint">Exit value</div><div style="font-size:1.3rem;font-weight:800">' + money(exitVal) + '</div></div>' +
+          '</div>';
+      }
+      modeEl.addEventListener("change", function () {
+        tlbl.textContent = modeEl.value === "pct" ? "Target return (%)" : "Target price (₹)";
+        document.getElementById("tgt").value = modeEl.value === "pct" ? 5 : Math.round(n("entry") * 1.05 * 100) / 100;
+        run();
+      });
+      ["entry", "qty", "tgt"].forEach(function (id) { document.getElementById(id).addEventListener("input", run); });
+      run();
+      var shareUrl = "https://chintasmoney.com/profit-target-calculator";
+      var shareText = "Free profit target calculator — plan your exit and see your return before you enter 👇";
+      var tg = document.getElementById("shTg"), wa = document.getElementById("shWa"), cp = document.getElementById("shCopy");
+      if (tg) tg.href = "https://t.me/share/url?url=" + encodeURIComponent(shareUrl) + "&text=" + encodeURIComponent(shareText);
+      if (wa) wa.href = "https://wa.me/?text=" + encodeURIComponent(shareText + " " + shareUrl);
+      if (cp) cp.addEventListener("click", function () {
+        if (navigator.share) { navigator.share({ title: "ChintasMoney", text: shareText, url: shareUrl }).catch(function () {}); return; }
+        if (navigator.clipboard) { navigator.clipboard.writeText(shareUrl); cp.textContent = "✓ Copied"; setTimeout(function () { cp.textContent = "🔗 Copy link"; }, 1500); }
+      });
+    })();
+  </script>
+  <script src="consent.js"></script>
+  <script src="analytics.js"></script>
+</body>
+</html>
