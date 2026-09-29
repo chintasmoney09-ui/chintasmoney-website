@@ -272,6 +272,25 @@ async function hmacHex(secret, msg) {
   return Array.from(new Uint8Array(sig)).map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
 }
 
+// Warm welcome-to-premium email, sent automatically when someone buys a plan.
+async function sendSubWelcomeEmail(env, o) {
+  if (!o || !o.email || !o.plan) return;
+  var d = productDesc(o.plan);
+  var feats = (d && d.feats) ? d.feats : ["Full mistake analysis", "Your AI trading coach", "Deeper analytics & history"];
+  var firstName = o.name ? String(o.name).trim().split(/\s+/)[0] : "";
+  var greet = firstName ? "Hi " + esc(firstName) + " 👋" : "Welcome aboard 👋";
+  var inner =
+    '<p style="color:#0f1730;font-weight:700;font-size:1.05rem;margin:0 0 6px">' + greet + '</p>' +
+    '<h2 style="margin:0 0 6px;font-size:1.4rem">You\'re now on ' + esc(d ? d.name : o.plan) + ' 🎉</h2>' +
+    '<p style="color:#5b6b8c;margin:0 0 14px">Thank you for subscribing — and welcome to the ChintasMoney family. You\'ve just given your trading the one edge that actually compounds: <b>discipline</b>. We\'re honoured to be part of your journey. 💚</p>' +
+    '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px 16px;margin:0 0 16px">' +
+    '<div style="font-weight:800;color:#166534;margin-bottom:8px">What\'s unlocked for you now:</div>' +
+    '<ul style="margin:0;padding-left:18px;color:#166534;line-height:1.8">' + feats.map(function (f) { return "<li>" + esc(f) + "</li>"; }).join("") + '</ul></div>' +
+    '<p style="color:#5b6b8c;margin:0 0 14px">Here\'s the best first move: open the app, log your recent trades honestly, and let your Discipline Score show you exactly what to fix first.</p>' +
+    '<div style="text-align:center;margin:20px 0 8px"><a href="' + APP_URL + '" style="display:inline-block;background:linear-gradient(135deg,#22e08a,#12b39a);color:#04231b;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:800">Open your app →</a></div>' +
+    '<p style="color:#5b6b8c;font-size:14px;margin:20px 0 0">Any question at all, just reply to this email — a real person reads every one.<br>To calmer, sharper trading. 💚<br>— Team ChintasMoney</p>';
+  await sendEmail(env, { to: o.email, subject: "🎉 Welcome to ChintasMoney " + (d ? d.name : "Premium") + " — you're all set!", html: emailShell(inner) });
+}
 async function handleRzpVerify(request, env) {
   if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) return jsonRes({ error: "payments not configured" }, 0);
   let b; try { b = await request.json(); } catch (e) { return jsonRes({ error: "bad request" }, 0); }
@@ -303,6 +322,7 @@ async function handleRzpVerify(request, env) {
     status: "paid", created_at: new Date().toISOString(),
   });
   await sendReceiptEmail(env, { email: email, product: product, label: p.label, amount: p.amount, paymentId: paymentId });
+  if (p.type === "plan" && email) await sendSubWelcomeEmail(env, { email: email, plan: p.plan });
   return jsonRes({ valid: true, product: product, grant: grant }, 0);
 }
 
@@ -486,6 +506,8 @@ async function handleRzpWebhook(request, env) {
           'Plan/product: <b>' + esc((product && productDesc(product).name) || "—") + '</b><br>' +
           'Customer: ' + esc(p.email || p.contact || "—") + '<br>Method: ' + esc(p.method || "Razorpay") + '<br>Payment ID: ' + esc(p.id) + '</div>' +
           '<p style="margin:14px 0 0"><a href="' + SITE_URL + '/app/admin" style="color:#12b39a;font-weight:700">Open admin →</a></p>');
+        // Warm welcome-to-premium email on a plan purchase (best-effort).
+        try { const pd = product && RZP_PRODUCTS[product]; if (pd && pd.type === "plan" && p.email) await sendSubWelcomeEmail(env, { email: p.email, plan: pd.plan }); } catch (e) {}
       }
     } else if (type === "refund.created" || type === "refund.processed") {
       const r = (ev.payload && ev.payload.refund && ev.payload.refund.entity) || null;
@@ -858,6 +880,39 @@ async function handleLead(request, env) {
   return aRes({ ok: true }, 200);
 }
 
+// Prospect Radar — LIVE search of public Reddit for people asking about
+// trading discipline / risk right now, so the owner can join the conversation
+// and pull them to the free tool. Public data only; no scraping of contacts.
+async function handleAdminProspects(request, env) {
+  const gate = await requireAdmin(request, env); if (gate.err) return gate.err;
+  const url = new URL(request.url);
+  const q = (url.searchParams.get("q") || "position sizing").slice(0, 120);
+  const sub = (url.searchParams.get("sub") || "").replace(/[^A-Za-z0-9_]/g, "").slice(0, 40);
+  const endpoint = sub
+    ? "https://www.reddit.com/r/" + sub + "/search.json?restrict_sr=1&sort=new&limit=25&q=" + encodeURIComponent(q)
+    : "https://www.reddit.com/search.json?sort=new&limit=25&q=" + encodeURIComponent(q);
+  let items = [];
+  try {
+    const r = await fetch(endpoint, { headers: { "User-Agent": "ChintasMoney-ProspectRadar/1.0 (+https://chintasmoney.com)" } });
+    if (!r.ok) return aRes({ error: "search_failed", detail: "Reddit returned " + r.status + ". Try again in a moment." }, 200);
+    const j = await r.json();
+    const kids = (j && j.data && j.data.children) || [];
+    items = kids.map(function (c) {
+      const d = c.data || {};
+      return {
+        title: String(d.title || "").slice(0, 200),
+        subreddit: d.subreddit || "",
+        author: d.author || "",
+        url: "https://www.reddit.com" + (d.permalink || ""),
+        comments: d.num_comments || 0,
+        created: d.created_utc ? Math.floor(d.created_utc) : 0,
+        snippet: String(d.selftext || "").replace(/\s+/g, " ").slice(0, 220),
+      };
+    }).filter(function (x) { return x.title; });
+  } catch (e) { return aRes({ error: "search_error", detail: "Couldn't reach Reddit right now." }, 200); }
+  return aRes({ ok: true, items: items }, 200);
+}
+
 // Admin email broadcast (marketing to your own users / opted-in leads).
 // body: { subject, message, segment, emails? }
 async function handleAdminBroadcast(request, env) {
@@ -1080,6 +1135,7 @@ export default {
     if (request.method === "POST" && url.pathname === "/api/referral") return handleReferral(request, env);
     if (request.method === "POST" && url.pathname === "/api/lead") return handleLead(request, env);
     if (request.method === "POST" && url.pathname === "/api/admin/broadcast") return handleAdminBroadcast(request, env);
+    if (request.method === "GET" && url.pathname === "/api/admin/prospects") return handleAdminProspects(request, env);
     if (request.method === "POST" && url.pathname === "/api/push/subscribe") return handlePushSubscribe(request, env);
     if (request.method === "POST" && url.pathname === "/api/admin/push") return handleAdminPush(request, env);
     if (request.method === "GET" && url.pathname === "/api/admin/razorpay") return handleAdminRazorpay(request, env);
