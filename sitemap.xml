@@ -1,25 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://chintasmoney.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://chintasmoney.com/app/index.html</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://chintasmoney.com/pricing.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://chintasmoney.com/learn.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://chintasmoney.com/blog.html</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://chintasmoney.com/blog-discipline-over-profit.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://chintasmoney.com/blog-one-percent-risk-rule.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://chintasmoney.com/blog-stop-revenge-trading.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://chintasmoney.com/blog-why-traders-lose-money.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://chintasmoney.com/blog-trading-psychology.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://chintasmoney.com/blog-recover-money-lost-in-trading.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://chintasmoney.com/blog-trading-journal.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://chintasmoney.com/blog-intraday-mistakes-beginners.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://chintasmoney.com/faq.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://chintasmoney.com/about.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://chintasmoney.com/contact.html</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://chintasmoney.com/privacy.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
-  <url><loc>https://chintasmoney.com/terms.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
-  <url><loc>https://chintasmoney.com/refund.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
-  <url><loc>https://chintasmoney.com/disclaimer.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
-  <url><loc>https://chintasmoney.com/position-size-calculator.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://chintasmoney.com/partners.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://chintasmoney.com/app/</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://chintasmoney.com/pricing</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://chintasmoney.com/learn</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://chintasmoney.com/blog</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://chintasmoney.com/blog-discipline-over-profit</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://chintasmoney.com/blog-one-percent-risk-rule</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://chintasmoney.com/blog-stop-revenge-trading</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://chintasmoney.com/blog-why-traders-lose-money</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://chintasmoney.com/blog-trading-psychology</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://chintasmoney.com/blog-recover-money-lost-in-trading</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://chintasmoney.com/blog-trading-journal</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://chintasmoney.com/blog-intraday-mistakes-beginners</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://chintasmoney.com/faq</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://chintasmoney.com/about</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://chintasmoney.com/contact</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://chintasmoney.com/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://chintasmoney.com/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://chintasmoney.com/refund</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://chintasmoney.com/disclaimer</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://chintasmoney.com/position-size-calculator</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://chintasmoney.com/partners</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
 </urlset>

@@ -186,7 +186,7 @@ function emailShell(inner) {
     '<b style="color:#fff">ChintasMoney</b> · reduce your losses by understanding your behaviour.<br>' +
     'Support: <a href="mailto:' + SUPPORT_EMAIL + '" style="color:#7cc7ff">' + SUPPORT_EMAIL + '</a> · ' +
     '<a href="' + SITE_URL + '" style="color:#7cc7ff">chintasmoney.com</a> · ' +
-    '<a href="' + SITE_URL + '/refund.html" style="color:#7cc7ff">Refund policy</a><br>' +
+    '<a href="' + SITE_URL + '/refund" style="color:#7cc7ff">Refund policy</a><br>' +
     '<span style="color:#6f83ab">Behaviour analysis of your own trades. Not investment advice — no buy/sell tips. F&amp;O is risky.</span>' +
     '</div></div></div>';
 }
@@ -479,7 +479,7 @@ async function handleRzpWebhook(request, env) {
           '<b style="font-size:1.3rem;color:#16a34a">' + rupees(p.amount) + '</b><br>' +
           'Plan/product: <b>' + esc((product && productDesc(product).name) || "—") + '</b><br>' +
           'Customer: ' + esc(p.email || p.contact || "—") + '<br>Method: ' + esc(p.method || "Razorpay") + '<br>Payment ID: ' + esc(p.id) + '</div>' +
-          '<p style="margin:14px 0 0"><a href="' + SITE_URL + '/app/admin.html" style="color:#12b39a;font-weight:700">Open admin →</a></p>');
+          '<p style="margin:14px 0 0"><a href="' + SITE_URL + '/app/admin" style="color:#12b39a;font-weight:700">Open admin →</a></p>');
       }
     } else if (type === "refund.created" || type === "refund.processed") {
       const r = (ev.payload && ev.payload.refund && ev.payload.refund.entity) || null;
@@ -878,7 +878,7 @@ async function handleWelcome(request, env) {
     '<h2 style="margin:0 0 6px">🆕 New user just joined!</h2>' +
     '<p style="color:#5b6b8c;margin:0 0 12px">Someone created an account.</p>' +
     '<div style="border:1px solid #e6ebf5;border-radius:12px;padding:14px 16px;font-size:14px">Email: <b>' + esc(email) + '</b><br>When: ' + esc(new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })) + '</div>' +
-    '<p style="margin:14px 0 0"><a href="' + SITE_URL + '/app/admin.html" style="color:#12b39a;font-weight:700">Open admin →</a></p>');
+    '<p style="margin:14px 0 0"><a href="' + SITE_URL + '/app/admin" style="color:#12b39a;font-weight:700">Open admin →</a></p>');
   return aRes({ ok: true }, 200);
 }
 

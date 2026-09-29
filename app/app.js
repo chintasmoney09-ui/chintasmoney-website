@@ -181,7 +181,7 @@
   function shell(r) {
     var s = CM.load(), wrap = el('<div class="app"></div>');
     var side = el('<aside class="sidebar' + (mobileOpen ? " open" : "") + '"></aside>');
-    side.appendChild(el('<a class="brand" href="../index.html"><span class="brand-badge brand-logo-chip"><img src="assets/logo-icon.png" alt="ChintasMoney"/></span><div><b>ChintasMoney</b><small>TRADER REPORT CARD</small></div></a>'));
+    side.appendChild(el('<a class="brand" href="/"><span class="brand-badge brand-logo-chip"><img src="assets/logo-icon.png" alt="ChintasMoney"/></span><div><b>ChintasMoney</b><small>TRADER REPORT CARD</small></div></a>'));
     NAV.forEach(function (n) {
       if (n.sep) { side.appendChild(el('<div class="nav-sep"></div>')); if (n.group) side.appendChild(el('<div style="color:#6f83ab;font-size:.66rem;letter-spacing:.08em;padding:2px 10px 4px">' + n.group.toUpperCase() + '</div>')); return; }
       var locked = !CM.planAllows(s.profile.plan, n.id);
@@ -225,7 +225,7 @@
     }
 
     var foot = el('<div class="side-foot"><span class="plan-pill">● ' + CM.PLANS[s.profile.plan].name + ' plan</span>' +
-      '<div class="side-legal"><a href="../learn.html">Learn</a> · <a href="../privacy.html">Privacy</a> · <a href="../terms.html">Terms</a> · <a href="../disclaimer.html">Disclaimer</a></div>' +
+      '<div class="side-legal"><a href="/learn">Learn</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/disclaimer">Disclaimer</a></div>' +
       '<div class="side-legal" style="margin-top:6px">Not investment advice · F&amp;O is risky.</div></div>');
     var scBtn = el('<button class="side-shortcuts">⌨ Keyboard shortcuts (?)</button>'); scBtn.addEventListener("click", function () { showShortcuts(); });
     foot.appendChild(scBtn);
@@ -2379,7 +2379,7 @@
     c.appendChild(el('<div class="legal-note" style="margin-top:8px">✅ Educational behaviour-analysis of your <b>own past</b> trades. 🚫 <b>Not</b> investment advice — no tips, calls, predictions, and not SEBI-registered.</div>'));
     c.appendChild(el('<h3 style="margin:18px 0 6px">Contact</h3>'));
     c.appendChild(el('<p class="hint" style="line-height:1.9">✉️ <a href="mailto:support@chintasmoney.com" style="color:var(--emerald)">support@chintasmoney.com</a><br>📞 +91 91066 80559<br>📍 Surat, Gujarat, India</p>'));
-    c.appendChild(el('<p class="hint" style="margin-top:10px"><a href="/about.html" target="_blank" rel="noopener" style="color:var(--emerald)">Full about page →</a> · <a href="/disclaimer.html" target="_blank" rel="noopener" style="color:var(--emerald)">Risk disclaimer →</a> · <a href="/privacy.html" target="_blank" rel="noopener" style="color:var(--emerald)">Privacy →</a></p>'));
+    c.appendChild(el('<p class="hint" style="margin-top:10px"><a href="/about" target="_blank" rel="noopener" style="color:var(--emerald)">Full about page →</a> · <a href="/disclaimer" target="_blank" rel="noopener" style="color:var(--emerald)">Risk disclaimer →</a> · <a href="/privacy" target="_blank" rel="noopener" style="color:var(--emerald)">Privacy →</a></p>'));
     v.appendChild(c);
     return v;
   };
@@ -3026,7 +3026,7 @@
       planFeatureList(s.profile.plan).map(function (f) { return '<li>✓ ' + esc(f) + '</li>'; }).join("") + '</ul>'));
     // Billing & refunds row
     var billRow = el('<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px"></div>');
-    var invBtn = el('<a class="btn btn-sm" href="../refund.html" target="_blank" rel="noopener">📄 Refund policy</a>');
+    var invBtn = el('<a class="btn btn-sm" href="/refund" target="_blank" rel="noopener">📄 Refund policy</a>');
     var refBtn = el('<button class="btn btn-sm">↩ Request a refund / cancel</button>');
     refBtn.addEventListener("click", function () {
       dialog("Refund or cancel", '<p class="hint">Changed your mind? No problem.</p>' +
@@ -3035,7 +3035,7 @@
         '<li>Refunds are processed back to your original payment method (UPI/card), usually within 5–7 working days.</li>' +
         '<li>To stop future renewals, just tell us in the same email — your plan stays active until the period ends.</li>' +
         '</ul>' +
-        '<p class="hint">See the full <a href="../refund.html" target="_blank" rel="noopener">refund policy</a>.</p>',
+        '<p class="hint">See the full <a href="/refund" target="_blank" rel="noopener">refund policy</a>.</p>',
         function (b, close) {
           var mail = el('<button class="btn btn-primary" style="margin-top:6px">✉ Email support now</button>');
           mail.addEventListener("click", function () {
