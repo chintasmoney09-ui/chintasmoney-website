@@ -3130,6 +3130,8 @@
     var since = s.profile.plan_since || s.profile.planSince;
     var sinceTxt = since ? new Date(since).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : null;
     var curCard = el('<div class="card" style="border-color:var(--violet)"></div>');
+    var badgeFile = s.profile.plan === "pro" ? "platinum" : (s.profile.plan === "diamond" ? "diamond" : (s.profile.plan === "plus" ? "plus" : ""));
+    if (badgeFile) curCard.appendChild(el('<div style="text-align:center;margin:4px 0 2px"><img src="/assets/badge-' + badgeFile + '.png" alt="' + esc(curPlan.name) + '" style="width:120px;max-width:45%;height:auto"/></div>'));
     curCard.appendChild(el('<div class="card-hd"><h3>Your plan: ' + esc(curPlan.name) +
       (curPlan.price ? ' <span class="badge b-navy">₹' + curPlan.price + '/' + curPlan.cadence + '</span>' : ' <span class="badge b-navy">Free</span>') + '</h3></div>'));
     curCard.appendChild(el('<p class="hint" style="margin:0 0 10px">' + (sinceTxt ? "Member since " + esc(sinceTxt) + ". " : "") +
