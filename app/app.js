@@ -1700,6 +1700,9 @@
   function cmNotifs() {
     var s = CM.load(), st = CM.stats(), e = CM.engagement(), ts = CM.tokenState(), plan = s.profile.plan || "free";
     var list = [];
+    if (s.profile && s.profile.giftMsg) {
+      list.push({ id: "gift-" + (s.profile.giftAt || "x"), ic: "🎁", title: "You've received a gift!", body: s.profile.giftMsg, cta: ["Open your app", "home"] });
+    }
     if (e.streak > 0 && !e.loggedToday) list.push({ id: "streak", ic: "🔥", title: e.streak + "-day streak going", body: "Log a trade today to keep your streak alive.", cta: ["Log a trade", "log"] });
     if (!ts.unlimited && ts.total <= 0) list.push({ id: "tokens0", ic: "🎟️", title: "You're out of analyses", body: "Top up tokens or upgrade to keep running Trade Replays.", cta: ["Get tokens", "tokens"] });
     else if (!ts.unlimited && ts.total <= 2) list.push({ id: "tokenslow", ic: "🎟️", title: "Only " + ts.total + " analyses left", body: "Top up so you never stop analysing your trades.", cta: ["Top up", "tokens"] });

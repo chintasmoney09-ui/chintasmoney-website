@@ -596,13 +596,32 @@ async function sendGiftEmail(env, o) {
   if (!o.email) return;
   var giftLine = o.plan ? "the <b>" + esc(productDesc(o.plan).name) + "</b> plan" : (o.tokens ? "<b>" + o.tokens + " analysis tokens</b>" : "a gift");
   var inner =
-    '<h2 style="margin:0 0 6px;font-size:1.35rem">You\'ve received a gift 🎁</h2>' +
-    '<p style="color:#5b6b8c;margin:0 0 14px">Someone at ChintasMoney just gifted you ' + giftLine + '. It\'s already active on your account — enjoy!</p>' +
+    '<h2 style="margin:0 0 6px;font-size:1.4rem">A gift, just for you 🎁</h2>' +
+    '<p style="color:#5b6b8c;margin:0 0 14px">Thank you for being part of ChintasMoney — we\'re rooting for you. To power up your trading journal, we\'ve gifted you ' + giftLine + ', already active on your account. ⚡</p>' +
     (o.message ? '<div style="background:#f8fafc;border:1px dashed #cbd5e1;border-radius:12px;padding:12px 14px;color:#475569;margin:0 0 14px">“' + esc(o.message) + '”</div>' : '') +
-    '<div style="text-align:center;margin:20px 0 8px"><a href="' + APP_URL + '" style="display:inline-block;background:linear-gradient(135deg,#22e08a,#12b39a);color:#04231b;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:800">Open your app →</a></div>' +
+    '<p style="color:#5b6b8c;margin:0 0 14px">Use it to log more of your trades, spot your patterns, and build the one thing that actually grows an account: <b>discipline</b>. Every trade you journal makes your next one sharper.</p>' +
+    '<div style="text-align:center;margin:20px 0 8px"><a href="' + APP_URL + '" style="display:inline-block;background:linear-gradient(135deg,#22e08a,#12b39a);color:#04231b;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:800">Open your app &amp; use your gift →</a></div>' +
     '<p style="color:#5b6b8c;font-size:13px;text-align:center;margin:6px 0 0">Your account: <b>' + esc(o.email) + '</b></p>' +
-    '<p style="color:#5b6b8c;font-size:14px;margin:20px 0 0">Thank you for being part of our community. Keep building that discipline. 💚<br>— Team ChintasMoney</p>';
-  await sendEmail(env, { to: o.email, subject: "You've received a gift from ChintasMoney 🎁", html: emailShell(inner) });
+    '<p style="color:#5b6b8c;font-size:14px;margin:20px 0 0">Here\'s to calmer, more disciplined trading. 💚<br>— Team ChintasMoney</p>';
+  await sendEmail(env, { to: o.email, subject: "🎁 A gift from ChintasMoney — you're all charged up!", html: emailShell(inner) });
+}
+// Send a push notification to every device subscribed under a given email.
+async function sendPushToEmail(env, email, payload) {
+  if (!email || !env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY || !env.SUPABASE_URL) return 0;
+  const base = env.SUPABASE_URL.replace(/\/$/, "");
+  let subs = [];
+  try {
+    const r = await fetch(base + "/rest/v1/push_subscriptions?select=*&email=eq." + encodeURIComponent(email.toLowerCase()), { headers: await sbHeaders(env) });
+    if (r.ok) subs = await r.json();
+  } catch (e) { return 0; }
+  let sent = 0;
+  for (const s of subs) {
+    try {
+      const status = await sendWebPush(env, { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
+      if (status === 200 || status === 201) sent++;
+    } catch (e) {}
+  }
+  return sent;
 }
 async function handleAdminGift(request, env) {
   const gate = await requireAdmin(request, env); if (gate.err) return gate.err;
@@ -616,12 +635,20 @@ async function handleAdminGift(request, env) {
   if (!data.profile || typeof data.profile !== "object") data.profile = {};
   if (typeof b.plan === "string" && ["free", "plus", "pro", "diamond"].indexOf(b.plan) !== -1) { data.profile.plan = b.plan; data.profile.plan_since = new Date().toISOString(); }
   if (b.tokens) data.profile.tokens = Math.max(0, (data.profile.tokens || 0) + Number(b.tokens));
+  // Leave an in-app message so the user sees the gift in their notification bell.
+  var giftWhat = b.plan ? (productDesc(b.plan).name + " plan") : (b.tokens ? (b.tokens + " analysis tokens") : "a gift");
+  data.profile.giftAt = new Date().toISOString();
+  data.profile.giftMsg = (b.message && String(b.message).slice(0, 240)) || ("You've received " + giftWhat + " — it's active now. Use it to journal more trades and sharpen your discipline. 💚");
+  data.profile.giftWhat = giftWhat;
   const up = await fetch(base + "/rest/v1/user_state?on_conflict=user_id", {
     method: "POST", headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" }),
     body: JSON.stringify({ user_id: userId, data: data, updated_at: new Date().toISOString() }),
   });
   if (!up.ok) return aRes({ error: "gift_failed" }, 400);
-  if (b.email) await sendGiftEmail(env, { email: b.email, plan: b.plan, tokens: b.tokens, message: b.message });
+  if (b.email) {
+    await sendGiftEmail(env, { email: b.email, plan: b.plan, tokens: b.tokens, message: b.message });
+    await sendPushToEmail(env, b.email, { title: "🎁 You've received a gift!", body: "You got " + giftWhat + ". Open the app to use it.", url: "/app/", tag: "cm-gift" });
+  }
   return aRes({ ok: true }, 200);
 }
 
