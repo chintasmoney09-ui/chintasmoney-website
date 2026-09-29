@@ -51,7 +51,7 @@
       .then(function (d) {
         if (!d) return;
         LIVE.users = d.users || []; LIVE.invoices = d.invoices || []; LIVE.refunds = d.refunds || []; LIVE.leads = d.leads || []; LIVE.pushCount = d.pushCount || 0;
-        LIVE.state = "live"; _lastSig = dataSig(d); startPoll(); render();
+        LIVE.state = "live"; _lastSig = dataSig(d); _lastPaid = paidStats(d); adminAskNotify(); startPoll(); render();
       })
       .catch(function () { LIVE.state = "demo"; LIVE.error = "Network error — showing demo data."; render(); });
   }
@@ -60,7 +60,11 @@
   // Auto-refresh: quietly re-pull live data and re-render only when something
   // actually changed (new user, new payment, new refund) — so the owner never
   // has to tap Refresh or check constantly.
-  var _lastSig = "", _pollTimer = null;
+  var _lastSig = "", _pollTimer = null, _lastPaid = null;
+  function paidStats(d) {
+    var paid = (d.invoices || []).filter(function (i) { return i.status === "paid"; });
+    return { count: paid.length, gross: paid.reduce(function (a, i) { return a + (i.amount || 0); }, 0) };
+  }
   function dataSig(d) {
     var inv = d.invoices || [], u = d.users || [], rf = d.refunds || [], ld = d.leads || [];
     var gross = inv.reduce(function (a, i) { return a + (i.amount || 0); }, 0);
@@ -73,6 +77,11 @@
       .then(function (d) {
         if (!d) return;
         var sig = dataSig(d);
+        var ps = paidStats(d);
+        if (_lastPaid && (ps.count > _lastPaid.count || ps.gross > _lastPaid.gross)) {
+          adminPaymentAlert(ps.count - _lastPaid.count, ps.gross - _lastPaid.gross);
+        }
+        _lastPaid = ps;
         LIVE.users = d.users || []; LIVE.invoices = d.invoices || []; LIVE.refunds = d.refunds || []; LIVE.leads = d.leads || []; LIVE.pushCount = d.pushCount || 0; LIVE.state = "live";
         if (_lastSig && sig !== _lastSig) { _lastSig = sig; render(); } else { _lastSig = sig; }
       })
@@ -212,6 +221,38 @@
     if (!document.getElementById("cm-confetti-kf")) { var st = document.createElement("style"); st.id = "cm-confetti-kf"; st.textContent = "@keyframes cmfall{to{top:100%;opacity:.2;transform:translateY(20px) rotate(400deg)}}"; document.head.appendChild(st); }
     document.body.appendChild(wrap);
     setTimeout(function () { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); }, 1900);
+  }
+
+  // ---- Live payment alert (fires the moment money comes in) -----------------
+  function adminBeep() {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext; if (!Ctx) return;
+      var ctx = new Ctx(); var o = ctx.createOscillator(); var g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination); o.type = "sine"; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.18, ctx.currentTime); o.start();
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4); o.stop(ctx.currentTime + 0.42);
+    } catch (e) {}
+  }
+  function adminBanner(text) {
+    var b = document.createElement("div");
+    b.style.cssText = "position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:400;background:#16a34a;color:#fff;font-weight:800;padding:12px 20px;border-radius:999px;box-shadow:0 10px 30px rgba(0,0,0,.3);font-family:inherit;font-size:.95rem;max-width:90vw";
+    b.textContent = text;
+    document.body.appendChild(b);
+    setTimeout(function () { b.style.transition = "opacity .5s"; b.style.opacity = "0"; }, 5000);
+    setTimeout(function () { if (b.parentNode) b.parentNode.removeChild(b); }, 5600);
+  }
+  function adminPaymentAlert(nNew, amount) {
+    adminBeep(); adminConfetti();
+    var msg = "💰 " + (nNew > 1 ? nNew + " new payments" : "New payment") + (amount > 0 ? " · " + money(amount) : "") + " just came in!";
+    adminBanner(msg);
+    try {
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("ChintasMoney — 💰 payment received!", { body: (amount > 0 ? money(amount) + " " : "") + "just landed. Tap to open admin.", icon: "assets/logo-icon.png", tag: "cm-pay" });
+      }
+    } catch (e) {}
+  }
+  function adminAskNotify() {
+    try { if ("Notification" in window && Notification.permission === "default") Notification.requestPermission(); } catch (e) {}
   }
 
   // Gift a plan or tokens to a user (grants + emails a gift message).
@@ -561,10 +602,12 @@
     var nCount = todayPays.length + todayRefs.length;
     var notifBtn = el('<button class="cm-btn sm" title="Today\'s activity" style="position:relative">🔔' + (nCount ? '<span style="position:absolute;top:-5px;right:-5px;background:#dc2626;color:#fff;border-radius:999px;font-size:.62rem;font-weight:800;min-width:16px;height:16px;line-height:16px;text-align:center;padding:0 3px">' + nCount + '</span>' : '') + '</button>');
     notifBtn.addEventListener("click", function () {
+      adminAskNotify(); // user gesture — good moment to ask for desktop-alert permission
       var lines = [];
       todayPays.forEach(function (i) { lines.push("💰 " + money(i.amount) + " · " + (i.email || "customer") + " · " + productName(i.product)); });
       todayRefs.forEach(function (r) { lines.push("↩ Refund " + money(r.amount) + " · " + (r.email || "")); });
-      alert(nCount ? "Today (" + today + "):\n\n" + lines.join("\n") : "No new payments or refunds today.");
+      var notifyState = (("Notification" in window) && Notification.permission === "granted") ? "\n\n🔔 Live alerts ON — you'll get a sound + popup the moment a payment arrives." : "\n\n(Tip: allow notifications so you get a live alert on every new payment.)";
+      alert((nCount ? "Today (" + today + "):\n\n" + lines.join("\n") : "No new payments or refunds today.") + notifyState);
     });
     actions.appendChild(notifBtn); actions.appendChild(searchBtn); actions.appendChild(refreshBtn);
     top.appendChild(actions);
