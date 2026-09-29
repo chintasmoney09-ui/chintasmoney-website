@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Average Price Calculator (Free) — Stock Averaging / Cost Basis | ChintasMoney</title>
+  <link rel="canonical" href="https://chintasmoney.com/average-price-calculator" />
+  <meta name="description" content="Free stock average price calculator. Add each buy (price and quantity) to get your average cost per share and total investment. Plan your averaging with discipline." />
+  <meta name="keywords" content="average price calculator, stock averaging calculator, average down calculator, cost basis calculator, share average calculator India" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <meta property="og:title" content="Free Average Price Calculator — ChintasMoney" />
+  <meta property="og:description" content="Add each buy to get your average cost per share instantly." />
+  <meta property="og:url" content="https://chintasmoney.com/average-price-calculator" />
+  <meta property="og:type" content="website" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/assets/favicon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/logo-icon.png" />
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1462824307424705" crossorigin="anonymous"></script>
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+    {"@type":"Question","name":"How do I calculate the average price of a stock?","acceptedAnswer":{"@type":"Answer","text":"Multiply each buy's price by its quantity to get the amount invested, add all the amounts, add all the quantities, then divide total amount by total quantity. That weighted figure is your average cost per share."}},
+    {"@type":"Question","name":"Is averaging down a good idea?","acceptedAnswer":{"@type":"Answer","text":"Averaging down lowers your average price but also increases your risk in a falling stock. It only makes sense with a plan and a stop — never to 'rescue' a losing trade emotionally. Discipline is what decides the outcome."}}
+  ]}
+  </script>
+</head>
+<body>
+  <header class="hdr">
+    <div class="container nav" style="min-height:80px">
+      <a href="/" class="brand"><img src="assets/logo-tile.png" alt="ChintasMoney" style="height:56px" /><span class="brand-name" style="font-size:.95rem">Chinta's <span class="brand-emoji">🤑</span> <b>Money</b></span></a>
+    </div>
+  </header>
+  <main class="legal"><div class="legal-inner">
+    <h1>Average Price Calculator</h1>
+    <p class="hint" style="font-size:1.02rem;line-height:1.7">Bought the same stock at different prices? Add each buy below to get your true <b>average cost per share</b> and total investment. Handy for averaging down — but do it with a plan, not emotion.</p>
+
+    <div class="card" style="margin:18px 0;padding:18px">
+      <div id="rows"></div>
+      <button id="addRow" class="btn" style="margin-top:6px">＋ Add another buy</button>
+      <div id="out" style="margin-top:14px"></div>
+    </div>
+
+    <div style="text-align:center;margin:22px 0">
+      <a class="btn btn-primary" href="/app/" style="display:inline-block;padding:12px 22px">Track your discipline free →</a>
+      <p class="hint" style="margin-top:8px">ChintasMoney scores how disciplined you actually trade — not tips. 100% free to start.</p>
+    </div>
+
+    <div class="card" style="margin-top:18px;padding:16px;text-align:center">
+      <div style="font-weight:700;margin-bottom:8px">📢 Useful? Send it to a trading friend.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+        <a id="shTg" target="_blank" rel="noopener" style="padding:10px 16px;border-radius:10px;background:#229ED9;color:#fff;font-weight:700;text-decoration:none">✈️ Telegram</a>
+        <a id="shWa" target="_blank" rel="noopener" style="padding:10px 16px;border-radius:10px;background:#25D366;color:#fff;font-weight:700;text-decoration:none">💬 WhatsApp</a>
+        <button id="shCopy" style="padding:10px 16px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;color:#0f172a;font-weight:700;cursor:pointer;font-family:inherit">🔗 Copy link</button>
+      </div>
+    </div>
+
+    <h2>The discipline of averaging</h2>
+    <p>Averaging down feels like getting a bargain, but it doubles your exposure to a stock that's already moving against you. Smart averaging is planned in advance with a fixed budget and a stop-loss — never a panic reaction to a red screen. Size each tranche with our <a href="/position-size-calculator">position size calculator</a> and check the payoff with the <a href="/risk-reward-calculator">risk-reward calculator</a>. See all <a href="/tools">free trading tools</a>.</p>
+
+    <a class="back" href="/">← Back to ChintasMoney</a>
+  </div></main>
+  <script>
+    (function () {
+      var rows = document.getElementById("rows");
+      function money(v) { v = Math.round(v * 100) / 100; return "₹" + v.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+      function addRow(p, q) {
+        var i = rows.children.length + 1;
+        var row = document.createElement("div");
+        row.className = "grid g2"; row.style.marginBottom = "8px";
+        row.innerHTML = '<label class="fld"><span>Buy ' + i + ' — price (₹)</span><input class="pp" type="number" value="' + (p || "") + '" placeholder="e.g. 100"/></label>' +
+          '<label class="fld"><span>Quantity</span><input class="qq" type="number" value="' + (q || "") + '" placeholder="e.g. 50"/></label>';
+        rows.appendChild(row);
+        row.querySelectorAll("input").forEach(function (inp) { inp.addEventListener("input", run); });
+      }
+      function run() {
+        var pp = rows.querySelectorAll(".pp"), qq = rows.querySelectorAll(".qq");
+        var amt = 0, qty = 0;
+        for (var i = 0; i < pp.length; i++) {
+          var p = parseFloat(pp[i].value) || 0, q = parseFloat(qq[i].value) || 0;
+          amt += p * q; qty += q;
+        }
+        var out = document.getElementById("out");
+        if (qty <= 0) { out.innerHTML = '<p class="hint">Enter your buys to see your average price.</p>'; return; }
+        var avg = amt / qty;
+        out.innerHTML =
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
+          '<div class="card" style="padding:12px;border-color:var(--emerald)"><div class="hint">Average price / share</div><div style="font-size:1.5rem;font-weight:800;color:var(--emerald,#12b39a)">' + money(avg) + '</div></div>' +
+          '<div class="card" style="padding:12px"><div class="hint">Total quantity</div><div style="font-size:1.3rem;font-weight:800">' + qty.toLocaleString("en-IN") + '</div></div>' +
+          '<div class="card" style="padding:12px"><div class="hint">Total invested</div><div style="font-size:1.3rem;font-weight:800">' + money(amt) + '</div></div>' +
+          '</div>';
+      }
+      document.getElementById("addRow").addEventListener("click", function () { addRow(); });
+      addRow(100, 50); addRow(90, 50); run();
+      var shareUrl = "https://chintasmoney.com/average-price-calculator";
+      var shareText = "Free stock average price calculator — add each buy, get your true average cost 👇";
+      var tg = document.getElementById("shTg"), wa = document.getElementById("shWa"), cp = document.getElementById("shCopy");
+      if (tg) tg.href = "https://t.me/share/url?url=" + encodeURIComponent(shareUrl) + "&text=" + encodeURIComponent(shareText);
+      if (wa) wa.href = "https://wa.me/?text=" + encodeURIComponent(shareText + " " + shareUrl);
+      if (cp) cp.addEventListener("click", function () {
+        if (navigator.share) { navigator.share({ title: "ChintasMoney", text: shareText, url: shareUrl }).catch(function () {}); return; }
+        if (navigator.clipboard) { navigator.clipboard.writeText(shareUrl); cp.textContent = "✓ Copied"; setTimeout(function () { cp.textContent = "🔗 Copy link"; }, 1500); }
+      });
+    })();
+  </script>
+  <script src="consent.js"></script>
+  <script src="analytics.js"></script>
+</body>
+</html>

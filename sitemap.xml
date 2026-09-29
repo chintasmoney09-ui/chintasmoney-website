@@ -23,6 +23,8 @@
   <url><loc>https://chintasmoney.com/position-size-calculator</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://chintasmoney.com/risk-reward-calculator</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://chintasmoney.com/brokerage-calculator</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://chintasmoney.com/profit-target-calculator</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://chintasmoney.com/average-price-calculator</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://chintasmoney.com/tools</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://chintasmoney.com/partners</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
 </urlset>
