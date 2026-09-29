@@ -478,7 +478,7 @@
   // ===========================================================================
   //  SHELL
   // ===========================================================================
-  var TABTITLE = { overview: "Overview", people: "People Logged", calendar: "Activity Calendar",
+  var TABTITLE = { overview: "Overview", growth: "Growth Cockpit", people: "People Logged", calendar: "Activity Calendar",
     content: "Content Calendar", catalogue: "Product Catalogue & Prices",
     revenue: "Revenue, Invoices & Refunds", razorpay: "Razorpay (live)", gating: "Locked Sections & Gating", flags: "Feature Flags",
     emailer: "Email Marketing", leads: "Leads & CRM", finder: "Lead Finder", push: "Push Alerts",
@@ -501,6 +501,7 @@
   // ---- Global admin search (jump to any section) ---------------------------
   var SEARCH_ITEMS = [
     ["overview", "▦ Overview", "totals, paying users, revenue, plan mix"],
+    ["growth", "📈 Growth cockpit", "funnel, conversion, MRR, ARPU, leads, affiliates, run the business by numbers"],
     ["people", "👥 People logged", "every user, plan, activity"],
     ["calendar", "📅 Activity calendar", "signups & active users per day"],
     ["content", "🗓️ Content calendar", "plan your posts and reels"],
@@ -555,7 +556,7 @@
 
     var side = el('<aside class="cm-side"></aside>');
     side.appendChild(el('<a class="cm-brand" href="/app/"><img src="assets/logo.png" alt=""/><span>ChintasMoney<small>CONTROL PANEL</small></span></a>'));
-    [["overview", "▦ Overview"], ["people", "👥 People logged"], ["calendar", "📅 Activity calendar"],
+    [["overview", "▦ Overview"], ["growth", "📈 Growth cockpit"], ["people", "👥 People logged"], ["calendar", "📅 Activity calendar"],
      ["content", "🗓️ Content calendar"], ["catalogue", "🏷️ Products & prices"],
      ["revenue", "₹ Revenue & invoices"], ["razorpay", "💳 Razorpay (live)"], ["gating", "🔒 Locked sections"], ["flags", "⚑ Feature flags"],
      ["emailer", "✉️ Email marketing"], ["leads", "🎯 Leads & CRM"], ["finder", "🧭 Lead finder"], ["push", "📲 Push alerts"],
@@ -653,6 +654,74 @@
   }
 
   var TABS = {
+    // -------- GROWTH COCKPIT (run the business by numbers) -------------------
+    growth: function () {
+      var v = el('<div></div>');
+      v.appendChild(el('<div class="cm-note" style="margin-bottom:14px">Your business at a glance — the funnel, conversion, recurring revenue and where growth comes from. ' + (liveOn() ? "Live data." : "Demo data — sign in via the server for live numbers.") + '</div>'));
+      var users = allUsers(), leads = allLeads();
+      var paying = users.filter(function (u) { return u.plan && u.plan !== "free"; });
+      var nUsers = users.length, nPaying = paying.length, nLeads = leads.length;
+      var affiliates = leads.filter(function (l) { return (l.source || "").toLowerCase().indexOf("affiliate") !== -1; }).length;
+      var conv = nUsers ? Math.round(nPaying / nUsers * 100) : 0;
+      var leadConv = nLeads ? Math.round(nUsers / Math.max(nLeads, 1) * 100) : 0;
+      var gross = grossRevenue(), refunds = refundTotal(), net = netRevenue(), rec = mrr();
+      var arpu = nPaying ? Math.round(net / nPaying) : 0;
+      var pushSubs = liveOn() ? (LIVE.pushCount || 0) : 0;
+
+      // ---- Funnel -----------------------------------------------------------
+      v.appendChild(el('<h3 style="margin:0 0 8px">Acquisition funnel</h3>'));
+      var funnel = el('<div class="cm-card" style="padding:16px;margin-bottom:16px"></div>');
+      var stages = [["🎯 Leads captured", nLeads, "#d97706"], ["👥 Signed-up users", nUsers, "#2563eb"], ["💳 Paying customers", nPaying, "#16a34a"]];
+      var maxV = Math.max(nLeads, nUsers, nPaying, 1);
+      stages.forEach(function (s) {
+        var pct = Math.round(s[1] / maxV * 100);
+        funnel.appendChild(el('<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:.88rem;font-weight:700;color:#334155"><span>' + s[0] + '</span><span>' + s[1] + '</span></div>' +
+          '<div style="background:#eef2f7;border-radius:999px;height:14px;margin-top:4px;overflow:hidden"><div style="width:' + Math.max(pct, 3) + '%;height:100%;background:' + s[2] + '"></div></div></div>'));
+      });
+      funnel.appendChild(el('<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:.82rem;color:#64748b"><span>Lead→User: <b style="color:#0f172a">' + leadConv + '%</b></span><span>User→Paying: <b style="color:#0f172a">' + conv + '%</b></span></div>'));
+      v.appendChild(funnel);
+
+      // ---- KPI cards --------------------------------------------------------
+      v.appendChild(el('<h3 style="margin:0 0 8px">Revenue &amp; customers</h3>'));
+      var grid = el('<div class="cm-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px"></div>');
+      grid.appendChild(stat("Net revenue", money(net), "after refunds"));
+      grid.appendChild(stat("MRR", money(rec), "recurring / month"));
+      grid.appendChild(stat("ARPU", money(arpu), "net per paying user"));
+      grid.appendChild(stat("Gross revenue", money(gross), "all-time"));
+      grid.appendChild(stat("Refunds", money(refunds), "all-time"));
+      grid.appendChild(stat("Paying customers", nPaying, conv + "% of users"));
+      grid.appendChild(stat("Total users", nUsers, "signed-up"));
+      grid.appendChild(stat("Leads", nLeads, "opted-in"));
+      grid.appendChild(stat("Affiliate applications", affiliates, "from partners page"));
+      grid.appendChild(stat("Push subscribers", pushSubs, "opted-in devices"));
+      v.appendChild(grid);
+
+      // ---- Plan mix ---------------------------------------------------------
+      v.appendChild(el('<h3 style="margin:0 0 8px">Plan mix</h3>'));
+      var mix = { free: 0, plus: 0, pro: 0, diamond: 0 };
+      users.forEach(function (u) { var p = u.plan || "free"; if (mix[p] == null) mix[p] = 0; mix[p]++; });
+      var mixCard = el('<div class="cm-card" style="padding:14px"></div>');
+      [["Free", "free", "#94a3b8"], ["Go Plus", "plus", "#16a34a"], ["Platinum", "pro", "#2563eb"], ["Diamond", "diamond", "#8b5cf6"]].forEach(function (p) {
+        var n = mix[p[1]] || 0, pct = nUsers ? Math.round(n / nUsers * 100) : 0;
+        mixCard.appendChild(el('<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:.85rem;font-weight:700;color:#334155"><span>' + p[0] + '</span><span>' + n + ' · ' + pct + '%</span></div>' +
+          '<div style="background:#eef2f7;border-radius:999px;height:10px;margin-top:3px;overflow:hidden"><div style="width:' + Math.max(pct, 2) + '%;height:100%;background:' + p[2] + '"></div></div></div>'));
+      });
+      v.appendChild(mixCard);
+
+      // ---- Next-move hints (turn numbers into action) -----------------------
+      var tips = [];
+      if (nLeads > 0 && leadConv < 30) tips.push("Only " + leadConv + "% of leads became users — send a welcome campaign from the Emailer to convert more.");
+      if (nUsers > 0 && conv < 5) tips.push("Conversion to paid is " + conv + "%. Try a limited-time offer email to free users.");
+      if (nLeads === 0) tips.push("No leads yet — share your free tools (Telegram/WhatsApp) and use Prospect Radar to find people to help.");
+      if (pushSubs === 0) tips.push("No push subscribers yet — nudge users to turn on alerts (Profile → Turn on alerts).");
+      if (affiliates > 0) tips.push(affiliates + " affiliate application(s) waiting — approve them in Leads & CRM and send their partner link.");
+      if (tips.length) {
+        var t = el('<div class="cm-note" style="margin-top:16px;background:#eff6ff;border-color:#bfdbfe"><b>💡 Suggested next moves</b><ul style="margin:8px 0 0;padding-left:18px;line-height:1.7">' + tips.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + '</ul></div>');
+        v.appendChild(t);
+      }
+      return v;
+    },
+
     // -------- EMAIL MARKETING (broadcast to users / leads) -------------------
     emailer: function () {
       var v = el('<div></div>');
