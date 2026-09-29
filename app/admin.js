@@ -38,7 +38,7 @@
   function setAuthed(v) { setToken(v ? "1" : ""); }
 
   // ---- live data (Supabase via Worker service-role) -------------------------
-  var LIVE = { state: "idle", users: null, invoices: null, refunds: null, leads: null, error: "" };
+  var LIVE = { state: "idle", users: null, invoices: null, refunds: null, leads: null, pushCount: 0, error: "" };
   function fetchLive() {
     if (token() === "1") { LIVE.state = "demo"; return; } // local gate → demo data
     LIVE.state = "loading";
@@ -50,7 +50,7 @@
       })
       .then(function (d) {
         if (!d) return;
-        LIVE.users = d.users || []; LIVE.invoices = d.invoices || []; LIVE.refunds = d.refunds || []; LIVE.leads = d.leads || [];
+        LIVE.users = d.users || []; LIVE.invoices = d.invoices || []; LIVE.refunds = d.refunds || []; LIVE.leads = d.leads || []; LIVE.pushCount = d.pushCount || 0;
         LIVE.state = "live"; _lastSig = dataSig(d); startPoll(); render();
       })
       .catch(function () { LIVE.state = "demo"; LIVE.error = "Network error — showing demo data."; render(); });
@@ -73,7 +73,7 @@
       .then(function (d) {
         if (!d) return;
         var sig = dataSig(d);
-        LIVE.users = d.users || []; LIVE.invoices = d.invoices || []; LIVE.refunds = d.refunds || []; LIVE.leads = d.leads || []; LIVE.state = "live";
+        LIVE.users = d.users || []; LIVE.invoices = d.invoices || []; LIVE.refunds = d.refunds || []; LIVE.leads = d.leads || []; LIVE.pushCount = d.pushCount || 0; LIVE.state = "live";
         if (_lastSig && sig !== _lastSig) { _lastSig = sig; render(); } else { _lastSig = sig; }
       })
       .catch(function () {});
@@ -99,7 +99,7 @@
       'h1{margin:0 0 2px}.muted{color:#5b6b8c}table{width:100%;border-collapse:collapse;margin:20px 0}' +
       'td,th{padding:10px 8px;border-bottom:1px solid #e6ebf5;text-align:left}.r{text-align:right}' +
       '.tot{font-size:1.3rem;font-weight:800}.badge{display:inline-block;padding:3px 10px;border-radius:999px;background:#dcfce7;color:#166534;font-weight:700;font-size:.8rem}' +
-      '.btn{display:inline-block;margin-top:16px;padding:10px 16px;border:1px solid #cbd5e1;border-radius:8px;background:#8b5cf6;color:#fff;cursor:pointer;font-size:.9rem}</style></head><body>' +
+      '.btn{display:inline-block;margin-top:16px;padding:10px 16px;background:#fff;color:#0f172a;border:1px solid #cbd5e1;border-radius:8px;background:#8b5cf6;color:#fff;cursor:pointer;font-size:.9rem}</style></head><body>' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start"><div><h1>ChintasMoney</h1><div class="muted">Trader Report Card — educational software (SaaS)</div></div>' +
       '<div class="r"><div style="font-weight:800">INVOICE</div><div class="muted">' + esc(i.date) + '</div></div></div>' +
       '<table><tr><th>Bill to</th><td class="r">' + esc(i.email || "—") + '</td></tr>' +
@@ -256,8 +256,8 @@
       ".cm-login-card p{margin:0 0 18px;color:#64748b;font-size:.9rem}",
       ".cm-fld{display:block;margin:0 0 12px}",
       ".cm-fld span{display:block;font-size:.78rem;font-weight:600;color:#475569;margin-bottom:5px}",
-      ".cm-fld input,.cm-fld select{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit}",
-      ".cm-btn{display:inline-flex;align-items:center;gap:6px;justify-content:center;padding:10px 16px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;font-weight:600;cursor:pointer;font-family:inherit;font-size:.9rem}",
+      ".cm-fld input,.cm-fld select{width:100%;box-sizing:border-box;padding:11px 12px;background:#fff;color:#0f172a;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit}",
+      ".cm-btn{display:inline-flex;align-items:center;gap:6px;justify-content:center;padding:10px 16px;border-radius:10px;background:#fff;color:#0f172a;border:1px solid #cbd5e1;background:#fff;font-weight:600;cursor:pointer;font-family:inherit;font-size:.9rem}",
       ".cm-btn.p{background:linear-gradient(135deg,#8b5cf6,#6366f1);color:#fff;border:none}",
       ".cm-btn.sm{padding:7px 12px;font-size:.82rem}",
       ".cm-btn.danger{color:#dc2626;border-color:#fecaca}",
@@ -440,7 +440,7 @@
   var TABTITLE = { overview: "Overview", people: "People Logged", calendar: "Activity Calendar",
     content: "Content Calendar", catalogue: "Product Catalogue & Prices",
     revenue: "Revenue, Invoices & Refunds", razorpay: "Razorpay (live)", gating: "Locked Sections & Gating", flags: "Feature Flags",
-    emailer: "Email Marketing", leads: "Leads & CRM", finder: "Lead Finder",
+    emailer: "Email Marketing", leads: "Leads & CRM", finder: "Lead Finder", push: "Push Alerts",
     exportt: "Export / Download", privacy: "Privacy & Security" };
 
   // Month shown by the calendars (0 = current month, -1 = last month, etc.)
@@ -471,13 +471,14 @@
     ["emailer", "✉️ Email marketing", "send campaigns, newsletters, announcements to users and leads"],
     ["leads", "🎯 Leads & CRM", "captured leads, opt-ins, prospects, export contacts"],
     ["finder", "🧭 Lead finder", "find clients: communities, creators, hashtags, outreach scripts, prospecting tracker"],
+    ["push", "📲 Push alerts", "send push notifications to users' phones and browsers"],
     ["exportt", "⬇ Export everything", "download users, invoices, refunds"],
     ["privacy", "🛡️ Privacy & security", "admin password & security"]
   ];
   function openAdminSearch() {
     var back = el('<div style="position:fixed;inset:0;background:rgba(11,21,51,.55);z-index:200;display:flex;align-items:flex-start;justify-content:center;padding:60px 16px"></div>');
     var box = el('<div style="background:#fff;border-radius:16px;width:100%;max-width:460px;box-shadow:0 24px 60px rgba(0,0,0,.35);overflow:hidden"></div>');
-    box.appendChild(el('<div style="padding:14px 16px 0"><input id="cmAdSearch" placeholder="Search sections… e.g. revenue, prices, users" autocomplete="off" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #cbd5e1;border-radius:10px;font-size:1rem;font-family:inherit"/></div>'));
+    box.appendChild(el('<div style="padding:14px 16px 0"><input id="cmAdSearch" placeholder="Search sections… e.g. revenue, prices, users" autocomplete="off" style="width:100%;box-sizing:border-box;padding:12px 14px;background:#fff;color:#0f172a;border:1px solid #cbd5e1;border-radius:10px;font-size:1rem;font-family:inherit"/></div>'));
     var list = el('<div id="cmAdList" style="padding:10px 12px 14px;display:grid;gap:6px;max-height:56vh;overflow:auto"></div>');
     box.appendChild(list); back.appendChild(box); document.body.appendChild(back);
     function close() { if (back.parentNode) document.body.removeChild(back); }
@@ -516,7 +517,7 @@
     [["overview", "▦ Overview"], ["people", "👥 People logged"], ["calendar", "📅 Activity calendar"],
      ["content", "🗓️ Content calendar"], ["catalogue", "🏷️ Products & prices"],
      ["revenue", "₹ Revenue & invoices"], ["razorpay", "💳 Razorpay (live)"], ["gating", "🔒 Locked sections"], ["flags", "⚑ Feature flags"],
-     ["emailer", "✉️ Email marketing"], ["leads", "🎯 Leads & CRM"], ["finder", "🧭 Lead finder"],
+     ["emailer", "✉️ Email marketing"], ["leads", "🎯 Leads & CRM"], ["finder", "🧭 Lead finder"], ["push", "📲 Push alerts"],
      ["exportt", "⬇ Export everything"], ["privacy", "🛡️ Privacy & security"]].forEach(function (t) {
       var b = el('<button class="cm-nav' + (TAB === t[0] ? " on" : "") + '">' + t[1] + '</button>');
       b.addEventListener("click", function () { TAB = t[0]; render(); });
@@ -624,7 +625,7 @@
 
       var card = el('<div class="cm-card" style="padding:18px;display:grid;gap:12px;max-width:620px"></div>');
       card.appendChild(el('<label style="font-weight:700;font-size:.85rem;color:#334155">Send to</label>'));
-      var seg = el('<select style="padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit">' +
+      var seg = el('<select style="padding:11px 12px;background:#fff;color:#0f172a;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit">' +
         '<option value="leads">Leads only (' + leads.length + ')</option>' +
         '<option value="users">All users (' + users.length + ')</option>' +
         '<option value="plus">Plus plan users</option>' +
@@ -636,7 +637,7 @@
       card.appendChild(seg);
       var customWrap = el('<div style="display:none"></div>');
       customWrap.appendChild(el('<label style="font-weight:700;font-size:.85rem;color:#334155;display:block;margin-bottom:5px">Paste emails (comma, space or new line separated)</label>'));
-      var customTa = el('<textarea rows="3" placeholder="alice@example.com, bob@example.com" style="width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit"></textarea>');
+      var customTa = el('<textarea rows="3" placeholder="alice@example.com, bob@example.com" style="width:100%;box-sizing:border-box;padding:11px 12px;background:#fff;color:#0f172a;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit"></textarea>');
       customWrap.appendChild(customTa);
       card.appendChild(customWrap);
 
@@ -647,7 +648,7 @@
       leads.forEach(function (l) { if (l.email && !seenC[l.email.toLowerCase()]) { seenC[l.email.toLowerCase()] = 1; contacts.push({ email: l.email, tag: "lead" }); } });
       var pickWrap = el('<div style="display:none"></div>');
       var pickHead = el('<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap"></div>');
-      var pickSearch = el('<input placeholder="Filter by email…" style="flex:1;min-width:160px;padding:9px 11px;border:1px solid #cbd5e1;border-radius:10px;font-family:inherit"/>');
+      var pickSearch = el('<input placeholder="Filter by email…" style="flex:1;min-width:160px;padding:9px 11px;background:#fff;color:#0f172a;border:1px solid #cbd5e1;border-radius:10px;font-family:inherit"/>');
       var selAll = el('<button class="cm-btn sm ghost" type="button">Select all</button>');
       var selNone = el('<button class="cm-btn sm ghost" type="button">Clear</button>');
       var pickCount = el('<span style="font-size:.82rem;color:#64748b;font-weight:700">0 selected</span>');
@@ -690,11 +691,11 @@
       });
 
       card.appendChild(el('<label style="font-weight:700;font-size:.85rem;color:#334155">Subject</label>'));
-      var subj = el('<input placeholder="e.g. New: your free Money Leak Report is ready" style="padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit"/>');
+      var subj = el('<input placeholder="e.g. New: your free Money Leak Report is ready" style="padding:11px 12px;background:#fff;color:#0f172a;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit"/>');
       card.appendChild(subj);
 
       card.appendChild(el('<label style="font-weight:700;font-size:.85rem;color:#334155">Message</label>'));
-      var msg = el('<textarea rows="9" placeholder="Write your message here. Plain text — line breaks are kept. Your logo, footer and unsubscribe line are added automatically." style="width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit;line-height:1.6"></textarea>');
+      var msg = el('<textarea rows="9" placeholder="Write your message here. Plain text — line breaks are kept. Your logo, footer and unsubscribe line are added automatically." style="width:100%;box-sizing:border-box;padding:11px 12px;background:#fff;color:#0f172a;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit;line-height:1.6"></textarea>');
       card.appendChild(msg);
 
       var status = el('<div style="font-size:.85rem;color:#64748b;min-height:18px"></div>');
@@ -776,6 +777,51 @@
       return v;
     },
 
+    // -------- PUSH ALERTS (Web Push to phones/browsers) ----------------------
+    push: function () {
+      var v = el('<div></div>');
+      var IN = 'padding:11px 12px;background:#fff;color:#0f172a;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit;background:#fff;color:#0f172a';
+      v.appendChild(el('<div class="cm-note" style="margin-bottom:14px">Send a notification straight to the phones and browsers of users who turned on alerts (Profile → 🔔 Turn on alerts in the app). It pops up even when the app is closed.</div>'));
+      var subsCount = liveOn() ? (LIVE.pushCount || 0) : 0;
+      v.appendChild(el('<div class="cm-card cm-stat" style="max-width:220px;margin-bottom:14px"><span class="lbl">Subscribed devices</span><span class="val">' + subsCount + '</span><span class="hint">opted in to push</span></div>'));
+
+      var card = el('<div class="cm-card" style="padding:18px;display:grid;gap:12px;max-width:620px"></div>');
+      card.appendChild(el('<label style="font-weight:700;font-size:.85rem;color:#334155">Title</label>'));
+      var title = el('<input placeholder="e.g. New feature just dropped 🎉" style="' + IN + '"/>');
+      card.appendChild(title);
+      card.appendChild(el('<label style="font-weight:700;font-size:.85rem;color:#334155">Message</label>'));
+      var body = el('<textarea rows="3" placeholder="Short and punchy — this shows on the lock screen." style="width:100%;box-sizing:border-box;' + IN + '"></textarea>');
+      card.appendChild(body);
+      card.appendChild(el('<label style="font-weight:700;font-size:.85rem;color:#334155">Opens (in-app path)</label>'));
+      var link = el('<input value="/app/" style="' + IN + '"/>');
+      card.appendChild(link);
+
+      var status = el('<div style="font-size:.85rem;color:#64748b;min-height:18px"></div>');
+      var sendBtn = el('<button class="cm-btn" style="justify-self:start">📲 Send push</button>');
+      sendBtn.addEventListener("click", function () {
+        if (!liveOn()) { alert("Live data isn't connected yet, so sending is disabled in demo mode."); return; }
+        var t = title.value.trim(), bd = body.value.trim();
+        if (!t || !bd) { status.style.color = "#dc2626"; status.textContent = "Please fill in a title and a message."; return; }
+        if (!confirm("Send this push to " + subsCount + " device(s)?")) return;
+        sendBtn.disabled = true; sendBtn.textContent = "Sending…"; status.style.color = "#64748b"; status.textContent = "Sending…";
+        adminPost("/api/admin/push", { title: t, body: bd, url: link.value.trim() || "/app/" }).then(function (r) {
+          sendBtn.disabled = false; sendBtn.textContent = "📲 Send push";
+          if (r && r.ok) {
+            adminConfetti(); status.style.color = "#166534";
+            status.textContent = "✓ Delivered to " + r.sent + " of " + r.total + " device(s)" + (r.removed ? " (" + r.removed + " expired, cleaned up)." : ".");
+            title.value = ""; body.value = "";
+          } else {
+            status.style.color = "#dc2626";
+            status.textContent = "Couldn't send: " + ((r && (r.detail || r.error)) || "unknown error") + ".";
+          }
+        });
+      });
+      card.appendChild(sendBtn); card.appendChild(status);
+      v.appendChild(card);
+      v.appendChild(el('<div class="cm-note" style="margin-top:14px;background:#eff6ff;border-color:#bfdbfe">ℹ️ Push needs <b>VAPID_PUBLIC_KEY</b> + <b>VAPID_PRIVATE_KEY</b> set in Cloudflare, and the <b>push_subscriptions</b> table in Supabase. If sending says "not configured," those aren\'t set yet.</div>'));
+      return v;
+    },
+
     // -------- LEAD FINDER (legal prospecting hub + outreach tracker) ---------
     finder: function () {
       var v = el('<div></div>');
@@ -848,9 +894,9 @@
       function prospects() { var c = CM.adminConfig(); return c.prospects || []; }
       function saveProspects(p) { var c = CM.adminConfig(); c.prospects = p; CM.saveAdmin(c); }
       var form = el('<div class="cm-card" style="padding:14px;display:grid;gap:8px;max-width:560px;margin-bottom:12px"></div>');
-      var who = el('<input placeholder="Who / where (e.g. @trader_ravi on X, or r/IndianStreetBets)" style="padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-family:inherit"/>');
-      var note = el('<input placeholder="Note (e.g. sent affiliate DM, waiting reply)" style="padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-family:inherit"/>');
-      var stsel = el('<select style="padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-family:inherit"><option value="to-contact">To contact</option><option value="contacted">Contacted</option><option value="replied">Replied</option><option value="partner">Partner / converted 🎉</option></select>');
+      var who = el('<input placeholder="Who / where (e.g. @trader_ravi on X, or r/IndianStreetBets)" style="padding:10px 12px;background:#fff;color:#0f172a;border:1px solid #cbd5e1;border-radius:10px;font-family:inherit"/>');
+      var note = el('<input placeholder="Note (e.g. sent affiliate DM, waiting reply)" style="padding:10px 12px;background:#fff;color:#0f172a;border:1px solid #cbd5e1;border-radius:10px;font-family:inherit"/>');
+      var stsel = el('<select style="padding:10px 12px;background:#fff;color:#0f172a;border:1px solid #cbd5e1;border-radius:10px;font-family:inherit"><option value="to-contact">To contact</option><option value="contacted">Contacted</option><option value="replied">Replied</option><option value="partner">Partner / converted 🎉</option></select>');
       var add = el('<button class="cm-btn" style="justify-self:start">➕ Add prospect</button>');
       add.addEventListener("click", function () {
         var w = who.value.trim(); if (!w) { who.focus(); return; }
@@ -1205,7 +1251,7 @@
         var cur = CM.FEATURE_MATRIX[area];
         var row = el('<div class="cm-row"></div>');
         row.appendChild(el('<div><b>' + esc(area) + '</b><div class="cm-hint">min plan: ' + esc(CM.PLANS[cur].name) + '</div></div>'));
-        var sel = el('<select style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:9px;font-family:inherit">' +
+        var sel = el('<select style="padding:8px 10px;background:#fff;color:#0f172a;border:1px solid #cbd5e1;border-radius:9px;font-family:inherit">' +
           order.map(function (id) { return '<option value="' + id + '"' + (id === cur ? " selected" : "") + '>' + CM.PLANS[id].name + '</option>'; }).join("") + '</select>');
         sel.addEventListener("change", function () { CM.setFeatureGate(area, sel.value); render(); });
         row.appendChild(sel);

@@ -407,6 +407,12 @@ async function handleAdminData(request, env) {
     const lr = await fetch(base + "/rest/v1/leads?select=*&order=created_at.desc&limit=1000", { headers: h });
     if (lr.ok) leadRows = await lr.json();
   } catch (e) {}
+  let pushCount = 0;
+  try {
+    const pr = await fetch(base + "/rest/v1/push_subscriptions?select=endpoint", { headers: Object.assign({}, h, { Prefer: "count=exact", Range: "0-0" }) });
+    const cr = pr.headers.get("content-range");
+    if (cr && cr.indexOf("/") !== -1) pushCount = parseInt(cr.split("/")[1], 10) || 0;
+  } catch (e) {}
 
   const outUsers = users.map(function (u) {
     const st = (states[u.id] && states[u.id].data) || {};
@@ -436,7 +442,7 @@ async function handleAdminData(request, env) {
   const leads = leadRows.map(function (l) {
     return { email: l.email || "", source: l.source || "—", note: l.note || "", date: (l.created_at || "").slice(0, 10) };
   });
-  return aRes({ users: outUsers, invoices: invoices, refunds: refunds, leads: leads, totalUsers: outUsers.length }, 200);
+  return aRes({ users: outUsers, invoices: invoices, refunds: refunds, leads: leads, pushCount: pushCount, totalUsers: outUsers.length }, 200);
 }
 
 // ---- Razorpay webhook: record verified payments/refunds into Supabase -------
@@ -867,6 +873,121 @@ async function handleAdminBroadcast(request, env) {
   return aRes({ ok: true, sent: sent, total: recipients.length, capped: recipients.length > CAP }, 200);
 }
 
+// ===========================================================================
+//  WEB PUSH  (RFC 8291 aes128gcm payload + RFC 8292 VAPID auth)
+// ===========================================================================
+function pushB64ToBytes(s) {
+  s = String(s).replace(/-/g, "+").replace(/_/g, "/");
+  const pad = s.length % 4 ? "=".repeat(4 - (s.length % 4)) : "";
+  const raw = atob(s + pad);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+function pushBytesToB64url(bytes) {
+  const b = new Uint8Array(bytes);
+  let bin = "";
+  for (let i = 0; i < b.length; i++) bin += String.fromCharCode(b[i]);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function pushConcat(arrays) {
+  let len = 0; arrays.forEach(function (a) { len += a.length; });
+  const out = new Uint8Array(len); let off = 0;
+  arrays.forEach(function (a) { out.set(a, off); off += a.length; });
+  return out;
+}
+async function pushHkdf(salt, ikm, info, length) {
+  const key = await crypto.subtle.importKey("raw", ikm, { name: "HKDF" }, false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt: salt, info: info }, key, length * 8);
+  return new Uint8Array(bits);
+}
+async function vapidAuthHeader(env, endpoint) {
+  const aud = new URL(endpoint).origin;
+  const enc = function (s) { return pushBytesToB64url(new TextEncoder().encode(s)); };
+  const header = enc(JSON.stringify({ typ: "JWT", alg: "ES256" }));
+  const payload = enc(JSON.stringify({ aud: aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: "mailto:" + (env.OWNER_EMAIL || OWNER_EMAIL) }));
+  const unsigned = header + "." + payload;
+  const pub = pushB64ToBytes(env.VAPID_PUBLIC_KEY);
+  const jwk = { kty: "EC", crv: "P-256", d: env.VAPID_PRIVATE_KEY, x: pushBytesToB64url(pub.slice(1, 33)), y: pushBytesToB64url(pub.slice(33, 65)), ext: true };
+  const signKey = await crypto.subtle.importKey("jwk", jwk, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, signKey, new TextEncoder().encode(unsigned));
+  const jwt = unsigned + "." + pushBytesToB64url(new Uint8Array(sig));
+  return "vapid t=" + jwt + ", k=" + env.VAPID_PUBLIC_KEY;
+}
+async function encryptPush(subscription, payloadBytes) {
+  const uaPublic = pushB64ToBytes(subscription.keys.p256dh);   // 65 bytes
+  const authSecret = pushB64ToBytes(subscription.keys.auth);   // 16 bytes
+  const asPair = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+  const asPublic = new Uint8Array(await crypto.subtle.exportKey("raw", asPair.publicKey)); // 65 bytes
+  const uaKey = await crypto.subtle.importKey("raw", uaPublic, { name: "ECDH", namedCurve: "P-256" }, false, []);
+  const shared = new Uint8Array(await crypto.subtle.deriveBits({ name: "ECDH", public: uaKey }, asPair.privateKey, 256));
+  const keyInfo = pushConcat([new TextEncoder().encode("WebPush: info\0"), uaPublic, asPublic]);
+  const ikm = await pushHkdf(authSecret, shared, keyInfo, 32);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const cek = await pushHkdf(salt, ikm, new TextEncoder().encode("Content-Encoding: aes128gcm\0"), 16);
+  const nonce = await pushHkdf(salt, ikm, new TextEncoder().encode("Content-Encoding: nonce\0"), 12);
+  const record = pushConcat([payloadBytes, new Uint8Array([2])]); // single-record delimiter 0x02
+  const aesKey = await crypto.subtle.importKey("raw", cek, { name: "AES-GCM" }, false, ["encrypt"]);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, aesKey, record));
+  const rs = new Uint8Array([0, 0, 0x10, 0x00]); // record size = 4096
+  const idlen = new Uint8Array([asPublic.length]); // 65
+  return pushConcat([salt, rs, idlen, asPublic, ct]);
+}
+async function sendWebPush(env, subscription, payloadObj) {
+  const payloadBytes = new TextEncoder().encode(JSON.stringify(payloadObj));
+  const body = await encryptPush(subscription, payloadBytes);
+  const auth = await vapidAuthHeader(env, subscription.endpoint);
+  const res = await fetch(subscription.endpoint, {
+    method: "POST",
+    headers: { "Content-Encoding": "aes128gcm", "Content-Type": "application/octet-stream", TTL: "86400", Authorization: auth },
+    body: body,
+  });
+  return res.status;
+}
+// Store a browser's push subscription (opt-in from the app).
+async function handlePushSubscribe(request, env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return aRes({ error: "not_configured" }, 501);
+  let b; try { b = await request.json(); } catch (e) { return aRes({ error: "bad_request" }, 400); }
+  const sub = b && b.subscription;
+  if (!sub || !sub.endpoint || !sub.keys || !sub.keys.p256dh || !sub.keys.auth) return aRes({ error: "bad_subscription" }, 400);
+  const email = b && typeof b.email === "string" ? b.email.trim().toLowerCase().slice(0, 200) : "";
+  const base = env.SUPABASE_URL.replace(/\/$/, "");
+  try {
+    await fetch(base + "/rest/v1/push_subscriptions?on_conflict=endpoint", {
+      method: "POST",
+      headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=merge-duplicates" }),
+      body: JSON.stringify({ endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth, email: email, created_at: new Date().toISOString() }),
+    });
+  } catch (e) {}
+  return aRes({ ok: true }, 200);
+}
+// Admin: broadcast a push notification to every subscribed device.
+async function handleAdminPush(request, env) {
+  const gate = await requireAdmin(request, env); if (gate.err) return gate.err;
+  if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) return aRes({ error: "push_not_configured", detail: "Add VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in Cloudflare." }, 501);
+  let b; try { b = await request.json(); } catch (e) { return aRes({ error: "bad_request" }, 400); }
+  const title = String((b && b.title) || "").slice(0, 100);
+  const body = String((b && b.body) || "").slice(0, 300);
+  const urlPath = String((b && b.url) || "/app/").slice(0, 300);
+  if (!title || !body) return aRes({ error: "missing", detail: "Title and message are required." }, 400);
+  const h = { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: "Bearer " + env.SUPABASE_SERVICE_ROLE_KEY };
+  let subs = [];
+  try { const r = await fetch(gate.base + "/rest/v1/push_subscriptions?select=*&limit=5000", { headers: h }); if (r.ok) subs = await r.json(); } catch (e) {}
+  const payload = { title: title, body: body, url: urlPath, icon: SITE_URL + "/app/assets/icon-192.png", tag: "cm-broadcast" };
+  let sent = 0; const gone = [];
+  for (const s of subs) {
+    try {
+      const status = await sendWebPush(env, { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
+      if (status === 200 || status === 201) sent++;
+      else if (status === 404 || status === 410) gone.push(s.endpoint);
+    } catch (e) {}
+  }
+  for (const ep of gone) {
+    try { await fetch(gate.base + "/rest/v1/push_subscriptions?endpoint=eq." + encodeURIComponent(ep), { method: "DELETE", headers: h }); } catch (e) {}
+  }
+  return aRes({ ok: true, sent: sent, total: subs.length, removed: gone.length }, 200);
+}
+
 // Welcome email on first sign-in. Client calls this once per new account.
 async function handleWelcome(request, env) {
   let b; try { b = await request.json(); } catch (e) { return aRes({ error: "bad_request" }, 400); }
@@ -898,6 +1019,8 @@ export default {
     if (request.method === "POST" && url.pathname === "/api/referral") return handleReferral(request, env);
     if (request.method === "POST" && url.pathname === "/api/lead") return handleLead(request, env);
     if (request.method === "POST" && url.pathname === "/api/admin/broadcast") return handleAdminBroadcast(request, env);
+    if (request.method === "POST" && url.pathname === "/api/push/subscribe") return handlePushSubscribe(request, env);
+    if (request.method === "POST" && url.pathname === "/api/admin/push") return handleAdminPush(request, env);
     if (request.method === "GET" && url.pathname === "/api/admin/razorpay") return handleAdminRazorpay(request, env);
     if (request.method === "POST" && url.pathname === "/api/admin/login") return handleAdminLogin(request, env);
     if (request.method === "GET" && url.pathname === "/api/admin/data") return handleAdminData(request, env);

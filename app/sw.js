@@ -1,6 +1,6 @@
 /* ChintasMoney service worker — offline app shell.
  * Bump CACHE when you ship new app files so clients update. */
-var CACHE = "chintasmoney-v124";
+var CACHE = "chintasmoney-v125";
 var SHELL = [
   "./index.html",
   "./styles.css?v=20260922b",
@@ -46,4 +46,35 @@ self.addEventListener("fetch", function (e) {
       }).catch(function () { return r; });
     }));
   }
+});
+
+// ---- Web Push: show the notification the Worker sent -----------------------
+self.addEventListener("push", function (e) {
+  var data = {};
+  try { data = e.data ? e.data.json() : {}; } catch (err) {
+    try { data = { title: "ChintasMoney", body: e.data ? e.data.text() : "" }; } catch (e2) { data = {}; }
+  }
+  var title = data.title || "ChintasMoney";
+  var opts = {
+    body: data.body || "",
+    icon: data.icon || "./assets/icon-192.png",
+    badge: "./assets/favicon.png",
+    data: { url: data.url || "./" },
+    tag: data.tag || undefined,
+    renotify: !!data.tag
+  };
+  e.waitUntil(self.registration.showNotification(title, opts));
+});
+
+// ---- Tapping the notification opens (or focuses) the app -------------------
+self.addEventListener("notificationclick", function (e) {
+  e.notification.close();
+  var target = (e.notification.data && e.notification.data.url) || "./";
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (list) {
+    for (var i = 0; i < list.length; i++) {
+      var c = list[i];
+      if ("focus" in c) { c.navigate && target && c.navigate(target); return c.focus(); }
+    }
+    if (self.clients.openWindow) return self.clients.openWindow(target);
+  }));
 });
