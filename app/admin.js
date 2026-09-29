@@ -38,7 +38,7 @@
   function setAuthed(v) { setToken(v ? "1" : ""); }
 
   // ---- live data (Supabase via Worker service-role) -------------------------
-  var LIVE = { state: "idle", users: null, invoices: null, refunds: null, error: "" };
+  var LIVE = { state: "idle", users: null, invoices: null, refunds: null, leads: null, error: "" };
   function fetchLive() {
     if (token() === "1") { LIVE.state = "demo"; return; } // local gate → demo data
     LIVE.state = "loading";
@@ -50,7 +50,7 @@
       })
       .then(function (d) {
         if (!d) return;
-        LIVE.users = d.users || []; LIVE.invoices = d.invoices || []; LIVE.refunds = d.refunds || [];
+        LIVE.users = d.users || []; LIVE.invoices = d.invoices || []; LIVE.refunds = d.refunds || []; LIVE.leads = d.leads || [];
         LIVE.state = "live"; _lastSig = dataSig(d); startPoll(); render();
       })
       .catch(function () { LIVE.state = "demo"; LIVE.error = "Network error — showing demo data."; render(); });
@@ -62,9 +62,9 @@
   // has to tap Refresh or check constantly.
   var _lastSig = "", _pollTimer = null;
   function dataSig(d) {
-    var inv = d.invoices || [], u = d.users || [], rf = d.refunds || [];
+    var inv = d.invoices || [], u = d.users || [], rf = d.refunds || [], ld = d.leads || [];
     var gross = inv.reduce(function (a, i) { return a + (i.amount || 0); }, 0);
-    return u.length + "|" + inv.length + "|" + rf.length + "|" + gross;
+    return u.length + "|" + inv.length + "|" + rf.length + "|" + gross + "|" + ld.length;
   }
   function pollLive() {
     if (token() === "1" || !isAuthed()) return;
@@ -73,7 +73,7 @@
       .then(function (d) {
         if (!d) return;
         var sig = dataSig(d);
-        LIVE.users = d.users || []; LIVE.invoices = d.invoices || []; LIVE.refunds = d.refunds || []; LIVE.state = "live";
+        LIVE.users = d.users || []; LIVE.invoices = d.invoices || []; LIVE.refunds = d.refunds || []; LIVE.leads = d.leads || []; LIVE.state = "live";
         if (_lastSig && sig !== _lastSig) { _lastSig = sig; render(); } else { _lastSig = sig; }
       })
       .catch(function () {});
@@ -383,6 +383,7 @@
   function allUsers() { return liveOn() ? (LIVE.users || []) : [localUser()].concat(DEMO_USERS); }
   function allInvoices() { return liveOn() ? (LIVE.invoices || []) : DEMO_INVOICES; }
   function allRefunds() { return liveOn() ? (LIVE.refunds || []) : DEMO_REFUNDS; }
+  function allLeads() { return liveOn() ? (LIVE.leads || []) : []; }
   function planPrice(id) { return (CM.PLANS[id] && CM.PLANS[id].price) || 0; }
   function packPrice(id) { var p = TOKEN_PACKS.filter(function (x) { return x.id === id; })[0]; return p ? p.price : 0; }
   function productPrice(id) { return CM.PLANS[id] ? planPrice(id) : packPrice(id); }
@@ -439,6 +440,7 @@
   var TABTITLE = { overview: "Overview", people: "People Logged", calendar: "Activity Calendar",
     content: "Content Calendar", catalogue: "Product Catalogue & Prices",
     revenue: "Revenue, Invoices & Refunds", razorpay: "Razorpay (live)", gating: "Locked Sections & Gating", flags: "Feature Flags",
+    emailer: "Email Marketing", leads: "Leads & CRM",
     exportt: "Export / Download", privacy: "Privacy & Security" };
 
   // Month shown by the calendars (0 = current month, -1 = last month, etc.)
@@ -466,6 +468,8 @@
     ["razorpay", "💳 Razorpay (live)", "live payments, refunds, settlements from razorpay"],
     ["gating", "🔒 Locked sections", "which plan unlocks each feature"],
     ["flags", "⚑ Feature flags", "turn features on or off"],
+    ["emailer", "✉️ Email marketing", "send campaigns, newsletters, announcements to users and leads"],
+    ["leads", "🎯 Leads & CRM", "captured leads, opt-ins, prospects, export contacts"],
     ["exportt", "⬇ Export everything", "download users, invoices, refunds"],
     ["privacy", "🛡️ Privacy & security", "admin password & security"]
   ];
@@ -511,6 +515,7 @@
     [["overview", "▦ Overview"], ["people", "👥 People logged"], ["calendar", "📅 Activity calendar"],
      ["content", "🗓️ Content calendar"], ["catalogue", "🏷️ Products & prices"],
      ["revenue", "₹ Revenue & invoices"], ["razorpay", "💳 Razorpay (live)"], ["gating", "🔒 Locked sections"], ["flags", "⚑ Feature flags"],
+     ["emailer", "✉️ Email marketing"], ["leads", "🎯 Leads & CRM"],
      ["exportt", "⬇ Export everything"], ["privacy", "🛡️ Privacy & security"]].forEach(function (t) {
       var b = el('<button class="cm-nav' + (TAB === t[0] ? " on" : "") + '">' + t[1] + '</button>');
       b.addEventListener("click", function () { TAB = t[0]; render(); });
@@ -519,7 +524,7 @@
     side.appendChild(el('<div class="cm-sep"></div>'));
     side.appendChild(el('<a class="cm-nav" href="index.html">↩ Back to app</a>'));
     var out = el('<button class="cm-nav">⎋ Sign out</button>');
-    out.addEventListener("click", function () { stopPoll(); _lastSig = ""; setToken(""); LIVE = { state: "idle", users: null, invoices: null, refunds: null, error: "" }; render(); });
+    out.addEventListener("click", function () { stopPoll(); _lastSig = ""; setToken(""); LIVE = { state: "idle", users: null, invoices: null, refunds: null, leads: null, error: "" }; render(); });
     side.appendChild(out);
     shell.appendChild(side);
 
@@ -603,6 +608,118 @@
   }
 
   var TABS = {
+    // -------- EMAIL MARKETING (broadcast to users / leads) -------------------
+    emailer: function () {
+      var v = el('<div></div>');
+      v.appendChild(el('<div class="cm-note" style="margin-bottom:14px">Compose a campaign and send it to your users or captured leads — receipts already look professional, and so will this. Emails go out from your verified <b>chintasmoney.com</b> domain via Resend, with your logo header and an unsubscribe line automatically added.</div>'));
+
+      var users = allUsers(), leads = allLeads();
+      var paying = users.filter(function (u) { return u.plan && u.plan !== "free"; }).length;
+      var chips = el('<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px"></div>');
+      chips.appendChild(el('<div class="cm-card cm-stat" style="min-width:120px"><span class="lbl">All users</span><span class="val">' + users.length + '</span><span class="hint">signed-up accounts</span></div>'));
+      chips.appendChild(el('<div class="cm-card cm-stat" style="min-width:120px"><span class="lbl">Paying</span><span class="val">' + paying + '</span><span class="hint">on a paid plan</span></div>'));
+      chips.appendChild(el('<div class="cm-card cm-stat" style="min-width:120px"><span class="lbl">Leads</span><span class="val">' + leads.length + '</span><span class="hint">opted-in prospects</span></div>'));
+      v.appendChild(chips);
+
+      var card = el('<div class="cm-card" style="padding:18px;display:grid;gap:12px;max-width:620px"></div>');
+      card.appendChild(el('<label style="font-weight:700;font-size:.85rem;color:#334155">Send to</label>'));
+      var seg = el('<select style="padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit">' +
+        '<option value="leads">Leads only (' + leads.length + ')</option>' +
+        '<option value="users">All users (' + users.length + ')</option>' +
+        '<option value="plus">Plus plan users</option>' +
+        '<option value="pro">Pro plan users</option>' +
+        '<option value="diamond">Diamond plan users</option>' +
+        '<option value="custom">Custom list (paste emails)</option>' +
+        '</select>');
+      card.appendChild(seg);
+      var customWrap = el('<div style="display:none"></div>');
+      customWrap.appendChild(el('<label style="font-weight:700;font-size:.85rem;color:#334155;display:block;margin-bottom:5px">Paste emails (comma, space or new line separated)</label>'));
+      var customTa = el('<textarea rows="3" placeholder="alice@example.com, bob@example.com" style="width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit"></textarea>');
+      customWrap.appendChild(customTa);
+      card.appendChild(customWrap);
+      seg.addEventListener("change", function () { customWrap.style.display = seg.value === "custom" ? "block" : "none"; });
+
+      card.appendChild(el('<label style="font-weight:700;font-size:.85rem;color:#334155">Subject</label>'));
+      var subj = el('<input placeholder="e.g. New: your free Money Leak Report is ready" style="padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit"/>');
+      card.appendChild(subj);
+
+      card.appendChild(el('<label style="font-weight:700;font-size:.85rem;color:#334155">Message</label>'));
+      var msg = el('<textarea rows="9" placeholder="Write your message here. Plain text — line breaks are kept. Your logo, footer and unsubscribe line are added automatically." style="width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit;line-height:1.6"></textarea>');
+      card.appendChild(msg);
+
+      var status = el('<div style="font-size:.85rem;color:#64748b;min-height:18px"></div>');
+      var sendBtn = el('<button class="cm-btn" style="justify-self:start">✉️ Send campaign</button>');
+      sendBtn.addEventListener("click", function () {
+        if (!liveOn()) { alert("Live data isn't connected yet, so sending is disabled in demo mode."); return; }
+        var subject = subj.value.trim(), message = msg.value.trim(), segv = seg.value;
+        if (!subject || !message) { status.textContent = "Please fill in both a subject and a message."; status.style.color = "#dc2626"; return; }
+        var emails = segv === "custom" ? customTa.value.trim() : "";
+        if (segv === "custom" && !emails) { status.textContent = "Paste at least one email address."; status.style.color = "#dc2626"; return; }
+        if (!confirm("Send \"" + subject + "\" to the selected recipients?\n\nThis emails real people. Make sure it's ready.")) return;
+        sendBtn.disabled = true; sendBtn.textContent = "Sending…"; status.style.color = "#64748b"; status.textContent = "Sending campaign…";
+        adminPost("/api/admin/broadcast", { subject: subject, message: message, segment: segv, emails: emails }).then(function (r) {
+          sendBtn.disabled = false; sendBtn.textContent = "✉️ Send campaign";
+          if (r && r.ok) {
+            adminConfetti();
+            status.style.color = "#166534";
+            status.textContent = "✓ Sent to " + r.sent + " recipient" + (r.sent === 1 ? "" : "s") + (r.capped ? " (capped at " + r.sent + " of " + r.total + " — send the rest in a second batch)." : ".");
+            subj.value = ""; msg.value = "";
+          } else {
+            status.style.color = "#dc2626";
+            status.textContent = "Couldn't send: " + ((r && (r.detail || r.error)) || "unknown error") + ".";
+          }
+        });
+      });
+      card.appendChild(sendBtn);
+      card.appendChild(status);
+      v.appendChild(card);
+      v.appendChild(el('<div class="cm-note" style="margin-top:14px;background:#fef9c3;border-color:#fde68a">⚠️ <b>Only email people who signed up or opted in.</b> Buying or scraping lists is spam — it violates Resend\'s terms and gets your domain blacklisted (breaking your receipts and login emails). Every message includes an unsubscribe line, as the law requires.</div>'));
+      return v;
+    },
+
+    // -------- LEADS & CRM (opt-in captured prospects) ------------------------
+    leads: function () {
+      var v = el('<div></div>');
+      v.appendChild(el('<div class="cm-note" style="margin-bottom:14px">People who opted in through your site — the free Position-Size Calculator, newsletter box, or any lead form. These are permission-based contacts you can email from the <b>Email marketing</b> tab. Grow this list and you grow your funnel.</div>'));
+      var leads = allLeads();
+      v.appendChild(el('<div class="cm-card cm-stat" style="max-width:200px;margin-bottom:14px"><span class="lbl">Total leads</span><span class="val">' + leads.length + '</span><span class="hint">opted-in contacts</span></div>'));
+
+      if (!liveOn()) { v.appendChild(el('<div class="cm-note">Connect live data (sign in via the server) to see real captured leads.</div>')); return v; }
+      if (!leads.length) {
+        v.appendChild(el('<div class="cm-note">No leads captured yet. Share your free tool — <b>chintasmoney.com/position-size-calculator.html</b> — and its email box will fill this list. Each opt-in shows up here automatically.</div>'));
+        return v;
+      }
+
+      var bar = el('<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>');
+      var mailBtn = el('<button class="cm-btn sm">✉️ Email these leads</button>');
+      mailBtn.addEventListener("click", function () { TAB = "emailer"; render(); });
+      var csvBtn = el('<button class="cm-btn sm ghost">⬇ Export CSV</button>');
+      csvBtn.addEventListener("click", function () {
+        var rows = [["email", "source", "note", "date"]].concat(leads.map(function (l) {
+          return [l.email || "", l.source || "", (l.note || "").replace(/[\r\n,]+/g, " "), l.date || ""];
+        }));
+        var csv = rows.map(function (r) { return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(","); }).join("\n");
+        var a = document.createElement("a");
+        a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+        a.download = "chintasmoney-leads.csv"; a.click();
+      });
+      bar.appendChild(mailBtn); bar.appendChild(csvBtn);
+      v.appendChild(bar);
+
+      var tbl = el('<div class="cm-card" style="padding:0;overflow:auto"></div>');
+      var t = el('<table class="cm-table" style="width:100%;border-collapse:collapse"></table>');
+      t.appendChild(el('<thead><tr><th style="text-align:left;padding:10px 12px">Email</th><th style="text-align:left;padding:10px 12px">Source</th><th style="text-align:left;padding:10px 12px">Note</th><th style="text-align:left;padding:10px 12px">Date</th></tr></thead>'));
+      var tb = el('<tbody></tbody>');
+      leads.forEach(function (l) {
+        tb.appendChild(el('<tr><td style="padding:9px 12px;border-top:1px solid #eef2f7">' + esc(l.email || "") + '</td>' +
+          '<td style="padding:9px 12px;border-top:1px solid #eef2f7">' + esc(l.source || "site") + '</td>' +
+          '<td style="padding:9px 12px;border-top:1px solid #eef2f7;color:#64748b">' + esc(l.note || "") + '</td>' +
+          '<td style="padding:9px 12px;border-top:1px solid #eef2f7;color:#64748b">' + esc((l.date || "").slice(0, 10)) + '</td></tr>'));
+      });
+      t.appendChild(tb); tbl.appendChild(t); v.appendChild(tbl);
+      return v;
+    },
+
     // -------- ACTIVITY CALENDAR (signups + logins per day) -------------------
     calendar: function () {
       var v = el('<div></div>');
