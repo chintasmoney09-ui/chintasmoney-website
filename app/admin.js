@@ -109,7 +109,7 @@
       '<tr><th>Status</th><td class="r"><span class="badge">' + esc(i.status) + '</span></td></tr>' +
       '<tr><th class="tot">Total paid</th><td class="r tot">' + money(i.amount) + '</td></tr></table>' +
       '<div class="muted" style="font-size:.85rem">Thank you. This is a receipt for a software subscription. Not investment advice. ' +
-      'Refunds: support@chintasmoney.com · https://chintasmoney.com/refund.html</div>' +
+      'Refunds: support@chintasmoney.com · https://chintasmoney.com/refund</div>' +
       '<button class="btn" onclick="window.print()">🖨 Print / Save as PDF</button>' +
       '</body></html>';
     win.document.write(html); win.document.close();
@@ -512,7 +512,7 @@
     var shell = el('<div class="cm-shell"></div>');
 
     var side = el('<aside class="cm-side"></aside>');
-    side.appendChild(el('<a class="cm-brand" href="index.html"><img src="assets/logo.png" alt=""/><span>ChintasMoney<small>CONTROL PANEL</small></span></a>'));
+    side.appendChild(el('<a class="cm-brand" href="/app/"><img src="assets/logo.png" alt=""/><span>ChintasMoney<small>CONTROL PANEL</small></span></a>'));
     [["overview", "▦ Overview"], ["people", "👥 People logged"], ["calendar", "📅 Activity calendar"],
      ["content", "🗓️ Content calendar"], ["catalogue", "🏷️ Products & prices"],
      ["revenue", "₹ Revenue & invoices"], ["razorpay", "💳 Razorpay (live)"], ["gating", "🔒 Locked sections"], ["flags", "⚑ Feature flags"],
@@ -523,7 +523,7 @@
       side.appendChild(b);
     });
     side.appendChild(el('<div class="cm-sep"></div>'));
-    side.appendChild(el('<a class="cm-nav" href="index.html">↩ Back to app</a>'));
+    side.appendChild(el('<a class="cm-nav" href="/app/">↩ Back to app</a>'));
     var out = el('<button class="cm-nav">⎋ Sign out</button>');
     out.addEventListener("click", function () { stopPoll(); _lastSig = ""; setToken(""); LIVE = { state: "idle", users: null, invoices: null, refunds: null, leads: null, error: "" }; render(); });
     side.appendChild(out);
@@ -687,7 +687,7 @@
 
       if (!liveOn()) { v.appendChild(el('<div class="cm-note">Connect live data (sign in via the server) to see real captured leads.</div>')); return v; }
       if (!leads.length) {
-        v.appendChild(el('<div class="cm-note">No leads captured yet. Share your free tool — <b>chintasmoney.com/position-size-calculator.html</b> — and its email box will fill this list. Each opt-in shows up here automatically.</div>'));
+        v.appendChild(el('<div class="cm-note">No leads captured yet. Share your free tool — <b>chintasmoney.com/position-size-calculator</b> — and its email box will fill this list. Each opt-in shows up here automatically.</div>'));
         return v;
       }
 
@@ -769,7 +769,7 @@
       // ---- Copy-paste outreach scripts --------------------------------------
       v.appendChild(el('<h3 style="margin:22px 0 8px">Outreach scripts (copy, tweak, paste)</h3>'));
       var SCRIPTS = [
-        { t: "Community reply (helpful, not salesy)", body: "The mistake most people make isn't picking the wrong stock — it's sizing too big. Risk a fixed 1–2% per trade so no single loss hurts. I built a free calculator that does the math for you: chintasmoney.com/position-size-calculator.html — no signup needed." },
+        { t: "Community reply (helpful, not salesy)", body: "The mistake most people make isn't picking the wrong stock — it's sizing too big. Risk a fixed 1–2% per trade so no single loss hurts. I built a free calculator that does the math for you: chintasmoney.com/position-size-calculator — no signup needed." },
         { t: "Creator / affiliate DM", body: "Hi [name], love your content on [topic]. I built ChintasMoney — it scores how disciplined a trader actually is (a 'Discipline Score'), not tips. I'd love to give your audience a free tool and set you up with an affiliate commission on anyone who upgrades. Worth a quick chat?" },
         { t: "Quora / long answer closer", body: "If you want to see exactly where your own trading leaks money — oversizing, holding losers, revenge trades — ChintasMoney scores your discipline for free: chintasmoney.com. It's not tips; it's a mirror for how you actually trade." }
       ];
