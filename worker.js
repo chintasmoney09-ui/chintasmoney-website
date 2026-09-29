@@ -8,6 +8,10 @@
 const SYMBOLS = [
   { y: "^NSEI", name: "NIFTY 50" },
   { y: "^NSEBANK", name: "BANK NIFTY" },
+  { y: "^BSESN", name: "SENSEX" },
+  { y: "GC=F", name: "GOLD" },
+  { y: "CL=F", name: "CRUDE OIL" },
+  { y: "INR=X", name: "USD/INR" },
   { y: "RELIANCE.NS", name: "RELIANCE" },
   { y: "TCS.NS", name: "TCS" },
   { y: "HDFCBANK.NS", name: "HDFC BANK" },

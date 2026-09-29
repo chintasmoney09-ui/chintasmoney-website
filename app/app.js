@@ -533,7 +533,9 @@
   var handoff = { calc: null, log: null };
   var SYMBOLS = [["NIFTY", 24800, 11], ["BANKNIFTY", 51200, 23], ["RELIANCE", 2980, 7], ["TCS", 3910, 31], ["TATAMOTORS", 985, 5], ["ZOMATO", 168, 13]];
   // Real NSE symbols users can pick from (indices resolve to tracking ETFs via tvSymbolFor).
-  var POPULAR_SYMS = ["NIFTY", "BANKNIFTY", "FINNIFTY", "RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY", "SBIN",
+  var POPULAR_SYMS = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX",
+    "GOLD", "SILVER", "CRUDE", "BRENT", "NATGAS", "COPPER", "USDINR", "BTC", "ETH", "SOLANA",
+    "RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY", "SBIN",
     "AXISBANK", "KOTAKBANK", "ITC", "LT", "BHARTIARTL", "HINDUNILVR", "MARUTI", "SUNPHARMA", "WIPRO", "HCLTECH",
     "TECHM", "TATAMOTORS", "TATASTEEL", "JSWSTEEL", "ADANIENT", "ADANIPORTS", "BAJFINANCE", "BAJAJFINSV",
     "ASIANPAINT", "TITAN", "ULTRACEMCO", "NESTLEIND", "POWERGRID", "NTPC", "ONGC", "COALINDIA", "HDFCLIFE",
@@ -601,7 +603,7 @@
       quick.appendChild(ch);
     });
     function mountMk() {
-      liveTradeChart(box, mkState.sym, {}, 520, false, false);
+      liveTradeChart(box, mkState.sym, {}, 520, true, false);
       symRow.querySelector("#mkDeep").href = "https://www.tradingview.com/symbols/" + encodeURIComponent(mkState.sym).replace("%3A", "-") + "/";
     }
     symRow.querySelector("#mkSym").addEventListener("change", function () { mkState.sym = this.value; mountMk(); refreshQuick(); });
@@ -645,7 +647,7 @@
   var MARKET_GROUPS = [
     ["Indian Indices", [["NIFTY 50", "NSE:NIFTY"], ["BANK NIFTY", "NSE:BANKNIFTY"], ["SENSEX", "BSE:SENSEX"]]],
     ["NSE Stocks", [["RELIANCE", "NSE:RELIANCE"], ["TCS", "NSE:TCS"], ["HDFC BANK", "NSE:HDFCBANK"], ["INFOSYS", "NSE:INFY"], ["ICICI BANK", "NSE:ICICIBANK"], ["SBI", "NSE:SBIN"], ["TATA MOTORS", "NSE:TATAMOTORS"], ["ADANI ENT", "NSE:ADANIENT"]]],
-    ["Commodities", [["Gold · XAU/USD", "OANDA:XAUUSD"], ["Silver · XAG/USD", "OANDA:XAGUSD"], ["Crude Oil · WTI", "TVC:USOIL"], ["Brent Oil", "TVC:UKOIL"], ["Natural Gas", "NYMEX:NG1!"]]],
+    ["Commodities", [["Gold · XAU/USD", "OANDA:XAUUSD"], ["Silver · XAG/USD", "OANDA:XAGUSD"], ["Crude Oil · WTI", "TVC:USOIL"], ["Brent Oil", "TVC:UKOIL"], ["Natural Gas", "NYMEX:NG1!"], ["Copper", "COMEX:HG1!"]]],
     ["Crypto", [["Bitcoin", "BINANCE:BTCUSDT"], ["Ethereum", "BINANCE:ETHUSDT"], ["Solana", "BINANCE:SOLUSDT"], ["Dogecoin", "BINANCE:DOGEUSDT"]]],
     ["Global Indices", [["S&P 500", "TVC:SPX"], ["Nasdaq 100", "TVC:NDX"], ["Dow Jones", "TVC:DJI"]]],
     ["Forex", [["USD/INR", "FX_IDC:USDINR"], ["EUR/USD", "OANDA:EURUSD"], ["GBP/USD", "OANDA:GBPUSD"]]]
@@ -1313,8 +1315,25 @@
       if (hint) hint.textContent = lot ? "· 1 lot = " + lot : "";
       if (lot && (qtyEl.value.trim() === "" || isLotValue(qtyEl.value))) qtyEl.value = lot;
     }
-    var ct; c.querySelector("#sym").addEventListener("input", function () { syncLot(); updatePreview(); clearTimeout(ct); ct = setTimeout(mountChart, 700); });
+    // Prefill the live market price into Entry (only when it's empty) so the
+    // trade starts from the real, current price.
+    function prefillLivePrice() {
+      var symEl = c.querySelector("#sym"), entryEl = c.querySelector("#entry");
+      if (!symEl.value.trim()) return;
+      var ysym = yfSymbolFor(symEl.value);
+      fetch("/api/candles?symbol=" + encodeURIComponent(ysym) + "&range=5d").then(function (r) { return r.json(); }).then(function (d) {
+        if (d && d.candles && d.candles.length) {
+          var last = d.candles[d.candles.length - 1].close;
+          if (entryEl && (entryEl.value.trim() === "" || entryEl.getAttribute("data-live") === "1")) {
+            entryEl.value = Math.round(last * 100) / 100; entryEl.setAttribute("data-live", "1"); refreshLevels(); updatePreview();
+          }
+        }
+      }).catch(function () {});
+    }
+    var ct, pt; c.querySelector("#sym").addEventListener("input", function () { syncLot(); updatePreview(); clearTimeout(ct); ct = setTimeout(mountChart, 700); clearTimeout(pt); pt = setTimeout(prefillLivePrice, 800); });
+    c.querySelector("#entry").addEventListener("input", function () { this.removeAttribute("data-live"); });
     syncLot();
+    if (c.querySelector("#sym").value.trim()) prefillLivePrice();
     updatePreview();
     mountChart();
     return v;
@@ -2111,17 +2130,43 @@
 
   // Map a user's symbol to a Yahoo symbol our /api/candles endpoint can fetch.
   function yfSymbolFor(sym) {
-    sym = (sym || "").trim().toUpperCase().replace(/^(NSE|BSE|BINANCE|OANDA|TVC|NASDAQ|NYMEX|FX_IDC):/, "");
-    var map = { NIFTY: "^NSEI", "NIFTY 50": "^NSEI", NIFTY50: "^NSEI", BANKNIFTY: "^NSEBANK", "BANK NIFTY": "^NSEBANK",
-      FINNIFTY: "^CNXFIN", SENSEX: "^BSESN", NIFTYBEES: "^NSEI", BANKBEES: "^NSEBANK", BTCUSDT: "BTC-USD", ETHUSDT: "ETH-USD",
-      XAUUSD: "GC=F", USOIL: "CL=F", SPX: "^GSPC", NDX: "^NDX", DJI: "^DJI" };
+    sym = (sym || "").trim().toUpperCase().replace(/^(NSE|BSE|BINANCE|OANDA|TVC|NASDAQ|NYMEX|COMEX|CBOT|FX|FX_IDC|FOREXCOM|CAPITALCOM|ICEEUR):/, "");
+    var map = {
+      // Indian indices
+      NIFTY: "^NSEI", "NIFTY 50": "^NSEI", NIFTY50: "^NSEI", BANKNIFTY: "^NSEBANK", "BANK NIFTY": "^NSEBANK",
+      FINNIFTY: "^CNXFIN", MIDCPNIFTY: "^NSEMDCP50", SENSEX: "^BSESN", NIFTYBEES: "^NSEI", BANKBEES: "^NSEBANK",
+      // Commodities (global futures — closest real, live series)
+      XAUUSD: "GC=F", GOLD: "GC=F", GC1: "GC=F", "GC1!": "GC=F",
+      XAGUSD: "SI=F", SILVER: "SI=F", "SI1!": "SI=F",
+      USOIL: "CL=F", WTI: "CL=F", CRUDE: "CL=F", CRUDEOIL: "CL=F", "CL1!": "CL=F",
+      UKOIL: "BZ=F", BRENT: "BZ=F", "BZ1!": "BZ=F",
+      NATGAS: "NG=F", NATURALGAS: "NG=F", "NG1!": "NG=F",
+      COPPER: "HG=F", "HG1!": "HG=F",
+      // Forex
+      USDINR: "INR=X", "USD/INR": "INR=X", EURUSD: "EURUSD=X", GBPUSD: "GBPUSD=X", USDJPY: "JPY=X",
+      // Crypto
+      BTCUSDT: "BTC-USD", ETHUSDT: "ETH-USD", SOLUSDT: "SOL-USD", DOGEUSDT: "DOGE-USD", XRPUSDT: "XRP-USD",
+      // Global indices
+      SPX: "^GSPC", NDX: "^NDX", DJI: "^DJI", NASDAQ: "^IXIC"
+    };
     if (map[sym]) return map[sym];
     if (/BANKNIFTY/.test(sym)) return "^NSEBANK";
+    if (/FINNIFTY/.test(sym)) return "^CNXFIN";
     if (/NIFTY/.test(sym)) return "^NSEI";
-    if (/SENSEX/.test(sym)) return "^BSESN";
+    if (/SENSEX|BANKEX/.test(sym)) return "^BSESN";
+    if (/XAG|SILVER/.test(sym)) return "SI=F";
+    if (/XAU|GOLD/.test(sym)) return "GC=F";
+    if (/BRENT|UKOIL/.test(sym)) return "BZ=F";
+    if (/CRUDE|USOIL|\bWTI\b|\bOIL\b/.test(sym)) return "CL=F";
+    if (/NAT.?GAS/.test(sym)) return "NG=F";
+    if (/COPPER/.test(sym)) return "HG=F";
+    if (/USDINR|\bINR\b/.test(sym)) return "INR=X";
+    if (/EURUSD/.test(sym)) return "EURUSD=X";
+    if (/GBPUSD/.test(sym)) return "GBPUSD=X";
     if (/^BTC/.test(sym)) return "BTC-USD";
     if (/^ETH/.test(sym)) return "ETH-USD";
-    if (/XAU|GOLD/.test(sym)) return "GC=F";
+    if (/^SOL/.test(sym)) return "SOL-USD";
+    if (/DOGE/.test(sym)) return "DOGE-USD";
     var first = sym.split(/\s+/)[0].replace(/[^A-Z0-9&.\-=^]/g, "");
     return first ? first + ".NS" : "^NSEI";
   }
@@ -2143,6 +2188,18 @@
   function liveTradeChart(box, userSym, levels, h, live, hideInd) {
     h = h || 320; box.innerHTML = "";
     box.style.overflow = "hidden"; box.style.borderRadius = "12px";
+    var priceEl = el('<div style="display:flex;align-items:baseline;gap:10px;padding:2px 2px 8px"><span style="font-size:1.35rem;font-weight:800;color:var(--ink)" class="cmLivePx">—</span><span style="font-size:.85rem;font-weight:700" class="cmLiveCh"></span><span style="font-size:.7rem;color:var(--muted);margin-left:auto" class="cmLiveDot">● live</span></div>');
+    box.appendChild(priceEl);
+    function fmtPx(n) { return (Math.abs(n) >= 1000 ? Math.round(n).toLocaleString("en-IN") : (Math.round(n * 100) / 100).toLocaleString("en-IN")); }
+    function updatePrice(cs) {
+      if (!cs || cs.length < 2) return;
+      var last = cs[cs.length - 1].close, prev = cs[cs.length - 2].close;
+      var ch = last - prev, pct = prev ? (ch / prev) * 100 : 0;
+      var pxEl = priceEl.querySelector(".cmLivePx"), chEl = priceEl.querySelector(".cmLiveCh");
+      pxEl.textContent = fmtPx(last);
+      chEl.textContent = (ch >= 0 ? "▲ +" : "▼ ") + fmtPx(ch) + " (" + (ch >= 0 ? "+" : "") + pct.toFixed(2) + "%)";
+      chEl.style.color = ch >= 0 ? "#22e08a" : "#ff5a6a";
+    }
     var host = el('<div style="height:' + h + 'px;width:100%;max-width:100%;overflow:hidden;border-radius:12px;border:1px solid rgba(255,255,255,.06)"></div>'); box.appendChild(host);
     var done = false;
     function fallback() { if (done) return; done = true; box.innerHTML = ""; var l = tradeLadder(levels || {}); box.appendChild(l || el('<p class="hint">Live chart unavailable right now.</p>')); }
@@ -2163,6 +2220,7 @@
       });
       var series = chart.addCandlestickSeries({ upColor: "#22e08a", downColor: "#ff5a6a", borderVisible: false, wickUpColor: "#22e08a", wickDownColor: "#ff5a6a" });
       series.setData(data.candles.map(function (c) { return { time: c.time, open: c.open, high: c.high, low: c.low, close: c.close }; }));
+      updatePrice(data.candles);
       chart.timeScale().fitContent();
       if (!hideInd) addIndicators(chart, data.candles, box, userSym);
       var lines = {};
@@ -2178,7 +2236,7 @@
       if (live) {
         var timer = setInterval(function () {
           fetch("/api/candles?symbol=" + encodeURIComponent(ysym) + "&range=3mo").then(function (r) { return r.json(); }).then(function (d) {
-            if (d && d.candles && d.candles.length > 2) series.setData(d.candles.map(function (c) { return { time: c.time, open: c.open, high: c.high, low: c.low, close: c.close }; }));
+            if (d && d.candles && d.candles.length > 2) { series.setData(d.candles.map(function (c) { return { time: c.time, open: c.open, high: c.high, low: c.low, close: c.close }; })); updatePrice(d.candles); }
           }).catch(function () {});
         }, 45000);
         _liveTimers.push(timer);
