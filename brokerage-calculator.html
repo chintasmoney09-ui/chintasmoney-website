@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brokerage Calculator (Free) — Intraday &amp; Delivery Charges, STT, GST | ChintasMoney</title>
+  <link rel="canonical" href="https://chintasmoney.com/brokerage-calculator" />
+  <meta name="description" content="Free brokerage calculator for Indian traders. Enter buy price, sell price and quantity to see brokerage, STT, GST, exchange, SEBI and stamp charges, plus your real net profit and breakeven." />
+  <meta name="keywords" content="brokerage calculator, intraday brokerage calculator, delivery charges calculator, STT calculator, zerodha brokerage calculator, trading charges calculator India, net profit calculator" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <meta property="og:title" content="Free Brokerage &amp; Charges Calculator — ChintasMoney" />
+  <meta property="og:description" content="See your real net profit after brokerage, STT, GST and every charge — for intraday or delivery." />
+  <meta property="og:url" content="https://chintasmoney.com/brokerage-calculator" />
+  <meta property="og:type" content="website" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/assets/favicon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/logo-icon.png" />
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1462824307424705" crossorigin="anonymous"></script>
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+    {"@type":"Question","name":"How is brokerage calculated for intraday?","acceptedAnswer":{"@type":"Answer","text":"Most discount brokers charge 0.03% of turnover or ₹20 per executed order, whichever is lower — on both the buy and sell legs. On top of brokerage you pay STT, exchange transaction charges, GST, SEBI charges and stamp duty."}},
+    {"@type":"Question","name":"What charges apply on delivery trades?","acceptedAnswer":{"@type":"Answer","text":"Many discount brokers charge zero brokerage on equity delivery, but you still pay STT (0.1% on both sides), exchange charges, GST, SEBI charges and stamp duty on the buy side, so a delivery trade is never completely free."}}
+  ]}
+  </script>
+</head>
+<body>
+  <header class="hdr">
+    <div class="container nav" style="min-height:80px">
+      <a href="/" class="brand"><img src="assets/logo-tile.png" alt="ChintasMoney" style="height:56px" /><span class="brand-name" style="font-size:.95rem">Chinta's <span class="brand-emoji">🤑</span> <b>Money</b></span></a>
+    </div>
+  </header>
+  <main class="legal"><div class="legal-inner">
+    <h1>Brokerage &amp; Charges Calculator</h1>
+    <p class="hint" style="font-size:1.02rem;line-height:1.7">Your "profit" on the screen isn't your real profit — brokerage, STT, GST and exchange charges quietly eat into it. This free calculator shows your <b>true net profit after every charge</b>, and the exact price you need just to break even. Estimated on typical Indian discount-broker rates.</p>
+
+    <div class="card" style="margin:18px 0;padding:18px">
+      <label class="fld"><span>Trade type</span>
+        <select id="ttype"><option value="intraday">Intraday (equity)</option><option value="delivery">Delivery (equity)</option></select>
+      </label>
+      <label class="fld"><span>Buy price (₹)</span><input id="buy" type="number" value="100" /></label>
+      <label class="fld"><span>Sell price (₹)</span><input id="sell" type="number" value="102" /></label>
+      <label class="fld"><span>Quantity (shares)</span><input id="qty" type="number" value="100" /></label>
+      <div id="out" style="margin-top:14px"></div>
+    </div>
+
+    <div style="text-align:center;margin:22px 0">
+      <a class="btn btn-primary" href="/app/" style="display:inline-block;padding:12px 22px">Track your discipline free →</a>
+      <p class="hint" style="margin-top:8px">ChintasMoney scores how disciplined you actually trade — not tips. 100% free to start.</p>
+    </div>
+
+    <div class="card" style="margin-top:18px;padding:16px;text-align:center">
+      <div style="font-weight:700;margin-bottom:8px">📢 Useful? Send it to a trading friend.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+        <a id="shTg" target="_blank" rel="noopener" style="padding:10px 16px;border-radius:10px;background:#229ED9;color:#fff;font-weight:700;text-decoration:none">✈️ Telegram</a>
+        <a id="shWa" target="_blank" rel="noopener" style="padding:10px 16px;border-radius:10px;background:#25D366;color:#fff;font-weight:700;text-decoration:none">💬 WhatsApp</a>
+        <button id="shCopy" style="padding:10px 16px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;color:#0f172a;font-weight:700;cursor:pointer;font-family:inherit">🔗 Copy link</button>
+      </div>
+    </div>
+
+    <h2>Why your net profit is smaller than you think</h2>
+    <p>Every trade has a hidden cost stack: <b>brokerage</b> (0.03% or ₹20/order for intraday at most discount brokers, often free for delivery), <b>STT</b>, <b>exchange transaction charges</b>, <b>18% GST</b> on brokerage + exchange charges, <b>SEBI charges</b>, and <b>stamp duty</b> on the buy side. On small moves these can turn a "winning" trade into a loss. Knowing your breakeven before you enter is pure discipline — and discipline is what <a href="/app/">ChintasMoney</a> measures.</p>
+    <p>Plan the trade fully: size it with our <a href="/position-size-calculator">position size calculator</a> and check the payoff with the <a href="/risk-reward-calculator">risk-reward calculator</a>. See all our <a href="/tools">free trading tools</a>.</p>
+    <p class="hint" style="font-size:.85rem">Charges are estimates based on typical discount-broker and current exchange rates; your broker's exact figures may vary. Not financial advice.</p>
+
+    <a class="back" href="/">← Back to ChintasMoney</a>
+  </div></main>
+  <script>
+    (function () {
+      function n(id) { var x = parseFloat(document.getElementById(id).value); return isNaN(x) ? 0 : x; }
+      function money(v) { v = Math.round(v * 100) / 100; return "₹" + v.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+      function run() {
+        var type = document.getElementById("ttype").value, buy = n("buy"), sell = n("sell"), qty = n("qty");
+        var out = document.getElementById("out");
+        if (buy <= 0 || qty <= 0) { out.innerHTML = '<p class="hint">Enter a buy price and quantity to see your charges.</p>'; return; }
+        var buyVal = buy * qty, sellVal = sell * qty, turnover = buyVal + sellVal;
+        // Brokerage: intraday = min(0.03% of leg, ₹20) per leg; delivery = 0.
+        function brokLeg(val) { return Math.min(val * 0.0003, 20); }
+        var brokerage = type === "intraday" ? (brokLeg(buyVal) + brokLeg(sellVal)) : 0;
+        // STT: intraday 0.025% on sell; delivery 0.1% on both.
+        var stt = type === "intraday" ? sellVal * 0.00025 : (buyVal + sellVal) * 0.001;
+        // Exchange txn charges (NSE approx 0.00297% of turnover).
+        var exch = turnover * 0.0000297;
+        // SEBI charges: ₹10 per crore = 0.0001% of turnover.
+        var sebi = turnover * 0.000001;
+        // GST 18% on brokerage + exchange + sebi.
+        var gst = (brokerage + exch + sebi) * 0.18;
+        // Stamp duty on buy side: intraday 0.003%, delivery 0.015%.
+        var stamp = buyVal * (type === "intraday" ? 0.00003 : 0.00015);
+        var totalCharges = brokerage + stt + exch + sebi + gst + stamp;
+        var gross = sellVal - buyVal;
+        var net = gross - totalCharges;
+        var breakeven = buy + totalCharges / qty;
+        function row(l, v) { return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span class="hint">' + l + '</span><span style="font-weight:700">' + money(v) + '</span></div>'; }
+        out.innerHTML =
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">' +
+          '<div class="card" style="padding:12px"><div class="hint">Gross P&L</div><div style="font-size:1.3rem;font-weight:800;color:' + (gross >= 0 ? "#12b39a" : "#dc2626") + '">' + money(gross) + '</div></div>' +
+          '<div class="card" style="padding:12px;border-color:var(--emerald)"><div class="hint">Net P&L (after charges)</div><div style="font-size:1.5rem;font-weight:800;color:' + (net >= 0 ? "var(--emerald,#12b39a)" : "#dc2626") + '">' + money(net) + '</div></div>' +
+          '</div>' +
+          '<div class="card" style="padding:12px 14px">' +
+          row("Brokerage", brokerage) + row("STT / CTT", stt) + row("Exchange txn charges", exch) +
+          row("GST (18%)", gst) + row("SEBI charges", sebi) + row("Stamp duty", stamp) +
+          '<div style="display:flex;justify-content:space-between;padding:8px 0 2px;font-weight:800"><span>Total charges</span><span>' + money(totalCharges) + '</span></div>' +
+          '<div style="display:flex;justify-content:space-between;padding:6px 0 0"><span class="hint">Breakeven sell price</span><span style="font-weight:800">' + money(breakeven) + '</span></div>' +
+          '</div>';
+      }
+      ["ttype", "buy", "sell", "qty"].forEach(function (id) { document.getElementById(id).addEventListener("input", run); document.getElementById(id).addEventListener("change", run); });
+      run();
+      var shareUrl = "https://chintasmoney.com/brokerage-calculator";
+      var shareText = "Free brokerage calculator — see your REAL net profit after brokerage, STT, GST & all charges 👇";
+      var tg = document.getElementById("shTg"), wa = document.getElementById("shWa"), cp = document.getElementById("shCopy");
+      if (tg) tg.href = "https://t.me/share/url?url=" + encodeURIComponent(shareUrl) + "&text=" + encodeURIComponent(shareText);
+      if (wa) wa.href = "https://wa.me/?text=" + encodeURIComponent(shareText + " " + shareUrl);
+      if (cp) cp.addEventListener("click", function () {
+        if (navigator.share) { navigator.share({ title: "ChintasMoney", text: shareText, url: shareUrl }).catch(function () {}); return; }
+        if (navigator.clipboard) { navigator.clipboard.writeText(shareUrl); cp.textContent = "✓ Copied"; setTimeout(function () { cp.textContent = "🔗 Copy link"; }, 1500); }
+      });
+    })();
+  </script>
+  <script src="consent.js"></script>
+  <script src="analytics.js"></script>
+</body>
+</html>
