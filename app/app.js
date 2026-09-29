@@ -1733,6 +1733,55 @@
     return d;
   }
 
+  // ---- Web Push (phone/browser alerts even when the app is closed) ----------
+  function pushCfgKey() { return (window.CM_CONFIG && window.CM_CONFIG.vapidPublicKey) || ""; }
+  function pushSupported() {
+    return !!(pushCfgKey() && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window);
+  }
+  function urlB64ToUint8(base64) {
+    var pad = "=".repeat((4 - (base64.length % 4)) % 4);
+    var b64 = (base64 + pad).replace(/-/g, "+").replace(/_/g, "/");
+    var raw = atob(b64), out = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+  function subscribeToPush(onDone) {
+    if (!pushSupported()) { toast("Alerts aren't supported on this browser.", "warn"); onDone && onDone(false); return; }
+    Notification.requestPermission().then(function (perm) {
+      if (perm !== "granted") { toast("You blocked alerts. Enable them in your browser settings to turn them on.", "warn"); onDone && onDone(false); return; }
+      navigator.serviceWorker.ready.then(function (reg) {
+        return reg.pushManager.getSubscription().then(function (existing) {
+          return existing || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8(pushCfgKey()) });
+        });
+      }).then(function (sub) {
+        var email = (window.CMCloud && window.CMCloud.user && window.CMCloud.user.email) || "";
+        return fetch("/api/push/subscribe", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ subscription: sub, email: email })
+        });
+      }).then(function () {
+        try { localStorage.setItem("cm.push.on", "1"); } catch (e) {}
+        toast("🔔 Alerts are on! We'll ping you with tips & reminders.", "ok");
+        onDone && onDone(true);
+      }).catch(function () { toast("Couldn't turn on alerts — please try again.", "warn"); onDone && onDone(false); });
+    });
+  }
+  function pushIsOn() { try { return localStorage.getItem("cm.push.on") === "1" && Notification.permission === "granted"; } catch (e) { return false; } }
+  function pushCard() {
+    if (!pushSupported()) return null;
+    var on = pushIsOn();
+    var card = el('<div class="card"><div class="card-hd"><h3>🔔 Alerts</h3></div></div>');
+    card.appendChild(el('<p class="hint" style="margin:0 0 10px">Get a ping on your phone for streak reminders, new features and tips — even when the app is closed.</p>'));
+    if (on) {
+      card.appendChild(el('<p style="margin:0;font-weight:700;color:var(--emerald)">✓ Alerts are on for this device.</p>'));
+    } else {
+      var btn = el('<button class="btn btn-primary btn-sm">🔔 Turn on alerts</button>');
+      btn.addEventListener("click", function () { btn.disabled = true; btn.textContent = "Turning on…"; subscribeToPush(function () { render(); }); });
+      card.appendChild(btn);
+    }
+    return card;
+  }
+
   // ---- RISK CALCULATOR -----------------------------------------------------
   var calcSide = "long";
   VIEWS.calc = function () {
@@ -3009,6 +3058,9 @@
     h.querySelector("input").addEventListener("change", function (e) { CM.setProfile({ handle: e.target.value }); });
     pc.appendChild(el('<p>Name: <b>' + esc(s.profile.name || "—") + '</b></p>')); pc.appendChild(h);
     v.appendChild(pc);
+
+    var pcard = pushCard();
+    if (pcard) v.appendChild(pcard);
 
     v.appendChild(el('<h2 style="margin:22px 0 8px;font-size:1.15rem">Subscription</h2>'));
 

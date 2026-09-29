@@ -78,3 +78,17 @@ create table if not exists public.leads (
 create unique index if not exists leads_email_key on public.leads(email);
 -- RLS on with no policy = only the service-role (Worker) can read/write it.
 alter table public.leads enable row level security;
+
+-- Web Push subscriptions (opt-in browser/phone push). Written by /api/push/subscribe.
+create table if not exists public.push_subscriptions (
+  id          bigint generated always as identity primary key,
+  endpoint    text not null,
+  p256dh      text not null,
+  auth        text not null,
+  email       text,
+  created_at  timestamptz not null default now()
+);
+-- One row per browser subscription (upsert on repeat opt-in).
+create unique index if not exists push_subscriptions_endpoint_key on public.push_subscriptions(endpoint);
+-- RLS on with no policy = only the service-role (Worker) can read/write it.
+alter table public.push_subscriptions enable row level security;

@@ -26,5 +26,9 @@ window.CM_CONFIG = {
 
   // true = one clean sign-in when the app opens, then you're in.
   // false = app works offline and sign-in is optional.
-  requireAuth: true
+  requireAuth: true,
+
+  // Web Push public key (VAPID). Safe to ship in the browser. The matching
+  // private key lives ONLY in the Cloudflare Worker as VAPID_PRIVATE_KEY.
+  vapidPublicKey: "BJL78AyLgYx7eFt2hFgccnlyO0dA4SvOqjp4NtIJUXgJOTocA_gOiP8-twZmaWub4j0q3sArjvHPjW5IBLA2His"
 };
