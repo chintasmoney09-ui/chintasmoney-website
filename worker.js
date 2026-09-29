@@ -155,6 +155,17 @@ async function recordPayment(env, row) {
 const SUPPORT_EMAIL = "chintasmoney@gmail.com";
 const OWNER_EMAIL = "chintasmoney@gmail.com"; // where owner alerts go (override with env.OWNER_EMAIL)
 const LOGO_URL = "https://chintasmoney.com/assets/logo-full.png";
+const WELCOME_BANNER = "https://chintasmoney.com/assets/email-welcome-banner.png";
+const MILESTONE_BANNER = "https://chintasmoney.com/assets/email-milestone-banner.png";
+// Branded plan badge (pro maps to the Platinum badge art).
+function planBadgeUrl(plan) {
+  var f = plan === "pro" ? "platinum" : (plan === "diamond" ? "diamond" : "plus");
+  return "https://chintasmoney.com/assets/badge-" + f + ".png";
+}
+// A full-width banner image row for the top of an email.
+function emailBanner(url) {
+  return '<div style="margin:0 0 16px"><img src="' + url + '" alt="ChintasMoney" width="536" style="width:100%;max-width:536px;height:auto;border-radius:12px;display:block"/></div>';
+}
 const APP_URL = "https://chintasmoney.com/app/";
 const SITE_URL = "https://chintasmoney.com";
 
@@ -241,6 +252,7 @@ async function sendReceiptEmail(env, o) {
 async function sendWelcomeEmail(env, email) {
   if (!email) return;
   const inner =
+    emailBanner(WELCOME_BANNER) +
     '<h2 style="margin:0 0 6px;font-size:1.35rem">Welcome to ChintasMoney 👋</h2>' +
     '<p style="color:#5b6b8c;margin:0 0 14px">We\'re so glad you\'re here. You\'ve just taken the first step most traders never take — choosing to understand <b style="color:#0f1730">why</b> you trade the way you do, not just what the market did.</p>' +
     '<p style="color:#5b6b8c;margin:0 0 14px">ChintasMoney is your honest mirror: a Discipline Score, your Trader Personality, the exact habits costing you money, and a coach that keeps you accountable. No tips, no noise — just you, getting better.</p>' +
@@ -284,6 +296,7 @@ async function sendSubWelcomeEmail(env, o) {
   var firstName = o.name ? String(o.name).trim().split(/\s+/)[0] : "";
   var greet = firstName ? "Hi " + esc(firstName) + " 👋" : "Welcome aboard 👋";
   var inner =
+    '<div style="text-align:center;margin:0 0 10px"><img src="' + planBadgeUrl(o.plan) + '" alt="' + esc(d ? d.name : o.plan) + '" width="150" style="width:150px;max-width:60%;height:auto"/></div>' +
     '<p style="color:#0f1730;font-weight:700;font-size:1.05rem;margin:0 0 6px">' + greet + '</p>' +
     '<h2 style="margin:0 0 6px;font-size:1.4rem">You\'re now on ' + esc(d ? d.name : o.plan) + ' 🎉</h2>' +
     '<p style="color:#5b6b8c;margin:0 0 14px">Thank you for subscribing — and welcome to the ChintasMoney family. You\'ve just given your trading the one edge that actually compounds: <b>discipline</b>. We\'re honoured to be part of your journey. 💚</p>' +
@@ -319,7 +332,7 @@ function lifecycleEmail(kind, firstName) {
     },
     fiveTrades: {
       subject: "🔥 5 trades in — your patterns are showing",
-      inner: head + '<h2 style="margin:0 0 6px;font-size:1.35rem">5 trades logged — you\'re building the habit 🔥</h2>' +
+      inner: emailBanner(MILESTONE_BANNER) + head + '<h2 style="margin:0 0 6px;font-size:1.35rem">5 trades logged — you\'re building the habit 🔥</h2>' +
         '<p style="color:#5b6b8c;margin:0 0 14px">This is where it gets interesting. Open your <b>Insights</b> and <b>Trade Grades</b> to see exactly where your money leaks — and the one fix that lifts your score the fastest.</p>' + lifeCta("See my insights") + lifeSign()
     },
     tenTrades: {
