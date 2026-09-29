@@ -440,7 +440,7 @@
   var TABTITLE = { overview: "Overview", people: "People Logged", calendar: "Activity Calendar",
     content: "Content Calendar", catalogue: "Product Catalogue & Prices",
     revenue: "Revenue, Invoices & Refunds", razorpay: "Razorpay (live)", gating: "Locked Sections & Gating", flags: "Feature Flags",
-    emailer: "Email Marketing", leads: "Leads & CRM",
+    emailer: "Email Marketing", leads: "Leads & CRM", finder: "Lead Finder",
     exportt: "Export / Download", privacy: "Privacy & Security" };
 
   // Month shown by the calendars (0 = current month, -1 = last month, etc.)
@@ -470,6 +470,7 @@
     ["flags", "⚑ Feature flags", "turn features on or off"],
     ["emailer", "✉️ Email marketing", "send campaigns, newsletters, announcements to users and leads"],
     ["leads", "🎯 Leads & CRM", "captured leads, opt-ins, prospects, export contacts"],
+    ["finder", "🧭 Lead finder", "find clients: communities, creators, hashtags, outreach scripts, prospecting tracker"],
     ["exportt", "⬇ Export everything", "download users, invoices, refunds"],
     ["privacy", "🛡️ Privacy & security", "admin password & security"]
   ];
@@ -515,7 +516,7 @@
     [["overview", "▦ Overview"], ["people", "👥 People logged"], ["calendar", "📅 Activity calendar"],
      ["content", "🗓️ Content calendar"], ["catalogue", "🏷️ Products & prices"],
      ["revenue", "₹ Revenue & invoices"], ["razorpay", "💳 Razorpay (live)"], ["gating", "🔒 Locked sections"], ["flags", "⚑ Feature flags"],
-     ["emailer", "✉️ Email marketing"], ["leads", "🎯 Leads & CRM"],
+     ["emailer", "✉️ Email marketing"], ["leads", "🎯 Leads & CRM"], ["finder", "🧭 Lead finder"],
      ["exportt", "⬇ Export everything"], ["privacy", "🛡️ Privacy & security"]].forEach(function (t) {
       var b = el('<button class="cm-nav' + (TAB === t[0] ? " on" : "") + '">' + t[1] + '</button>');
       b.addEventListener("click", function () { TAB = t[0]; render(); });
@@ -717,6 +718,118 @@
           '<td style="padding:9px 12px;border-top:1px solid #eef2f7;color:#64748b">' + esc((l.date || "").slice(0, 10)) + '</td></tr>'));
       });
       t.appendChild(tb); tbl.appendChild(t); v.appendChild(tbl);
+      return v;
+    },
+
+    // -------- LEAD FINDER (legal prospecting hub + outreach tracker) ---------
+    finder: function () {
+      var v = el('<div></div>');
+      v.appendChild(el('<div class="cm-note" style="margin-bottom:14px">Find real clients where your buyers already gather — legally. This is a prospecting playbook: go to these places, add value, drop your link (chintasmoney.com), and log who you contacted below. No scraping, no spam — just showing up where Indian traders already are.</div>'));
+
+      // ---- The hit-list of places to find leads -----------------------------
+      var SPOTS = [
+        { cat: "Reddit communities", why: "Indian traders asking for help daily. Answer a question, mention your free tool.", items: [
+          "r/IndianStockMarket", "r/IndianStreetBets", "r/DalalStreetTalks", "r/StockMarketIndia",
+          "r/IndianStockMarketLive", "r/options (global, sizing questions)"
+        ] },
+        { cat: "Telegram groups", why: "Huge Indian trading crowds. Join, be helpful, share the calculator when relevant.", items: [
+          "Search Telegram: 'Indian stock market', 'intraday traders India', 'options trading India'",
+          "Nifty/BankNifty discussion groups", "Prop-firm & funded-trader India groups"
+        ] },
+        { cat: "Discord servers", why: "Active trading chats — many run 'psychology' and 'risk' channels perfect for you.", items: [
+          "Search disboard.org: 'India trading', 'stock market India'",
+          "Trading psychology / day-trading servers"
+        ] },
+        { cat: "Twitter / X hashtags", why: "Reply with value under these tags; pin a post linking your free tool.", items: [
+          "#StockMarketIndia", "#Nifty50", "#BankNifty", "#Intraday", "#OptionsTrading", "#TradingPsychology", "#RiskManagement"
+        ] },
+        { cat: "YouTube / Instagram creators", why: "Partner or affiliate — they have the audience, you have the tool. Offer revenue share.", items: [
+          "Comment on Indian trading reels/videos with a genuine tip",
+          "DM small/mid finfluencers (5k–100k) for an affiliate deal (use your partners.html page)",
+          "Offer them a free Diamond plan + commission per referral"
+        ] },
+        { cat: "Quora", why: "Answer 'how much to risk per trade', 'why do traders lose' — evergreen traffic to your tool.", items: [
+          "Search & answer: position sizing, trading discipline, why traders lose money",
+          "Link the free position-size calculator in your answer"
+        ] },
+        { cat: "Facebook groups", why: "Older but massive Indian trading groups; less competition for attention.", items: [
+          "Search FB: 'Indian stock market', 'intraday trading India', 'F&O traders'"
+        ] }
+      ];
+      SPOTS.forEach(function (s) {
+        var card = el('<div class="cm-card" style="padding:14px;margin-bottom:10px"></div>');
+        card.appendChild(el('<div style="font-weight:800;color:#0f172a;font-size:1rem">' + esc(s.cat) + '</div>'));
+        card.appendChild(el('<div style="color:#64748b;font-size:.85rem;margin:2px 0 8px">' + esc(s.why) + '</div>'));
+        var ul = el('<ul style="margin:0;padding-left:18px;color:#334155;font-size:.9rem;line-height:1.7"></ul>');
+        s.items.forEach(function (it) { ul.appendChild(el('<li>' + esc(it) + '</li>')); });
+        card.appendChild(ul);
+        v.appendChild(card);
+      });
+
+      // ---- Copy-paste outreach scripts --------------------------------------
+      v.appendChild(el('<h3 style="margin:22px 0 8px">Outreach scripts (copy, tweak, paste)</h3>'));
+      var SCRIPTS = [
+        { t: "Community reply (helpful, not salesy)", body: "The mistake most people make isn't picking the wrong stock — it's sizing too big. Risk a fixed 1–2% per trade so no single loss hurts. I built a free calculator that does the math for you: chintasmoney.com/position-size-calculator.html — no signup needed." },
+        { t: "Creator / affiliate DM", body: "Hi [name], love your content on [topic]. I built ChintasMoney — it scores how disciplined a trader actually is (a 'Discipline Score'), not tips. I'd love to give your audience a free tool and set you up with an affiliate commission on anyone who upgrades. Worth a quick chat?" },
+        { t: "Quora / long answer closer", body: "If you want to see exactly where your own trading leaks money — oversizing, holding losers, revenge trades — ChintasMoney scores your discipline for free: chintasmoney.com. It's not tips; it's a mirror for how you actually trade." }
+      ];
+      SCRIPTS.forEach(function (sc) {
+        var card = el('<div class="cm-card" style="padding:14px;margin-bottom:10px"></div>');
+        card.appendChild(el('<div style="font-weight:700;color:#0f172a;margin-bottom:6px">' + esc(sc.t) + '</div>'));
+        var box = el('<div style="background:#f8fafc;border:1px solid #eef2f7;border-radius:8px;padding:10px;font-size:.88rem;color:#334155;line-height:1.6;white-space:pre-wrap">' + esc(sc.body) + '</div>');
+        card.appendChild(box);
+        var copy = el('<button class="cm-btn sm" style="margin-top:8px">📋 Copy</button>');
+        copy.addEventListener("click", function () {
+          if (navigator.clipboard) { navigator.clipboard.writeText(sc.body); copy.textContent = "✓ Copied"; setTimeout(function () { copy.textContent = "📋 Copy"; }, 1500); }
+          else { alert(sc.body); }
+        });
+        card.appendChild(copy);
+        v.appendChild(card);
+      });
+
+      // ---- Prospecting tracker (mini-CRM, per-device) -----------------------
+      v.appendChild(el('<h3 style="margin:22px 0 8px">Prospecting tracker</h3>'));
+      v.appendChild(el('<div class="cm-note" style="margin-bottom:10px">Log who you reach out to so you can follow up. Saved on this device.</div>'));
+      function prospects() { var c = CM.adminConfig(); return c.prospects || []; }
+      function saveProspects(p) { var c = CM.adminConfig(); c.prospects = p; CM.saveAdmin(c); }
+      var form = el('<div class="cm-card" style="padding:14px;display:grid;gap:8px;max-width:560px;margin-bottom:12px"></div>');
+      var who = el('<input placeholder="Who / where (e.g. @trader_ravi on X, or r/IndianStreetBets)" style="padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-family:inherit"/>');
+      var note = el('<input placeholder="Note (e.g. sent affiliate DM, waiting reply)" style="padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-family:inherit"/>');
+      var stsel = el('<select style="padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-family:inherit"><option value="to-contact">To contact</option><option value="contacted">Contacted</option><option value="replied">Replied</option><option value="partner">Partner / converted 🎉</option></select>');
+      var add = el('<button class="cm-btn" style="justify-self:start">➕ Add prospect</button>');
+      add.addEventListener("click", function () {
+        var w = who.value.trim(); if (!w) { who.focus(); return; }
+        var p = prospects(); p.unshift({ who: w, note: note.value.trim(), status: stsel.value, date: new Date().toISOString().slice(0, 10) });
+        saveProspects(p); who.value = ""; note.value = ""; render();
+      });
+      form.appendChild(who); form.appendChild(note); form.appendChild(stsel); form.appendChild(add);
+      v.appendChild(form);
+
+      var list = prospects();
+      if (!list.length) {
+        v.appendChild(el('<div class="cm-note">No prospects logged yet. Add your first outreach above.</div>'));
+      } else {
+        var STL = { "to-contact": ["To contact", "#64748b"], contacted: ["Contacted", "#2563eb"], replied: ["Replied", "#d97706"], partner: ["Partner 🎉", "#16a34a"] };
+        var tbl = el('<div class="cm-card" style="padding:0;overflow:auto"></div>');
+        var t = el('<table style="width:100%;border-collapse:collapse"></table>');
+        t.appendChild(el('<thead><tr><th style="text-align:left;padding:10px 12px">Who / where</th><th style="text-align:left;padding:10px 12px">Note</th><th style="text-align:left;padding:10px 12px">Status</th><th style="text-align:left;padding:10px 12px">Date</th><th></th></tr></thead>'));
+        var tb = el('<tbody></tbody>');
+        list.forEach(function (p, idx) {
+          var st = STL[p.status] || STL["to-contact"];
+          var tr = el('<tr></tr>');
+          tr.appendChild(el('<td style="padding:9px 12px;border-top:1px solid #eef2f7">' + esc(p.who) + '</td>'));
+          tr.appendChild(el('<td style="padding:9px 12px;border-top:1px solid #eef2f7;color:#64748b">' + esc(p.note || "") + '</td>'));
+          tr.appendChild(el('<td style="padding:9px 12px;border-top:1px solid #eef2f7"><span style="color:' + st[1] + ';font-weight:700;font-size:.85rem">' + st[0] + '</span></td>'));
+          tr.appendChild(el('<td style="padding:9px 12px;border-top:1px solid #eef2f7;color:#64748b">' + esc(p.date || "") + '</td>'));
+          var del = el('<button class="cm-btn sm ghost" title="Remove">✕</button>');
+          del.addEventListener("click", function () { var pl = prospects(); pl.splice(idx, 1); saveProspects(pl); render(); });
+          var tdd = el('<td style="padding:9px 12px;border-top:1px solid #eef2f7"></td>'); tdd.appendChild(del); tr.appendChild(tdd);
+          tb.appendChild(tr);
+        });
+        t.appendChild(tb); tbl.appendChild(t); v.appendChild(tbl);
+      }
+
+      v.appendChild(el('<div class="cm-note" style="margin-top:14px;background:#dcfce7;border-color:#bbf7d0">✅ <b>This is how you find clients without getting banned.</b> Every place above is where your buyers already are. Show up with value 3–4x a week, drop your free tool, and watch the Leads tab fill up.</div>'));
       return v;
     },
 
