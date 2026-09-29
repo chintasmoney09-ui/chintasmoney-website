@@ -888,6 +888,10 @@ export default {
   },
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // Friendly shortcut: /admin (and /admin.html) → the real admin panel.
+    if (url.pathname === "/admin" || url.pathname === "/admin.html" || url.pathname === "/admin/") {
+      return Response.redirect(url.origin + "/app/admin", 301);
+    }
     if (request.method === "POST" && url.pathname === "/api/razorpay/webhook") return handleRzpWebhook(request, env);
     if (request.method === "POST" && url.pathname === "/api/welcome") return handleWelcome(request, env);
     if (request.method === "POST" && url.pathname === "/api/coach") return handleCoach(request, env);

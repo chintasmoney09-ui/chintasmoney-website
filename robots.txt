@@ -1,5 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /brand-assets
 Disallow: /brand-assets.html
+Disallow: /app/admin
 
 Sitemap: https://chintasmoney.com/sitemap.xml
