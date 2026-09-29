@@ -630,6 +630,7 @@
         '<option value="plus">Plus plan users</option>' +
         '<option value="pro">Pro plan users</option>' +
         '<option value="diamond">Diamond plan users</option>' +
+        '<option value="pick">Pick individually (tick the ones you want)</option>' +
         '<option value="custom">Custom list (paste emails)</option>' +
         '</select>');
       card.appendChild(seg);
@@ -638,7 +639,55 @@
       var customTa = el('<textarea rows="3" placeholder="alice@example.com, bob@example.com" style="width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit"></textarea>');
       customWrap.appendChild(customTa);
       card.appendChild(customWrap);
-      seg.addEventListener("change", function () { customWrap.style.display = seg.value === "custom" ? "block" : "none"; });
+
+      // Individual picker — tick specific users/leads from the contacts we have.
+      var contacts = [];
+      var seenC = {};
+      users.forEach(function (u) { if (u.email && !seenC[u.email.toLowerCase()]) { seenC[u.email.toLowerCase()] = 1; contacts.push({ email: u.email, tag: (u.plan && u.plan !== "free" ? u.plan : "user") }); } });
+      leads.forEach(function (l) { if (l.email && !seenC[l.email.toLowerCase()]) { seenC[l.email.toLowerCase()] = 1; contacts.push({ email: l.email, tag: "lead" }); } });
+      var pickWrap = el('<div style="display:none"></div>');
+      var pickHead = el('<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap"></div>');
+      var pickSearch = el('<input placeholder="Filter by email…" style="flex:1;min-width:160px;padding:9px 11px;border:1px solid #cbd5e1;border-radius:10px;font-family:inherit"/>');
+      var selAll = el('<button class="cm-btn sm ghost" type="button">Select all</button>');
+      var selNone = el('<button class="cm-btn sm ghost" type="button">Clear</button>');
+      var pickCount = el('<span style="font-size:.82rem;color:#64748b;font-weight:700">0 selected</span>');
+      pickHead.appendChild(pickSearch); pickHead.appendChild(selAll); pickHead.appendChild(selNone); pickHead.appendChild(pickCount);
+      pickWrap.appendChild(pickHead);
+      var pickList = el('<div style="max-height:260px;overflow:auto;border:1px solid #eef2f7;border-radius:10px;padding:6px"></div>');
+      var picked = {};
+      function refreshCount() { var n = Object.keys(picked).filter(function (k) { return picked[k]; }).length; pickCount.textContent = n + " selected"; }
+      function drawPick(filter) {
+        filter = (filter || "").toLowerCase().trim();
+        pickList.innerHTML = "";
+        var shown = contacts.filter(function (c) { return !filter || c.email.toLowerCase().indexOf(filter) !== -1; });
+        if (!contacts.length) { pickList.appendChild(el('<div style="padding:10px;color:#64748b;font-size:.88rem">No contacts yet. Users and leads appear here once you have them.</div>')); return; }
+        if (!shown.length) { pickList.appendChild(el('<div style="padding:10px;color:#64748b;font-size:.88rem">No contact matches that filter.</div>')); return; }
+        shown.forEach(function (c) {
+          var row = el('<label style="display:flex;gap:10px;align-items:center;padding:7px 8px;border-radius:8px;cursor:pointer"></label>');
+          var cb = el('<input type="checkbox"' + (picked[c.email] ? " checked" : "") + ' style="width:16px;height:16px"/>');
+          cb.addEventListener("change", function () { picked[c.email] = cb.checked; refreshCount(); });
+          var tagColor = c.tag === "lead" ? "#d97706" : (c.tag === "user" ? "#64748b" : "#16a34a");
+          row.appendChild(cb);
+          row.appendChild(el('<span style="flex:1;font-size:.9rem;color:#0f172a">' + esc(c.email) + '</span>'));
+          row.appendChild(el('<span style="font-size:.7rem;font-weight:700;color:' + tagColor + ';text-transform:uppercase">' + esc(c.tag) + '</span>'));
+          pickList.appendChild(row);
+        });
+      }
+      selAll.addEventListener("click", function () {
+        var filter = pickSearch.value.toLowerCase().trim();
+        contacts.forEach(function (c) { if (!filter || c.email.toLowerCase().indexOf(filter) !== -1) picked[c.email] = true; });
+        drawPick(pickSearch.value); refreshCount();
+      });
+      selNone.addEventListener("click", function () { picked = {}; drawPick(pickSearch.value); refreshCount(); });
+      pickSearch.addEventListener("input", function () { drawPick(pickSearch.value); });
+      pickWrap.appendChild(pickList);
+      card.appendChild(pickWrap);
+      drawPick("");
+
+      seg.addEventListener("change", function () {
+        customWrap.style.display = seg.value === "custom" ? "block" : "none";
+        pickWrap.style.display = seg.value === "pick" ? "block" : "none";
+      });
 
       card.appendChild(el('<label style="font-weight:700;font-size:.85rem;color:#334155">Subject</label>'));
       var subj = el('<input placeholder="e.g. New: your free Money Leak Report is ready" style="padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit"/>');
@@ -654,11 +703,17 @@
         if (!liveOn()) { alert("Live data isn't connected yet, so sending is disabled in demo mode."); return; }
         var subject = subj.value.trim(), message = msg.value.trim(), segv = seg.value;
         if (!subject || !message) { status.textContent = "Please fill in both a subject and a message."; status.style.color = "#dc2626"; return; }
-        var emails = segv === "custom" ? customTa.value.trim() : "";
-        if (segv === "custom" && !emails) { status.textContent = "Paste at least one email address."; status.style.color = "#dc2626"; return; }
+        var emails = "";
+        if (segv === "custom") { emails = customTa.value.trim(); if (!emails) { status.textContent = "Paste at least one email address."; status.style.color = "#dc2626"; return; } }
+        if (segv === "pick") {
+          emails = Object.keys(picked).filter(function (k) { return picked[k]; }).join(", ");
+          if (!emails) { status.textContent = "Tick at least one contact to send to."; status.style.color = "#dc2626"; return; }
+        }
+        // Individual picks are sent through the same custom-list path on the server.
+        var sendSeg = segv === "pick" ? "custom" : segv;
         if (!confirm("Send \"" + subject + "\" to the selected recipients?\n\nThis emails real people. Make sure it's ready.")) return;
         sendBtn.disabled = true; sendBtn.textContent = "Sending…"; status.style.color = "#64748b"; status.textContent = "Sending campaign…";
-        adminPost("/api/admin/broadcast", { subject: subject, message: message, segment: segv, emails: emails }).then(function (r) {
+        adminPost("/api/admin/broadcast", { subject: subject, message: message, segment: sendSeg, emails: emails }).then(function (r) {
           sendBtn.disabled = false; sendBtn.textContent = "✉️ Send campaign";
           if (r && r.ok) {
             adminConfetti();
