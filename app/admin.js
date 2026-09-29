@@ -51,11 +51,35 @@
       .then(function (d) {
         if (!d) return;
         LIVE.users = d.users || []; LIVE.invoices = d.invoices || []; LIVE.refunds = d.refunds || [];
-        LIVE.state = "live"; render();
+        LIVE.state = "live"; _lastSig = dataSig(d); startPoll(); render();
       })
       .catch(function () { LIVE.state = "demo"; LIVE.error = "Network error — showing demo data."; render(); });
   }
   function liveOn() { return LIVE.state === "live"; }
+
+  // Auto-refresh: quietly re-pull live data and re-render only when something
+  // actually changed (new user, new payment, new refund) — so the owner never
+  // has to tap Refresh or check constantly.
+  var _lastSig = "", _pollTimer = null;
+  function dataSig(d) {
+    var inv = d.invoices || [], u = d.users || [], rf = d.refunds || [];
+    var gross = inv.reduce(function (a, i) { return a + (i.amount || 0); }, 0);
+    return u.length + "|" + inv.length + "|" + rf.length + "|" + gross;
+  }
+  function pollLive() {
+    if (token() === "1" || !isAuthed()) return;
+    fetch("/api/admin/data", { headers: { Authorization: "Bearer " + token() } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d) return;
+        var sig = dataSig(d);
+        LIVE.users = d.users || []; LIVE.invoices = d.invoices || []; LIVE.refunds = d.refunds || []; LIVE.state = "live";
+        if (_lastSig && sig !== _lastSig) { _lastSig = sig; render(); } else { _lastSig = sig; }
+      })
+      .catch(function () {});
+  }
+  function startPoll() { if (_pollTimer) return; _pollTimer = setInterval(pollLive, 30000); }
+  function stopPoll() { if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; } }
 
   // POST a JSON body to an admin endpoint with the session token. Returns a
   // parsed JSON object (or {error} on failure) — never throws.
@@ -495,7 +519,7 @@
     side.appendChild(el('<div class="cm-sep"></div>'));
     side.appendChild(el('<a class="cm-nav" href="index.html">↩ Back to app</a>'));
     var out = el('<button class="cm-nav">⎋ Sign out</button>');
-    out.addEventListener("click", function () { setToken(""); LIVE = { state: "idle", users: null, invoices: null, refunds: null, error: "" }; render(); });
+    out.addEventListener("click", function () { stopPoll(); _lastSig = ""; setToken(""); LIVE = { state: "idle", users: null, invoices: null, refunds: null, error: "" }; render(); });
     side.appendChild(out);
     shell.appendChild(side);
 
@@ -517,7 +541,8 @@
     if (LIVE.state === "loading") refreshBtn.disabled = true;
     refreshBtn.addEventListener("click", function () {
       if (token() === "1") { render(); return; } // demo gate — nothing live to pull
-      LIVE.state = "loading"; render(); fetchLive();
+      refreshBtn.disabled = true; refreshBtn.textContent = "⏳ Refreshing…";
+      fetchLive(); // sets loading, fetches, then re-renders with fresh data
     });
     var searchBtn = el('<button class="cm-btn sm" title="Search sections">🔍 Search</button>');
     searchBtn.addEventListener("click", openAdminSearch);
