@@ -1,6 +1,6 @@
 /* ChintasMoney service worker — offline app shell.
  * Bump CACHE when you ship new app files so clients update. */
-var CACHE = "chintasmoney-v131";
+var CACHE = "chintasmoney-v132";
 var SHELL = [
   "./index.html",
   "./styles.css?v=20260922b",
