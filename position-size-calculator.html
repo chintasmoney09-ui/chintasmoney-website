@@ -63,7 +63,16 @@
     <h2>How to calculate position size</h2>
     <p>Position sizing has three steps: (1) decide your <b>risk amount</b> = capital × risk %. (2) Find your <b>per-share risk</b> = entry price − stop-loss. (3) <b>Quantity</b> = risk amount ÷ per-share risk. Example: ₹1,00,000 capital, 1% risk = ₹1,000 to lose. Entry ₹500, stop ₹490 = ₹10 risk per share. Quantity = 1,000 ÷ 10 = <b>100 shares</b>.</p>
     <h2>How much should you risk per trade?</h2>
-    <p>Risk 1% and you can be wrong 20 times in a row and survive. Risk 10% and one bad day can end you. Position sizing — not prediction — is what keeps traders alive. That is discipline, and discipline is what <a href="/app/">ChintasMoney</a> measures.</p>
+    <p>Risk 1% and you can be wrong 20 times in a row and survive. Risk 10% and one bad day can end you. Position sizing — not prediction — is what keeps traders alive. That is discipline, and discipline is what <a href="/app/">ChintasMoney</a> measures. Next, check every setup with our free <a href="/risk-reward-calculator">risk-reward ratio calculator</a>.</p>
+
+    <div class="card" style="margin-top:18px;padding:16px;text-align:center">
+      <div style="font-weight:700;margin-bottom:8px">📢 Know a trader who oversizes? Send them this free tool.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+        <a id="shTg" target="_blank" rel="noopener" style="padding:10px 16px;border-radius:10px;background:#229ED9;color:#fff;font-weight:700;text-decoration:none">✈️ Telegram</a>
+        <a id="shWa" target="_blank" rel="noopener" style="padding:10px 16px;border-radius:10px;background:#25D366;color:#fff;font-weight:700;text-decoration:none">💬 WhatsApp</a>
+        <button id="shCopy" style="padding:10px 16px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;color:#0f172a;font-weight:700;cursor:pointer;font-family:inherit">🔗 Copy link</button>
+      </div>
+    </div>
 
     <a class="back" href="/">← Back to ChintasMoney</a>
   </div></main>
@@ -107,6 +116,17 @@
       }
       lb.addEventListener("click", submitLead);
       le.addEventListener("keydown", function (e) { if (e.key === "Enter") submitLead(); });
+
+      // Viral share — every user can distribute the tool in one tap.
+      var shareUrl = "https://chintasmoney.com/position-size-calculator";
+      var shareText = "Free position-size calculator — know exactly how many shares to trade so one bad day never wipes you out 👇";
+      var tg = document.getElementById("shTg"), wa = document.getElementById("shWa"), cp = document.getElementById("shCopy");
+      if (tg) tg.href = "https://t.me/share/url?url=" + encodeURIComponent(shareUrl) + "&text=" + encodeURIComponent(shareText);
+      if (wa) wa.href = "https://wa.me/?text=" + encodeURIComponent(shareText + " " + shareUrl);
+      if (cp) cp.addEventListener("click", function () {
+        if (navigator.share) { navigator.share({ title: "ChintasMoney", text: shareText, url: shareUrl }).catch(function () {}); return; }
+        if (navigator.clipboard) { navigator.clipboard.writeText(shareUrl); cp.textContent = "✓ Copied"; setTimeout(function () { cp.textContent = "🔗 Copy link"; }, 1500); }
+      });
     })();
   </script>
   <script src="consent.js"></script>

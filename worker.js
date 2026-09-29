@@ -865,35 +865,71 @@ async function sendWeeklyEmail(env, o) {
     '<p style="color:#5b6b8c;font-size:13px;margin:18px 0 0">Keep showing up — discipline compounds. We\'re proud of you. 💚<br>— Team ChintasMoney</p>';
   await sendEmail(env, { to: o.email, subject: "Your weekly discipline report — score " + s.disc + "/100", html: emailShell(inner) });
 }
+// "We miss you" re-engagement email for users who've drifted away.
+async function sendReengageEmail(env, o) {
+  if (!o || !o.email) return;
+  var firstName = o.name ? String(o.name).trim().split(/\s+/)[0] : "";
+  var hi = firstName ? "Hi " + esc(firstName) + " 👋" : "Hey 👋";
+  var inner =
+    '<p style="color:#0f1730;font-weight:700;font-size:1.05rem;margin:0 0 6px">' + hi + '</p>' +
+    '<h2 style="margin:0 0 6px;font-size:1.35rem">Your trading journal misses you 📓</h2>' +
+    '<p style="color:#5b6b8c;margin:0 0 14px">It\'s been a little while. The traders who actually improve aren\'t the ones with the best tips — they\'re the ones who keep showing up and journaling honestly. Two minutes today keeps your edge sharp.</p>' +
+    '<div style="background:#f8fafc;border:1px dashed #cbd5e1;border-radius:12px;padding:12px 14px;color:#475569;margin:0 0 14px">💡 Quick win: log your last trade and check what your Discipline Score says to fix first.</div>' +
+    lifeCta("Pick up where I left off") + lifeSign();
+  await sendEmail(env, { to: o.email, subject: "📓 Your ChintasMoney journal misses you", html: emailShell(inner) });
+}
 async function sendWeeklyReports(env) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY || !env.RESEND_API_KEY) return;
   const base = env.SUPABASE_URL.replace(/\/$/, "");
   const h = { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: "Bearer " + env.SUPABASE_SERVICE_ROLE_KEY };
-  // Map user_id -> email from auth.
-  const emails = {};
+  // Map user_id -> {email, last sign-in} from auth.
+  const meta = {};
   try {
     for (let page = 1; page <= 50; page++) {
       const ur = await fetch(base + "/auth/v1/admin/users?page=" + page + "&per_page=200", { headers: h });
       if (!ur.ok) break;
       const uj = await ur.json(); const batch = uj.users || (Array.isArray(uj) ? uj : []);
       if (!batch.length) break;
-      batch.forEach(function (u) { emails[u.id] = u.email; });
+      batch.forEach(function (u) { meta[u.id] = { email: u.email, last: u.last_sign_in_at || u.created_at || "" }; });
       if (batch.length < 200) break;
     }
   } catch (e) {}
-  // Paid users' state → weekly stats → email.
+  // What months's re-engage emails already went out (dedupe).
+  const monthTag = "reengage-" + new Date().toISOString().slice(0, 7); // reengage-YYYY-MM
+  const reengaged = {};
+  try {
+    const lr = await fetch(base + "/rest/v1/email_log?kind=eq." + encodeURIComponent(monthTag) + "&select=user_id", { headers: h });
+    if (lr.ok) (await lr.json()).forEach(function (r) { reengaged[r.user_id] = true; });
+  } catch (e) {}
+  const now = Date.now();
   try {
     const sr = await fetch(base + "/rest/v1/user_state?select=user_id,data", { headers: h });
     if (!sr.ok) return;
     const rows = await sr.json();
     for (const row of rows) {
       const data = row.data || {}; const prof = data.profile || {};
-      if (prof.plan !== "pro" && prof.plan !== "diamond") continue;
-      const stats = weekStats(data.trades || []);
-      if (!stats) continue; // nothing logged this week
-      const email = emails[row.user_id];
-      if (!email) continue;
-      await sendWeeklyEmail(env, { email: email, name: prof.name, stats: stats });
+      const m = meta[row.user_id]; if (!m || !m.email) continue;
+      // 1) Weekly report for paid, active users.
+      if (prof.plan === "pro" || prof.plan === "diamond") {
+        const stats = weekStats(data.trades || []);
+        if (stats) { await sendWeeklyEmail(env, { email: m.email, name: prof.name, stats: stats }); }
+      }
+      // 2) Re-engagement for anyone who's been away 10–90 days (once/month).
+      if (!reengaged[row.user_id] && m.last) {
+        const days = (now - new Date(m.last).getTime()) / 86400000;
+        const hasHistory = Array.isArray(data.trades) && data.trades.length > 0;
+        if (hasHistory && days >= 10 && days <= 90) {
+          let claimed = false;
+          try {
+            const ins = await fetch(base + "/rest/v1/email_log?on_conflict=user_id,kind", {
+              method: "POST", headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=ignore-duplicates,return=representation" }),
+              body: JSON.stringify({ user_id: row.user_id, kind: monthTag, email: m.email, created_at: new Date().toISOString() }),
+            });
+            if (ins.ok) { const rr = await ins.json().catch(function () { return []; }); claimed = Array.isArray(rr) && rr.length > 0; }
+          } catch (e) {}
+          if (claimed) await sendReengageEmail(env, { email: m.email, name: prof.name });
+        }
+      }
     }
   } catch (e) {}
 }
