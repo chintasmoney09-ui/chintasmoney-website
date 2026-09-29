@@ -595,7 +595,10 @@ async function handleAdminUpdateUser(request, env) {
 async function sendGiftEmail(env, o) {
   if (!o.email) return;
   var giftLine = o.plan ? "the <b>" + esc(productDesc(o.plan).name) + "</b> plan" : (o.tokens ? "<b>" + o.tokens + " analysis tokens</b>" : "a gift");
+  var firstName = (o.name ? String(o.name).trim().split(/\s+/)[0] : "");
+  var greet = firstName ? "Hi " + esc(firstName) + " 👋" : "Hi there 👋";
   var inner =
+    '<p style="color:#0f1730;font-weight:700;font-size:1.05rem;margin:0 0 6px">' + greet + '</p>' +
     '<h2 style="margin:0 0 6px;font-size:1.4rem">A gift, just for you 🎁</h2>' +
     '<p style="color:#5b6b8c;margin:0 0 14px">Thank you for being part of ChintasMoney — we\'re rooting for you. To power up your trading journal, we\'ve gifted you ' + giftLine + ', already active on your account. ⚡</p>' +
     (o.message ? '<div style="background:#f8fafc;border:1px dashed #cbd5e1;border-radius:12px;padding:12px 14px;color:#475569;margin:0 0 14px">“' + esc(o.message) + '”</div>' : '') +
@@ -637,8 +640,10 @@ async function handleAdminGift(request, env) {
   if (b.tokens) data.profile.tokens = Math.max(0, (data.profile.tokens || 0) + Number(b.tokens));
   // Leave an in-app message so the user sees the gift in their notification bell.
   var giftWhat = b.plan ? (productDesc(b.plan).name + " plan") : (b.tokens ? (b.tokens + " analysis tokens") : "a gift");
+  var recipName = (data.profile && data.profile.name) ? String(data.profile.name).trim() : "";
+  var firstName = recipName ? recipName.split(/\s+/)[0] : "";
   data.profile.giftAt = new Date().toISOString();
-  data.profile.giftMsg = (b.message && String(b.message).slice(0, 240)) || ("You've received " + giftWhat + " — it's active now. Use it to journal more trades and sharpen your discipline. 💚");
+  data.profile.giftMsg = (b.message && String(b.message).slice(0, 240)) || ((firstName ? firstName + ", you've" : "You've") + " received " + giftWhat + " — it's active now. Use it to journal more trades and sharpen your discipline. 💚");
   data.profile.giftWhat = giftWhat;
   const up = await fetch(base + "/rest/v1/user_state?on_conflict=user_id", {
     method: "POST", headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" }),
@@ -646,8 +651,8 @@ async function handleAdminGift(request, env) {
   });
   if (!up.ok) return aRes({ error: "gift_failed" }, 400);
   if (b.email) {
-    await sendGiftEmail(env, { email: b.email, plan: b.plan, tokens: b.tokens, message: b.message });
-    await sendPushToEmail(env, b.email, { title: "🎁 You've received a gift!", body: "You got " + giftWhat + ". Open the app to use it.", url: "/app/", tag: "cm-gift" });
+    await sendGiftEmail(env, { email: b.email, plan: b.plan, tokens: b.tokens, message: b.message, name: recipName });
+    await sendPushToEmail(env, b.email, { title: "🎁 " + (firstName ? firstName + ", a" : "A") + " gift for you!", body: "You got " + giftWhat + ". Open the app to use it.", url: "/app/", tag: "cm-gift" });
   }
   return aRes({ ok: true }, 200);
 }
