@@ -897,11 +897,40 @@ async function handleAdminBroadcast(request, env) {
   // Dedupe + validate + cap (protect sender reputation & Resend limits).
   const seen = {}; recipients = recipients.filter(function (e) { if (!e || e.indexOf("@") === -1 || seen[e]) return false; seen[e] = 1; return true; });
   const CAP = 300; const list = recipients.slice(0, CAP);
-  const inner = '<div style="font-size:15px;line-height:1.7;color:#0f1730">' + esc(message).replace(/\n/g, "<br>") + '</div>' +
-    '<p style="color:#98a6c4;font-size:12px;margin:18px 0 0">You are receiving this because you signed up or opted in at chintasmoney.com. Reply "unsubscribe" to stop.</p>';
-  const html = emailShell(inner);
+
+  // Build an email→first-name map so {{name}} can be personalised per recipient.
+  const nameByEmail = {};
+  try {
+    const nameById = {};
+    const sr = await fetch(base + "/rest/v1/user_state?select=user_id,data", { headers: h });
+    if (sr.ok) (await sr.json()).forEach(function (r) { const n = r.data && r.data.profile && r.data.profile.name; if (n) nameById[r.user_id] = String(n); });
+    for (let page = 1; page <= 50; page++) {
+      const ur = await fetch(base + "/auth/v1/admin/users?page=" + page + "&per_page=200", { headers: h });
+      if (!ur.ok) break; const uj = await ur.json(); const batch = uj.users || (Array.isArray(uj) ? uj : []);
+      if (!batch.length) break;
+      batch.forEach(function (u) {
+        if (!u.email) return;
+        const nm = nameById[u.id] || (u.user_metadata && (u.user_metadata.full_name || u.user_metadata.name)) || "";
+        if (nm) nameByEmail[u.email.toLowerCase()] = String(nm).trim().split(/\s+/)[0];
+      });
+      if (batch.length < 200) break;
+    }
+  } catch (e) {}
+
+  // Optional image banner at the top of the email.
+  const imageUrl = (b && typeof b.imageUrl === "string" && /^https:\/\//i.test(b.imageUrl.trim())) ? b.imageUrl.trim() : "";
+  const banner = imageUrl ? '<div style="text-align:center;margin:0 0 16px"><img src="' + esc(imageUrl) + '" alt="" style="max-width:100%;height:auto;border-radius:12px"/></div>' : "";
+
   let sent = 0;
-  for (const to of list) { await sendEmail(env, { to: to, subject: subject, html: html }); sent++; }
+  for (const to of list) {
+    const first = nameByEmail[to] || "";
+    const personal = message.replace(/\{\{\s*(name|first_?name)\s*\}\}/gi, first || "there");
+    const inner = banner +
+      '<div style="font-size:15px;line-height:1.7;color:#0f1730">' + esc(personal).replace(/\n/g, "<br>") + '</div>' +
+      '<p style="color:#98a6c4;font-size:12px;margin:18px 0 0">You are receiving this because you signed up or opted in at chintasmoney.com. Reply "unsubscribe" to stop.</p>';
+    await sendEmail(env, { to: to, subject: subject, html: emailShell(inner) });
+    sent++;
+  }
   return aRes({ ok: true, sent: sent, total: recipients.length, capped: recipients.length > CAP }, 200);
 }
 

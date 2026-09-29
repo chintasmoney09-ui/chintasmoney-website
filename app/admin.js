@@ -733,13 +733,41 @@
         pickWrap.style.display = seg.value === "pick" ? "block" : "none";
       });
 
+      // Ready-made templates — pick one to fill subject + message instantly.
+      var TEMPLATES = {
+        welcome: { s: "Welcome to ChintasMoney, {{name}} 🎉", m: "Hi {{name}},\n\nThank you for being our valued customer — we're genuinely thrilled to have you. 💚\n\nChintasMoney is your Trader Report Card: it scores how disciplined you actually trade (no tips, no noise) so every trade makes the next one sharper.\n\n👉 Log a few trades this week and watch your Discipline Score grow.\n\nWe're rooting for you.\n— Team ChintasMoney" },
+        feature: { s: "✨ New in ChintasMoney: {{name}}, check this out", m: "Hi {{name}},\n\nWe just shipped something we think you'll love. 🚀\n\n[Describe the new feature in a line or two here.]\n\nOpen the app and give it a try — it takes 2 minutes.\n\nHappy (disciplined) trading!\n— Team ChintasMoney" },
+        offer: { s: "🎁 A little something for you, {{name}}", m: "Hi {{name}},\n\nAs a thank-you for being with us, here's a special offer just for you:\n\n[Describe the offer — e.g. 20% off your first month, or bonus analysis tokens.]\n\nTap below to claim it. Offer ends soon!\n— Team ChintasMoney" },
+        tip: { s: "💡 One trading-discipline tip, {{name}}", m: "Hi {{name}},\n\nQuick tip that separates calm traders from the rest:\n\n\"Risk a fixed 1–2% per trade — never a gut-feeling amount.\"\n\nDo that, and one bad day can never wipe you out. Log your trades in ChintasMoney to see your own risk patterns.\n\nStay sharp,\n— Team ChintasMoney" }
+      };
+      card.appendChild(el('<label style="font-weight:700;font-size:.85rem;color:#334155">Ready-made template (optional)</label>'));
+      var tpl = el('<select style="padding:11px 12px;background:#fff;color:#0f172a;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit">' +
+        '<option value="">— Start from scratch —</option>' +
+        '<option value="welcome">🎉 Welcome / valued customer</option>' +
+        '<option value="feature">✨ New feature announcement</option>' +
+        '<option value="offer">🎁 Special offer</option>' +
+        '<option value="tip">💡 Trading tip</option>' +
+        '</select>');
+      card.appendChild(tpl);
+
       card.appendChild(el('<label style="font-weight:700;font-size:.85rem;color:#334155">Subject</label>'));
       var subj = el('<input placeholder="e.g. New: your free Money Leak Report is ready" style="padding:11px 12px;background:#fff;color:#0f172a;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit"/>');
       card.appendChild(subj);
 
+      card.appendChild(el('<label style="font-weight:700;font-size:.85rem;color:#334155">📷 Image / photo URL (optional)</label>'));
+      var imgUrl = el('<input placeholder="https://chintasmoney.com/assets/logo-full.png" style="padding:11px 12px;background:#fff;color:#0f172a;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit"/>');
+      card.appendChild(imgUrl);
+      card.appendChild(el('<div style="font-size:.78rem;color:#94a3b8;margin-top:-4px">Paste a public image link to show a banner at the top of the email. Tip: upload your image to the site or any host, then paste its URL.</div>'));
+
       card.appendChild(el('<label style="font-weight:700;font-size:.85rem;color:#334155">Message</label>'));
       var msg = el('<textarea rows="9" placeholder="Write your message here. Plain text — line breaks are kept. Your logo, footer and unsubscribe line are added automatically." style="width:100%;box-sizing:border-box;padding:11px 12px;background:#fff;color:#0f172a;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit;line-height:1.6"></textarea>');
       card.appendChild(msg);
+      card.appendChild(el('<div style="font-size:.78rem;color:#94a3b8;margin-top:-4px">✨ Type <b>{{name}}</b> anywhere and it\'s replaced with each person\'s first name automatically (falls back to "there").</div>'));
+      tpl.addEventListener("change", function () {
+        var t = TEMPLATES[tpl.value];
+        if (!t) return;
+        if (!subj.value.trim() || confirm("Replace the current subject & message with this template?")) { subj.value = t.s; msg.value = t.m; }
+      });
 
       var status = el('<div style="font-size:.85rem;color:#64748b;min-height:18px"></div>');
       var sendBtn = el('<button class="cm-btn" style="justify-self:start">✉️ Send campaign</button>');
@@ -757,7 +785,7 @@
         var sendSeg = segv === "pick" ? "custom" : segv;
         if (!confirm("Send \"" + subject + "\" to the selected recipients?\n\nThis emails real people. Make sure it's ready.")) return;
         sendBtn.disabled = true; sendBtn.textContent = "Sending…"; status.style.color = "#64748b"; status.textContent = "Sending campaign…";
-        adminPost("/api/admin/broadcast", { subject: subject, message: message, segment: sendSeg, emails: emails }).then(function (r) {
+        adminPost("/api/admin/broadcast", { subject: subject, message: message, segment: sendSeg, emails: emails, imageUrl: imgUrl.value.trim() }).then(function (r) {
           sendBtn.disabled = false; sendBtn.textContent = "✉️ Send campaign";
           if (r && r.ok) {
             adminConfetti();
