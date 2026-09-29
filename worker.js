@@ -291,7 +291,121 @@ async function sendSubWelcomeEmail(env, o) {
     '<p style="color:#5b6b8c;font-size:14px;margin:20px 0 0">Any question at all, just reply to this email — a real person reads every one.<br>To calmer, sharper trading. 💚<br>— Team ChintasMoney</p>';
   await sendEmail(env, { to: o.email, subject: "🎉 Welcome to ChintasMoney " + (d ? d.name : "Premium") + " — you're all set!", html: emailShell(inner) });
 }
+
+// ===========================================================================
+//  LIFECYCLE EMAILS — the right message at the right moment, sent once each.
+//  Milestone-based (never one-per-click) so it builds trust, not spam.
+// ===========================================================================
+function lifeCta(txt) {
+  return '<div style="text-align:center;margin:20px 0 8px"><a href="' + APP_URL + '" style="display:inline-block;background:linear-gradient(135deg,#22e08a,#12b39a);color:#04231b;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:800">' + txt + ' →</a></div>';
+}
+function lifeSign() {
+  return '<p style="color:#5b6b8c;font-size:14px;margin:20px 0 0">We\'re rooting for you. Reply anytime — a real person reads every email. 💚<br>— Team ChintasMoney</p>';
+}
+// Returns {subject, inner} for a milestone, or null.
+function lifecycleEmail(kind, firstName) {
+  var hi = firstName ? "Hi " + esc(firstName) + " 👋" : "Hey 👋";
+  var head = '<p style="color:#0f1730;font-weight:700;font-size:1.05rem;margin:0 0 6px">' + hi + '</p>';
+  var T = {
+    firstTrade: {
+      subject: "🎯 Your first trade is logged — here's what happens next",
+      inner: head + '<h2 style="margin:0 0 6px;font-size:1.35rem">Nice — your first trade is in! 🎯</h2>' +
+        '<p style="color:#5b6b8c;margin:0 0 14px">That\'s the hardest step, and you took it. Every trade you log makes your Discipline Score smarter about <b>your</b> patterns — where you size too big, hold losers, or jump in without a stop.</p>' +
+        '<p style="color:#5b6b8c;margin:0 0 14px">Log 5 and your first real insights unlock. Keep going. 💪</p>' + lifeCta("Log another trade") + lifeSign()
+    },
+    fiveTrades: {
+      subject: "🔥 5 trades in — your patterns are showing",
+      inner: head + '<h2 style="margin:0 0 6px;font-size:1.35rem">5 trades logged — you\'re building the habit 🔥</h2>' +
+        '<p style="color:#5b6b8c;margin:0 0 14px">This is where it gets interesting. Open your <b>Insights</b> and <b>Trade Grades</b> to see exactly where your money leaks — and the one fix that lifts your score the fastest.</p>' + lifeCta("See my insights") + lifeSign()
+    },
+    tenTrades: {
+      subject: "🏆 10 trades — you're in the top few % who actually journal",
+      inner: head + '<h2 style="margin:0 0 6px;font-size:1.35rem">10 trades logged — that\'s real discipline 🏆</h2>' +
+        '<p style="color:#5b6b8c;margin:0 0 14px">Most traders never journal a single trade. You\'ve done ten. Your report is now rich enough for the AI coach to spot your biggest edge and your costliest habit. Go ask it: "what should I fix first?"</p>' + lifeCta("Ask my AI coach") + lifeSign()
+    },
+    firstDream: {
+      subject: "💭 Your money dream is set — now let's protect it",
+      inner: head + '<h2 style="margin:0 0 6px;font-size:1.35rem">Love it — your dream is in the planner 💭</h2>' +
+        '<p style="color:#5b6b8c;margin:0 0 14px">A goal you can see is a goal you protect. The traders who hit theirs are the disciplined ones — and that\'s exactly what ChintasMoney trains. Keep logging, keep your risk small, and let it compound.</p>' + lifeCta("Open my dream plan") + lifeSign()
+    }
+  };
+  return T[kind] || null;
+}
+async function sendLifecycleEmail(env, kind, o) {
+  var t = lifecycleEmail(kind, o && o.name ? String(o.name).trim().split(/\s+/)[0] : "");
+  if (!t || !o || !o.email) return;
+  await sendEmail(env, { to: o.email, subject: t.subject, html: emailShell(t.inner) });
+}
+// Thank-you when someone buys an analysis token pack.
+async function sendTokenWelcomeEmail(env, o) {
+  if (!o || !o.email) return;
+  var firstName = o.name ? String(o.name).trim().split(/\s+/)[0] : "";
+  var hi = firstName ? "Hi " + esc(firstName) + " 👋" : "Hey 👋";
+  var inner =
+    '<p style="color:#0f1730;font-weight:700;font-size:1.05rem;margin:0 0 6px">' + hi + '</p>' +
+    '<h2 style="margin:0 0 6px;font-size:1.35rem">Your ' + (o.tokens ? esc(String(o.tokens)) + " " : "") + 'analysis tokens are ready 🎟️</h2>' +
+    '<p style="color:#5b6b8c;margin:0 0 14px">Thank you! Each token runs a deep Trade Replay on one of your own trades — turning a gut feeling into a clear lesson. Spend them on your most confusing trades first; that\'s where the biggest breakthroughs hide.</p>' +
+    lifeCta("Run an analysis") + lifeSign();
+  await sendEmail(env, { to: o.email, subject: "🎟️ Your ChintasMoney tokens are ready", html: emailShell(inner) });
+}
+// Endpoint the app pings; sends any newly-earned milestone email, once each.
+async function handleLifecycle(request, env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return aRes({ ok: false }, 200);
+  const authz = request.headers.get("Authorization") || "";
+  const userTok = authz.replace(/^Bearer\s+/i, "").trim();
+  if (!userTok) return aRes({ ok: false }, 200);
+  const base = env.SUPABASE_URL.replace(/\/$/, "");
+  let user;
+  try {
+    const ur = await fetch(base + "/auth/v1/user", { headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: "Bearer " + userTok } });
+    if (!ur.ok) return aRes({ ok: false }, 200);
+    user = await ur.json();
+  } catch (e) { return aRes({ ok: false }, 200); }
+  const uid = user && user.id, email = user && user.email;
+  if (!uid || !email) return aRes({ ok: false }, 200);
+  // Load state.
+  let data = { profile: {} };
+  try {
+    const sr = await fetch(base + "/rest/v1/user_state?user_id=eq." + encodeURIComponent(uid) + "&select=data", { headers: await sbHeaders(env) });
+    if (sr.ok) { const arr = await sr.json(); if (arr && arr[0] && arr[0].data) data = arr[0].data; }
+  } catch (e) {}
+  const prof = data.profile || {};
+  const name = prof.name || "";
+  const trades = Array.isArray(data.trades) ? data.trades.length : 0;
+  const dreams = Array.isArray(data.dreams) ? data.dreams.length : 0;
+  // Which milestones are reached now?
+  const due = [];
+  if (trades >= 1) due.push("firstTrade");
+  if (trades >= 5) due.push("fiveTrades");
+  if (trades >= 10) due.push("tenTrades");
+  if (dreams >= 1) due.push("firstDream");
+  if (!due.length) return aRes({ ok: true, sent: 0 }, 200);
+  // Dedupe via email_log (one row per user+kind). Read what was already sent.
+  let already = {};
+  try {
+    const lr = await fetch(base + "/rest/v1/email_log?user_id=eq." + encodeURIComponent(uid) + "&select=kind", { headers: await sbHeaders(env) });
+    if (lr.ok) (await lr.json()).forEach(function (r) { already[r.kind] = true; });
+  } catch (e) {}
+  let sent = 0;
+  for (const kind of due) {
+    if (already[kind]) continue;
+    // Claim the slot first (unique index stops duplicates across races).
+    let claimed = false;
+    try {
+      const ins = await fetch(base + "/rest/v1/email_log?on_conflict=user_id,kind", {
+        method: "POST", headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=ignore-duplicates,return=representation" }),
+        body: JSON.stringify({ user_id: uid, kind: kind, email: email, created_at: new Date().toISOString() }),
+      });
+      if (ins.ok) { const rows = await ins.json().catch(function () { return []; }); claimed = Array.isArray(rows) && rows.length > 0; }
+    } catch (e) {}
+    if (!claimed) continue; // someone else already claimed it — skip
+    await sendLifecycleEmail(env, kind, { email: email, name: name });
+    sent++;
+  }
+  return aRes({ ok: true, sent: sent }, 200);
+}
 async function handleRzpVerify(request, env) {
+  if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) return jsonRes({ error: "payments not configured" }, 0);
   if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) return jsonRes({ error: "payments not configured" }, 0);
   let b; try { b = await request.json(); } catch (e) { return jsonRes({ error: "bad request" }, 0); }
   const orderId = b && b.order_id, paymentId = b && b.payment_id, sig = b && b.signature;
@@ -323,6 +437,7 @@ async function handleRzpVerify(request, env) {
   });
   await sendReceiptEmail(env, { email: email, product: product, label: p.label, amount: p.amount, paymentId: paymentId });
   if (p.type === "plan" && email) await sendSubWelcomeEmail(env, { email: email, plan: p.plan });
+  if (p.type === "tokens" && email) await sendTokenWelcomeEmail(env, { email: email, tokens: p.tokens });
   return jsonRes({ valid: true, product: product, grant: grant }, 0);
 }
 
@@ -1136,6 +1251,7 @@ export default {
     if (request.method === "POST" && url.pathname === "/api/lead") return handleLead(request, env);
     if (request.method === "POST" && url.pathname === "/api/admin/broadcast") return handleAdminBroadcast(request, env);
     if (request.method === "GET" && url.pathname === "/api/admin/prospects") return handleAdminProspects(request, env);
+    if (request.method === "POST" && url.pathname === "/api/lifecycle") return handleLifecycle(request, env);
     if (request.method === "POST" && url.pathname === "/api/push/subscribe") return handlePushSubscribe(request, env);
     if (request.method === "POST" && url.pathname === "/api/admin/push") return handleAdminPush(request, env);
     if (request.method === "GET" && url.pathname === "/api/admin/razorpay") return handleAdminRazorpay(request, env);

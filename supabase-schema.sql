@@ -92,3 +92,15 @@ create table if not exists public.push_subscriptions (
 create unique index if not exists push_subscriptions_endpoint_key on public.push_subscriptions(endpoint);
 -- RLS on with no policy = only the service-role (Worker) can read/write it.
 alter table public.push_subscriptions enable row level security;
+
+-- Lifecycle email dedupe: one row per (user, milestone) so each automatic
+-- milestone email is sent only once. Written by /api/lifecycle (service-role).
+create table if not exists public.email_log (
+  id          bigint generated always as identity primary key,
+  user_id     uuid not null,
+  kind        text not null,
+  email       text,
+  created_at  timestamptz not null default now()
+);
+create unique index if not exists email_log_user_kind_key on public.email_log(user_id, kind);
+alter table public.email_log enable row level security;

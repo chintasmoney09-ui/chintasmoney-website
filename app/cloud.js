@@ -61,11 +61,23 @@
       } catch (e) {}
     }, 800);
   }
+  // Lifecycle emails: ping the worker a little after a change so it can send
+  // any newly-earned milestone email (first trade, 5 trades, first dream…).
+  // Debounced and server-deduped, so it never spams. Runs only when signed in.
+  var lifeTimer = null;
+  function scheduleLifecycle() {
+    if (Cloud.state !== "authed" || !Cloud.token) return;
+    clearTimeout(lifeTimer);
+    lifeTimer = setTimeout(function () {
+      try { fetch("/api/lifecycle", { method: "POST", headers: { Authorization: "Bearer " + Cloud.token } }).catch(function () {}); } catch (e) {}
+    }, 12000);
+  }
+  Cloud.lifecycle = scheduleLifecycle;
   // Patch CM.save so every local change also syncs to the cloud.
   function patchSave() {
     if (!window.CM || CM.__patched) return; CM.__patched = true;
     var orig = CM.save;
-    CM.save = function () { orig.apply(CM, arguments); schedulePush(); };
+    CM.save = function () { orig.apply(CM, arguments); schedulePush(); scheduleLifecycle(); };
   }
   // Merge two app states so signing in never destroys data logged on another
   // device or while offline. Trades & dreams are unioned by id (never dropped);
@@ -109,7 +121,8 @@
         } else { // first login → seed a fresh row from current local state
           return Cloud.client.from("user_state").upsert({ user_id: Cloud.user.id, data: localBefore, updated_at: new Date().toISOString() });
         }
-      });
+      })
+      .then(function (res) { try { scheduleLifecycle(); } catch (e) {} return res; });
   }
 
   // ---- auth API ------------------------------------------------------------
