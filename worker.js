@@ -1287,9 +1287,73 @@ async function handleWelcome(request, env) {
   return aRes({ ok: true }, 200);
 }
 
+// Daily "keep your streak alive" push — only to users with an active streak
+// who haven't logged today AND have push turned on. Targeted, never spam.
+async function sendStreakReminders(env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY || !env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) return;
+  const base = env.SUPABASE_URL.replace(/\/$/, "");
+  const h = { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: "Bearer " + env.SUPABASE_SERVICE_ROLE_KEY };
+  // Push subscriptions keyed by email.
+  let subsByEmail = {};
+  try {
+    const pr = await fetch(base + "/rest/v1/push_subscriptions?select=*", { headers: h });
+    if (pr.ok) (await pr.json()).forEach(function (s) { if (s.email) (subsByEmail[s.email.toLowerCase()] = subsByEmail[s.email.toLowerCase()] || []).push(s); });
+  } catch (e) {}
+  if (!Object.keys(subsByEmail).length) return;
+  // Map user_id -> email.
+  const emailById = {};
+  try {
+    for (let page = 1; page <= 50; page++) {
+      const ur = await fetch(base + "/auth/v1/admin/users?page=" + page + "&per_page=200", { headers: h });
+      if (!ur.ok) break; const uj = await ur.json(); const batch = uj.users || (Array.isArray(uj) ? uj : []);
+      if (!batch.length) break; batch.forEach(function (u) { if (u.email) emailById[u.id] = u.email.toLowerCase(); });
+      if (batch.length < 200) break;
+    }
+  } catch (e) {}
+  const today = new Date().toISOString().slice(0, 10);
+  const dayTag = "streak-" + today;
+  function streakOf(trades) {
+    var days = {}; (trades || []).forEach(function (t) { if (t && t.date) days[String(t.date).slice(0, 10)] = 1; });
+    var d = new Date(); d.setHours(0, 0, 0, 0);
+    var todayStr = d.toISOString().slice(0, 10);
+    var loggedToday = !!days[todayStr];
+    if (!days[todayStr]) { var y = new Date(d); y.setDate(y.getDate() - 1); if (!days[y.toISOString().slice(0, 10)]) return { streak: 0, loggedToday: false }; d = y; }
+    var streak = 0;
+    while (days[d.toISOString().slice(0, 10)]) { streak++; d.setDate(d.getDate() - 1); }
+    return { streak: streak, loggedToday: loggedToday };
+  }
+  try {
+    const sr = await fetch(base + "/rest/v1/user_state?select=user_id,data", { headers: h });
+    if (!sr.ok) return;
+    const rows = await sr.json();
+    for (const row of rows) {
+      const email = emailById[row.user_id]; if (!email) continue;
+      const subs = subsByEmail[email]; if (!subs || !subs.length) continue;
+      const st = streakOf((row.data && row.data.trades) || []);
+      if (st.loggedToday || st.streak < 2) continue; // only nudge a real, at-risk streak
+      // Dedupe once per day.
+      let claimed = false;
+      try {
+        const ins = await fetch(base + "/rest/v1/email_log?on_conflict=user_id,kind", {
+          method: "POST", headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=ignore-duplicates,return=representation" }),
+          body: JSON.stringify({ user_id: row.user_id, kind: dayTag, email: email, created_at: new Date().toISOString() }),
+        });
+        if (ins.ok) { const rr = await ins.json().catch(function () { return []; }); claimed = Array.isArray(rr) && rr.length > 0; }
+      } catch (e) {}
+      if (!claimed) continue;
+      const payload = { title: "🔥 Keep your " + st.streak + "-day streak alive!", body: "Log a trade before midnight so your streak doesn't reset.", url: "/app/", tag: "cm-streak" };
+      for (const s of subs) { try { await sendWebPush(env, { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload); } catch (e) {} }
+    }
+  } catch (e) {}
+}
+
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(sendWeeklyReports(env));
+    // Weekly report runs on Monday 04:00 UTC; the daily streak nudge runs every
+    // evening. We route by the cron string so each fires its own job.
+    if (event && event.cron === "0 4 * * 1") ctx.waitUntil(sendWeeklyReports(env));
+    else if (event && event.cron === "30 12 * * *") ctx.waitUntil(sendStreakReminders(env));
+    else ctx.waitUntil(sendWeeklyReports(env));
   },
   async fetch(request, env, ctx) {
     const url = new URL(request.url);

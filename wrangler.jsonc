@@ -23,8 +23,9 @@
     "not_found_handling": "404-page"
   },
   // Weekly discipline report email to Platinum/Diamond users.
-  // Mondays 04:00 UTC = 09:30 IST.
+  // Weekly report: Mondays 04:00 UTC = 09:30 IST.
+  // Daily streak nudge: 12:30 UTC = 18:00 IST (evening reminder).
   "triggers": {
-    "crons": ["0 4 * * 1"]
+    "crons": ["0 4 * * 1", "30 12 * * *"]
   }
 }
