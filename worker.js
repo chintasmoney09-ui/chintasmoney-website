@@ -1124,34 +1124,65 @@ async function sendLeadWelcomeEmail(env, email) {
 // Prospect Radar — LIVE search of public Reddit for people asking about
 // trading discipline / risk right now, so the owner can join the conversation
 // and pull them to the free tool. Public data only; no scraping of contacts.
+// Extract a balanced JSON object that starts at the first "{" after `marker`.
+function extractJsonAfter(html, marker) {
+  const i = html.indexOf(marker); if (i < 0) return null;
+  const start = html.indexOf("{", i); if (start < 0) return null;
+  let depth = 0, inStr = false, esc = false;
+  for (let j = start; j < html.length; j++) {
+    const c = html[j];
+    if (inStr) { if (esc) esc = false; else if (c === "\\") esc = true; else if (c === '"') inStr = false; }
+    else { if (c === '"') inStr = true; else if (c === "{") depth++; else if (c === "}") { depth--; if (depth === 0) { try { return JSON.parse(html.slice(start, j + 1)); } catch (e) { return null; } } } }
+  }
+  return null;
+}
+async function prospectsReddit(q, sub) {
+  const endpoint = sub
+    ? "https://www.reddit.com/r/" + sub + "/search.json?restrict_sr=1&sort=new&limit=25&q=" + encodeURIComponent(q)
+    : "https://www.reddit.com/search.json?sort=new&limit=25&q=" + encodeURIComponent(q);
+  const r = await fetch(endpoint, { headers: { "User-Agent": "ChintasMoney-ProspectRadar/1.0 (+https://chintasmoney.com)" } });
+  if (!r.ok) return { error: "search_failed", detail: "Reddit returned " + r.status + ". Try again in a moment." };
+  const j = await r.json();
+  const kids = (j && j.data && j.data.children) || [];
+  const items = kids.map(function (c) {
+    const d = c.data || {};
+    return { platform: "reddit", title: String(d.title || "").slice(0, 200), who: "r/" + (d.subreddit || ""), url: "https://www.reddit.com" + (d.permalink || ""), meta: (d.num_comments || 0) + " comments", created: d.created_utc ? Math.floor(d.created_utc) : 0, snippet: String(d.selftext || "").replace(/\s+/g, " ").slice(0, 220), channelUrl: "" };
+  }).filter(function (x) { return x.title; });
+  return { ok: true, items: items };
+}
+async function prospectsYouTube(q) {
+  const r = await fetch("https://www.youtube.com/results?search_query=" + encodeURIComponent(q + " india trading"), {
+    headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36", "Accept-Language": "en-US,en;q=0.9" },
+  });
+  if (!r.ok) return { error: "search_failed", detail: "YouTube returned " + r.status + "." };
+  const html = await r.text();
+  const data = extractJsonAfter(html, "ytInitialData = ") || extractJsonAfter(html, 'ytInitialData"] = ');
+  if (!data) return { error: "parse_failed", detail: "Couldn't read YouTube results — try again." };
+  const items = []; const seenCh = {};
+  (function walk(o) {
+    if (!o || typeof o !== "object" || items.length >= 24) return;
+    if (o.videoRenderer) {
+      const v = o.videoRenderer;
+      const title = (v.title && v.title.runs && v.title.runs[0] && v.title.runs[0].text) || "";
+      const channel = (v.ownerText && v.ownerText.runs && v.ownerText.runs[0] && v.ownerText.runs[0].text) || "";
+      const chId = (v.ownerText && v.ownerText.runs && v.ownerText.runs[0] && v.ownerText.runs[0].navigationEndpoint && v.ownerText.runs[0].navigationEndpoint.browseEndpoint && v.ownerText.runs[0].navigationEndpoint.browseEndpoint.browseId) || "";
+      const views = (v.shortViewCountText && (v.shortViewCountText.simpleText || (v.shortViewCountText.runs && v.shortViewCountText.runs.map(function (x) { return x.text; }).join("")))) || "";
+      if (v.videoId && title) items.push({ platform: "youtube", title: title.slice(0, 200), who: channel, url: "https://www.youtube.com/watch?v=" + v.videoId, channelUrl: chId ? "https://www.youtube.com/channel/" + chId : "", meta: views, created: 0, snippet: "" });
+    }
+    for (const k in o) walk(o[k]);
+  })(data);
+  return { ok: true, items: items };
+}
 async function handleAdminProspects(request, env) {
   const gate = await requireAdmin(request, env); if (gate.err) return gate.err;
   const url = new URL(request.url);
   const q = (url.searchParams.get("q") || "position sizing").slice(0, 120);
   const sub = (url.searchParams.get("sub") || "").replace(/[^A-Za-z0-9_]/g, "").slice(0, 40);
-  const endpoint = sub
-    ? "https://www.reddit.com/r/" + sub + "/search.json?restrict_sr=1&sort=new&limit=25&q=" + encodeURIComponent(q)
-    : "https://www.reddit.com/search.json?sort=new&limit=25&q=" + encodeURIComponent(q);
-  let items = [];
+  const source = (url.searchParams.get("source") || "reddit").toLowerCase();
   try {
-    const r = await fetch(endpoint, { headers: { "User-Agent": "ChintasMoney-ProspectRadar/1.0 (+https://chintasmoney.com)" } });
-    if (!r.ok) return aRes({ error: "search_failed", detail: "Reddit returned " + r.status + ". Try again in a moment." }, 200);
-    const j = await r.json();
-    const kids = (j && j.data && j.data.children) || [];
-    items = kids.map(function (c) {
-      const d = c.data || {};
-      return {
-        title: String(d.title || "").slice(0, 200),
-        subreddit: d.subreddit || "",
-        author: d.author || "",
-        url: "https://www.reddit.com" + (d.permalink || ""),
-        comments: d.num_comments || 0,
-        created: d.created_utc ? Math.floor(d.created_utc) : 0,
-        snippet: String(d.selftext || "").replace(/\s+/g, " ").slice(0, 220),
-      };
-    }).filter(function (x) { return x.title; });
-  } catch (e) { return aRes({ error: "search_error", detail: "Couldn't reach Reddit right now." }, 200); }
-  return aRes({ ok: true, items: items }, 200);
+    const out = source === "youtube" ? await prospectsYouTube(q) : await prospectsReddit(q, sub);
+    return aRes(out, 200);
+  } catch (e) { return aRes({ error: "search_error", detail: "Couldn't reach that source right now." }, 200); }
 }
 
 // Admin email broadcast (marketing to your own users / opted-in leads).

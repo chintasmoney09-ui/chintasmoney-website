@@ -992,20 +992,30 @@
 
       // ===== PROSPECT RADAR — live search of real people asking right now =====
       v.appendChild(el('<h3 style="margin:0 0 6px">🔴 Prospect Radar <span style="font-size:.7rem;color:#dc2626;font-weight:800;vertical-align:middle">LIVE</span></h3>'));
-      v.appendChild(el('<div class="cm-note" style="margin-bottom:12px">Your unfair advantage. This searches public Reddit <b>in real time</b> for people asking about risk, sizing and discipline <b>right now</b> — warm prospects you can help this minute. Reply with genuine value + your free tool link, and they come to you.</div>'));
+      v.appendChild(el('<div class="cm-note" style="margin-bottom:12px">Your unfair advantage. Search public <b>Reddit</b> for people asking about risk/discipline right now, or <b>YouTube</b> to find Indian trading creators to partner with. Save anyone straight into your tracker with <b>＋ Track</b>.</div>'));
       var radar = el('<div class="cm-card" style="padding:14px;margin-bottom:10px;display:grid;gap:8px"></div>');
+      // Source toggle
+      var RADAR_SRC = "reddit";
+      var srcRow = el('<div style="display:flex;gap:6px"></div>');
+      var bReddit = el('<button type="button" class="cm-btn sm">💬 Reddit — conversations</button>');
+      var bYt = el('<button type="button" class="cm-btn sm ghost">▶️ YouTube — creators</button>');
+      function setSrc(s) { RADAR_SRC = s; bReddit.className = "cm-btn sm" + (s === "reddit" ? "" : " ghost"); bYt.className = "cm-btn sm" + (s === "youtube" ? "" : " ghost"); subIn.style.display = s === "reddit" ? "" : "none"; qIn.value = s === "youtube" ? "trading psychology" : "how much to risk per trade"; setChips(s); }
+      bReddit.addEventListener("click", function () { setSrc("reddit"); }); bYt.addEventListener("click", function () { setSrc("youtube"); });
+      srcRow.appendChild(bReddit); srcRow.appendChild(bYt);
+      radar.appendChild(srcRow);
       var qIn = el('<input placeholder="What are they asking about?" value="how much to risk per trade" style="' + IN2 + '"/>');
       var subIn = el('<input placeholder="Subreddit (optional, e.g. IndianStockMarket)" style="' + IN2 + '"/>');
       var chips = el('<div style="display:flex;gap:6px;flex-wrap:wrap"></div>');
-      ["how much to risk per trade", "revenge trading", "blew my account", "position sizing", "trading discipline", "keep losing money", "stop loss hunting", "overtrading"].forEach(function (q) {
-        var c = el('<button type="button" class="cm-btn sm ghost" style="font-size:.78rem">' + esc(q) + '</button>');
-        c.addEventListener("click", function () { qIn.value = q; runRadar(); });
-        chips.appendChild(c);
-      });
+      var CHIPS = {
+        reddit: ["how much to risk per trade", "revenge trading", "blew my account", "position sizing", "trading discipline", "keep losing money", "overtrading"],
+        youtube: ["trading psychology", "how to stop revenge trading", "risk management india", "intraday discipline", "why traders lose money", "trading journal"]
+      };
+      function setChips(s) { chips.innerHTML = ""; CHIPS[s].forEach(function (q) { var c = el('<button type="button" class="cm-btn sm ghost" style="font-size:.78rem">' + esc(q) + '</button>'); c.addEventListener("click", function () { qIn.value = q; runRadar(); }); chips.appendChild(c); }); }
       var goBtn = el('<button class="cm-btn" style="justify-self:start">🔍 Find prospects now</button>');
       var results = el('<div style="display:grid;gap:8px;margin-top:6px"></div>');
       radar.appendChild(qIn); radar.appendChild(subIn); radar.appendChild(chips); radar.appendChild(goBtn); radar.appendChild(results);
       v.appendChild(radar);
+      setChips("reddit");
 
       function timeAgo(sec) {
         if (!sec) return "";
@@ -1015,26 +1025,38 @@
         return Math.floor(s / 86400) + "d ago";
       }
       var REPLY = "The mistake most people make isn't picking the wrong stock — it's sizing too big. Risk a fixed 1–2% per trade so no single loss hurts. I built a free calculator that does the math for you: chintasmoney.com/position-size-calculator — no signup needed.";
+      var DM = "Hi [name], love your content on trading. I built ChintasMoney — it scores how disciplined a trader actually is (a Discipline Score), not tips. I'd love to give your audience a free tool and set you up with an affiliate commission on anyone who upgrades. Worth a quick chat?";
       function runRadar() {
         results.innerHTML = "";
         results.appendChild(el('<div style="color:#64748b;font-size:.9rem;padding:6px">Searching live…</div>'));
-        var url = "/api/admin/prospects?q=" + encodeURIComponent(qIn.value.trim() || "position sizing") + (subIn.value.trim() ? "&sub=" + encodeURIComponent(subIn.value.trim()) : "");
+        var url = "/api/admin/prospects?source=" + RADAR_SRC + "&q=" + encodeURIComponent(qIn.value.trim() || "position sizing") + (RADAR_SRC === "reddit" && subIn.value.trim() ? "&sub=" + encodeURIComponent(subIn.value.trim()) : "");
         fetch(url, { headers: { Authorization: "Bearer " + token() } })
           .then(function (r) { return r.json().catch(function () { return {}; }); })
           .then(function (d) {
             results.innerHTML = "";
             if (!d || d.error || !d.items) { results.appendChild(el('<div class="cm-note">Couldn\'t search right now' + (d && d.detail ? " (" + esc(d.detail) + ")" : "") + '. Try again in a moment.</div>')); return; }
-            if (!d.items.length) { results.appendChild(el('<div class="cm-note">No fresh posts for that. Try another phrase or a broader term.</div>')); return; }
+            if (!d.items.length) { results.appendChild(el('<div class="cm-note">No results for that. Try another phrase.</div>')); return; }
             d.items.forEach(function (it) {
+              var yt = it.platform === "youtube";
               var card = el('<div style="border:1px solid #eef2f7;border-radius:10px;padding:11px 12px"></div>');
-              card.appendChild(el('<div style="font-size:.72rem;color:#64748b;font-weight:700">r/' + esc(it.subreddit) + ' · ' + esc(timeAgo(it.created)) + ' · ' + it.comments + ' comments</div>'));
+              var metaLine = (yt ? "▶️ " : "") + esc(it.who || "") + (it.created ? " · " + esc(timeAgo(it.created)) : "") + (it.meta ? " · " + esc(it.meta) : "");
+              card.appendChild(el('<div style="font-size:.72rem;color:#64748b;font-weight:700">' + metaLine + '</div>'));
               card.appendChild(el('<div style="font-weight:700;color:#0f172a;margin:3px 0">' + esc(it.title) + '</div>'));
               if (it.snippet) card.appendChild(el('<div style="font-size:.83rem;color:#64748b;margin-bottom:6px">' + esc(it.snippet) + '…</div>'));
               var row = el('<div style="display:flex;gap:8px;flex-wrap:wrap"></div>');
-              var open = el('<a class="cm-btn sm" href="' + esc(it.url) + '" target="_blank" rel="noopener">Open thread ↗</a>');
-              var cp = el('<button class="cm-btn sm ghost">📋 Copy reply</button>');
-              cp.addEventListener("click", function () { if (navigator.clipboard) { navigator.clipboard.writeText(REPLY); cp.textContent = "✓ Copied"; setTimeout(function () { cp.textContent = "📋 Copy reply"; }, 1500); } else alert(REPLY); });
-              row.appendChild(open); row.appendChild(cp); card.appendChild(row);
+              row.appendChild(el('<a class="cm-btn sm" href="' + esc(it.url) + '" target="_blank" rel="noopener">' + (yt ? "Watch ↗" : "Open thread ↗") + '</a>'));
+              if (yt && it.channelUrl) row.appendChild(el('<a class="cm-btn sm ghost" href="' + esc(it.channelUrl) + '" target="_blank" rel="noopener">Channel ↗</a>'));
+              var cp = el('<button class="cm-btn sm ghost">📋 ' + (yt ? "Copy DM" : "Copy reply") + '</button>');
+              cp.addEventListener("click", function () { var txt = yt ? DM : REPLY; if (navigator.clipboard) { navigator.clipboard.writeText(txt); cp.textContent = "✓ Copied"; setTimeout(function () { cp.textContent = "📋 " + (yt ? "Copy DM" : "Copy reply"); }, 1500); } else alert(txt); });
+              row.appendChild(cp);
+              var track = el('<button class="cm-btn sm" style="background:#16a34a;color:#fff">＋ Track</button>');
+              track.addEventListener("click", function () {
+                var who = (yt ? it.who : it.who) + (yt ? " (YouTube)" : "");
+                var p = prospects(); p.unshift({ who: who || it.title, note: it.title + " — " + it.url, status: "to-contact", date: new Date().toISOString().slice(0, 10) });
+                saveProspects(p); track.textContent = "✓ Tracked"; track.disabled = true; renderTracker && renderTracker();
+              });
+              row.appendChild(track);
+              card.appendChild(row);
               results.appendChild(card);
             });
           })
@@ -1119,15 +1141,27 @@
       add.addEventListener("click", function () {
         var w = who.value.trim(); if (!w) { who.focus(); return; }
         var p = prospects(); p.unshift({ who: w, note: note.value.trim(), status: stsel.value, date: new Date().toISOString().slice(0, 10) });
-        saveProspects(p); who.value = ""; note.value = ""; render();
+        saveProspects(p); who.value = ""; note.value = ""; renderTracker();
       });
       form.appendChild(who); form.appendChild(note); form.appendChild(stsel); form.appendChild(add);
       v.appendChild(form);
 
-      var list = prospects();
-      if (!list.length) {
-        v.appendChild(el('<div class="cm-note">No prospects logged yet. Add your first outreach above.</div>'));
-      } else {
+      var trkBar = el('<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"></div>');
+      var trkCount = el('<span style="font-size:.82rem;color:#64748b;font-weight:700"></span>');
+      var trkCsv = el('<button class="cm-btn sm ghost">⬇ Export CSV</button>');
+      trkCsv.addEventListener("click", function () {
+        var rows = [["who", "note", "status", "date"]].concat(prospects().map(function (p) { return [p.who || "", (p.note || "").replace(/[\r\n,]+/g, " "), p.status || "", p.date || ""]; }));
+        var csv = rows.map(function (r) { return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(","); }).join("\n");
+        var a = document.createElement("a"); a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv); a.download = "chintasmoney-prospects.csv"; a.click();
+      });
+      trkBar.appendChild(trkCount); trkBar.appendChild(trkCsv);
+      v.appendChild(trkBar);
+      var trackerWrap = el('<div></div>'); v.appendChild(trackerWrap);
+      function renderTracker() {
+        var list = prospects();
+        trkCount.textContent = list.length + " prospect" + (list.length === 1 ? "" : "s");
+        trackerWrap.innerHTML = "";
+        if (!list.length) { trackerWrap.appendChild(el('<div class="cm-note">No prospects yet. Use ＋ Track on a result above, or add one manually.</div>')); return; }
         var STL = { "to-contact": ["To contact", "#64748b"], contacted: ["Contacted", "#2563eb"], replied: ["Replied", "#d97706"], partner: ["Partner 🎉", "#16a34a"] };
         var tbl = el('<div class="cm-card" style="padding:0;overflow:auto"></div>');
         var t = el('<table style="width:100%;border-collapse:collapse"></table>');
@@ -1138,15 +1172,20 @@
           var tr = el('<tr></tr>');
           tr.appendChild(el('<td style="padding:9px 12px;border-top:1px solid #eef2f7">' + esc(p.who) + '</td>'));
           tr.appendChild(el('<td style="padding:9px 12px;border-top:1px solid #eef2f7;color:#64748b">' + esc(p.note || "") + '</td>'));
-          tr.appendChild(el('<td style="padding:9px 12px;border-top:1px solid #eef2f7"><span style="color:' + st[1] + ';font-weight:700;font-size:.85rem">' + st[0] + '</span></td>'));
+          var stTd = el('<td style="padding:9px 12px;border-top:1px solid #eef2f7"></td>');
+          var stSel = el('<select style="padding:5px 8px;background:#fff;color:' + st[1] + ';border:1px solid #e2e8f0;border-radius:8px;font-weight:700;font-size:.8rem;font-family:inherit"><option value="to-contact">To contact</option><option value="contacted">Contacted</option><option value="replied">Replied</option><option value="partner">Partner 🎉</option></select>');
+          stSel.value = p.status || "to-contact";
+          stSel.addEventListener("change", function () { var pl = prospects(); if (pl[idx]) { pl[idx].status = stSel.value; saveProspects(pl); renderTracker(); } });
+          stTd.appendChild(stSel); tr.appendChild(stTd);
           tr.appendChild(el('<td style="padding:9px 12px;border-top:1px solid #eef2f7;color:#64748b">' + esc(p.date || "") + '</td>'));
           var del = el('<button class="cm-btn sm ghost" title="Remove">✕</button>');
-          del.addEventListener("click", function () { var pl = prospects(); pl.splice(idx, 1); saveProspects(pl); render(); });
+          del.addEventListener("click", function () { var pl = prospects(); pl.splice(idx, 1); saveProspects(pl); renderTracker(); });
           var tdd = el('<td style="padding:9px 12px;border-top:1px solid #eef2f7"></td>'); tdd.appendChild(del); tr.appendChild(tdd);
           tb.appendChild(tr);
         });
-        t.appendChild(tb); tbl.appendChild(t); v.appendChild(tbl);
+        t.appendChild(tb); tbl.appendChild(t); trackerWrap.appendChild(tbl);
       }
+      renderTracker();
 
       v.appendChild(el('<div class="cm-note" style="margin-top:14px;background:#dcfce7;border-color:#bbf7d0">✅ <b>This is how you find clients without getting banned.</b> Every place above is where your buyers already are. Show up with value 3–4x a week, drop your free tool, and watch the Leads tab fill up.</div>'));
       return v;
