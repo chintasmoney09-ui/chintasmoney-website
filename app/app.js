@@ -3252,24 +3252,45 @@
       tbtn.addEventListener("click", function () { CM.setProfile({ plan: "pro", trialEndsAt: new Date(Date.now() + 7 * 86400000).toISOString() }); render(); });
       tb.appendChild(tbtn); v.appendChild(tb);
     }
-    var plans = el('<div class="plans"></div>');
+    // Plans — one horizontal swipe row of boxed cards. Price/trades/tokens all
+    // come from CM.PLANS, so admin-panel price changes reflect here live.
+    v.appendChild(el('<div style="display:flex;justify-content:space-between;align-items:baseline;margin:18px 2px 6px"><h2 style="font-size:1.15rem;margin:0">Plans</h2><span class="hint">swipe to compare →</span></div>'));
+    var SPEC = {
+      free: { trades: "15 / month", tokens: "5 free (once)" },
+      plus: { trades: "Unlimited", tokens: "50 / month" },
+      pro: { trades: "Unlimited", tokens: "Unlimited" },
+      diamond: { trades: "Unlimited", tokens: "Unlimited" }
+    };
+    var BADGEF = { plus: "plus", pro: "platinum", diamond: "diamond" };
+    var RANKP = { free: 0, plus: 1, pro: 2, diamond: 3 };
+    var plans = el('<div class="plan-slider" style="display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:4px 2px 14px;margin:0 -2px"></div>');
     Object.keys(CM.PLANS).forEach(function (id) {
-      var p = CM.PLANS[id], cur = s.profile.plan === id;
-      var card = el('<div class="plan' + (id === "plus" ? " feat" : "") + '">' + (id === "plus" ? '<span class="badge b-green" style="align-self:flex-start;margin-bottom:8px">Most popular</span>' : '') +
-        '<h3>' + p.name + '</h3><div class="amt">' + (p.price ? "₹" + p.price : "Free") + '<span class="hint" style="font-size:.9rem;font-weight:500">' + (p.price ? "/" + p.cadence : "") + '</span></div><p class="hint">' + p.blurb + '</p>' +
-        '<ul>' + p.features.slice(0, 7).map(function (f) { return '<li>' + esc(featLabel(f)) + '</li>'; }).join("") + '</ul></div>');
+      var p = CM.PLANS[id], cur = s.profile.plan === id, bf = BADGEF[id], sp = SPEC[id] || { trades: "—", tokens: "—" };
+      var accent = cur ? "var(--emerald)" : (id === "pro" ? "var(--violet)" : "var(--line)");
+      var card = el('<div style="scroll-snap-align:start;flex:0 0 84%;max-width:300px;box-sizing:border-box;border:1.5px solid ' + accent + ';border-radius:16px;padding:16px;background:var(--bg-2);display:flex;flex-direction:column"></div>');
+      var tag = cur ? '<span class="badge b-green" style="align-self:flex-start;margin-bottom:6px">✓ Your plan</span>' : (id === "pro" ? '<span class="badge b-navy" style="align-self:flex-start;margin-bottom:6px">Most popular</span>' : "");
+      var headHtml = tag +
+        '<div style="display:flex;align-items:center;gap:10px">' +
+        (bf ? '<img src="/assets/badge-' + bf + '.png" alt="" style="width:38px;height:38px"/>' : '<div style="font-size:1.8rem">🆓</div>') +
+        '<div><div style="font-weight:800;font-size:1.15rem;color:var(--ink)">' + esc(p.name) + '</div>' +
+        '<div class="hint" style="font-size:.8rem">' + esc(p.blurb) + '</div></div></div>' +
+        '<div style="margin:10px 0 4px"><span style="font-size:1.7rem;font-weight:800;color:var(--ink)">' + (p.price ? "₹" + p.price : "Free") + '</span><span class="hint"> ' + (p.price ? "/ " + p.cadence : "forever") + '</span></div>';
+      card.appendChild(el('<div>' + headHtml + '</div>'));
+      // Headline specs
+      card.appendChild(el('<div style="display:flex;gap:8px;margin:8px 0 10px">' +
+        '<div style="flex:1;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center"><div style="font-size:.65rem;color:var(--muted)">📝 Trades</div><div style="font-weight:800;font-size:.82rem;color:var(--ink)">' + sp.trades.replace("Unlimited", "∞") + '</div></div>' +
+        '<div style="flex:1;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center"><div style="font-size:.65rem;color:var(--muted)">🎟️ Tokens</div><div style="font-weight:800;font-size:.82rem;color:var(--ink)">' + sp.tokens.replace("Unlimited", "∞").replace(" / month", "/mo").replace(" free (once)", " free") + '</div></div>' +
+        '</div>'));
+      card.appendChild(el('<ul style="list-style:none;padding:0;margin:0 0 12px;display:grid;gap:5px;flex:1">' +
+        p.features.map(function (f) { return '<li style="font-size:.82rem;color:var(--ink-soft)"><span style="color:var(--emerald);font-weight:800">✓</span> ' + esc(featLabel(f)) + '</li>'; }).join("") + '</ul>'));
       var payMode = window.CM_CONFIG && window.CM_CONFIG.cloud && window.CM_CONFIG.razorpayKeyId && id !== "free";
-      var RANKP = { free: 0, plus: 1, pro: 2, diamond: 3 };
       var lower = RANKP[id] < RANKP[s.profile.plan];
-      var priceR = p.price || Math.round((window.CM_CONFIG.planPrices[id] || 0) / 100);
-      var label = cur ? "✓ Current plan" : (id === "free" ? "Switch to Free" : (lower ? "Downgrade to " + p.name : (payMode ? "Upgrade · ₹" + priceR : "Switch to " + p.name)));
-      var b = el('<button class="btn ' + (cur ? "" : (lower ? "btn-ghost" : "btn-primary")) + '"' + (cur ? " disabled" : "") + '>' + label + '</button>');
+      var label = cur ? "✓ Current plan" : (lower ? "Downgrade to " + p.name : (id === "free" ? "Switch to Free" : (payMode ? "Upgrade · ₹" + p.price : "Choose " + p.name)));
+      var b = el('<button class="btn ' + (cur ? "" : (lower ? "btn-ghost" : "btn-primary")) + '" style="width:100%;justify-content:center"' + (cur ? " disabled" : "") + '>' + label + '</button>');
       b.addEventListener("click", function () {
         if (cur) return;
-        if (payMode) {
-          // Reuse the guarded buy flow (handles same-plan / downgrade confirmations).
-          signInThen(function () { buyTokens(0, p.price); });
-        } else { CM.setProfile({ plan: id }); render(); }
+        if (payMode) { signInThen(function () { buyTokens(0, p.price); }); }
+        else { CM.setProfile({ plan: id }); render(); }
       });
       card.appendChild(b); plans.appendChild(card);
     });
