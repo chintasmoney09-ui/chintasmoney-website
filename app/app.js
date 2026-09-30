@@ -598,19 +598,23 @@
     out += POPULAR_SYMS.filter(function (s) { return !counts[s]; }).map(function (s) { return '<option value="' + s + '"></option>'; }).join("");
     return out;
   }
-  // F&O lot sizes (SEBI revises these periodically — reasonable current defaults).
+  // F&O lot sizes — current NSE/BSE index contract sizes (2026 series).
+  // NSE revises these periodically; keep in sync with the exchange circulars.
   function lotFor(s) {
     s = (s || "").toUpperCase();
-    if (/MIDCPNIFTY/.test(s)) return 120;
-    if (/FINNIFTY/.test(s)) return 65;
-    if (/BANKNIFTY/.test(s)) return 35;
-    if (/NIFTYNXT50/.test(s)) return 25;
-    if (/SENSEX/.test(s)) return 20;
-    if (/BANKEX/.test(s)) return 30;
-    if (/NIFTY/.test(s)) return 75;
+    if (/MIDCPNIFTY/.test(s)) return 120;   // Nifty Midcap Select
+    if (/FINNIFTY/.test(s)) return 60;      // Nifty Financial Services
+    if (/BANKNIFTY/.test(s)) return 30;     // Nifty Bank
+    if (/NIFTYNXT50/.test(s)) return 25;    // Nifty Next 50
+    if (/SENSEX/.test(s)) return 20;        // BSE Sensex
+    if (/BANKEX/.test(s)) return 30;        // BSE Bankex
+    if (/NIFTY/.test(s)) return 65;         // Nifty 50
     return null;
   }
-  var LOT_VALUES = [120, 75, 65, 35, 30, 25, 20];
+  // Values lotFor can emit — used to decide whether an auto-filled Qty may be
+  // safely overwritten when the symbol changes. Include past sizes too so an
+  // older auto-filled value is still recognised as "a lot" and refreshed.
+  var LOT_VALUES = [140, 120, 75, 65, 60, 50, 40, 35, 30, 25, 20, 15];
   function isLotValue(v) { return LOT_VALUES.indexOf(+v) >= 0; }
   function marketOptions(sel) {
     return MARKET_GROUPS.map(function (g) {
