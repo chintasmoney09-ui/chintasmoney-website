@@ -321,13 +321,42 @@
       ["Priority AI + monthly 1:1 review", "—", "—", "—", "✓"],
       ["Multi-year backtesting", "—", "—", "—", "✓"]
     ];
-    var cols = [["free", "Free"], ["plus", "Go Plus"], ["pro", "Platinum"], ["diamond", "Diamond"]];
-    function cell(v) { return v === "✓" ? '<span style="color:var(--emerald);font-weight:800">✓</span>' : v === "—" ? '<span class="muted">—</span>' : esc(v); }
-    var head = '<tr><th style="text-align:left">Feature</th>' + cols.map(function (c) { return '<th class="num"' + (c[0] === highlight ? ' style="color:var(--violet)"' : '') + '>' + c[1] + '</th>'; }).join("") + '</tr>';
-    var body = rows.map(function (r) {
-      return '<tr><td>' + esc(r[0]) + '</td>' + r.slice(1).map(function (v, i) { return '<td class="num"' + (cols[i][0] === highlight ? ' style="background:rgba(139,92,246,.06)"' : '') + '>' + cell(v) + '</td>'; }).join("") + '</tr>';
-    }).join("");
-    var card = el('<div class="card" style="overflow-x:auto;margin-top:16px"><div class="card-hd"><h3>Compare plans</h3><span class="hint">what each plan unlocks</span></div><table class="tbl" style="min-width:520px"><thead>' + head + '</thead><tbody>' + body + '</tbody></table></div>');
+    var cols = [["free", "Free", ""], ["plus", "Go Plus", "199"], ["pro", "Platinum", "499"], ["diamond", "Diamond", "999"]];
+    var ids = cols.map(function (c) { return c[0]; });
+    var sel = highlight && ids.indexOf(highlight) >= 0 ? highlight : "plus";
+    var card = el('<div class="card" style="margin-top:16px"></div>');
+    card.appendChild(el('<div class="card-hd"><h3>Compare plans</h3><span class="hint">tap a plan to see what it unlocks</span></div>'));
+    // Plan selector chips (scrollable row, never overflows the screen).
+    var chipRow = el('<div style="display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;-webkit-overflow-scrolling:touch"></div>');
+    var body = el('<div></div>');
+    function badgeFile(id) { return id === "pro" ? "platinum" : (id === "diamond" ? "diamond" : (id === "plus" ? "plus" : "")); }
+    function draw() {
+      // chips
+      chipRow.innerHTML = "";
+      cols.forEach(function (c) {
+        var on = c[0] === sel;
+        var chip = el('<button class="btn btn-sm' + (on ? " btn-primary" : "") + '" style="white-space:nowrap;flex:0 0 auto">' + c[1] + (c[2] ? ' · ₹' + c[2] : "") + '</button>');
+        chip.addEventListener("click", function () { sel = c[0]; draw(); });
+        chipRow.appendChild(chip);
+      });
+      // selected plan card body
+      var ci = ids.indexOf(sel);
+      body.innerHTML = "";
+      var bf = badgeFile(sel);
+      var head = el('<div style="display:flex;align-items:center;gap:12px;padding:6px 2px 12px">' +
+        (bf ? '<img src="/assets/badge-' + bf + '.png" alt="" style="width:54px;height:54px;flex:0 0 auto"/>' : '<div style="font-size:2rem">🆓</div>') +
+        '<div><div style="font-weight:800;font-size:1.1rem;color:var(--ink)">' + esc(cols[ci][1]) + '</div>' +
+        '<div class="hint">' + (cols[ci][2] ? "₹" + cols[ci][2] + "/month" : "Free forever") + (sel === highlight ? ' · <span style="color:var(--emerald);font-weight:700">your plan</span>' : "") + '</div></div></div>');
+      body.appendChild(head);
+      rows.forEach(function (r) {
+        var v = r[ci + 1];
+        var val = v === "✓" ? '<span style="color:var(--emerald);font-weight:800">✓ Included</span>'
+          : v === "—" ? '<span class="muted">—</span>' : '<b style="color:var(--ink)">' + esc(v) + '</b>';
+        var dim = v === "—" ? "opacity:.55;" : "";
+        body.appendChild(el('<div style="display:flex;justify-content:space-between;gap:12px;padding:9px 2px;border-bottom:1px solid var(--line);' + dim + '"><span>' + esc(r[0]) + '</span><span style="text-align:right;white-space:nowrap">' + val + '</span></div>'));
+      });
+    }
+    card.appendChild(chipRow); card.appendChild(body); draw();
     return card;
   }
 
