@@ -195,33 +195,31 @@ function productDesc(product) {
 function planFeatureLines(plan) {
   const F = {
     plus: [
-      "✅ Unlimited trades logged (Free is capped at 15/month)",
+      "🎟️ 300 tokens every month (~10 trade logs) + a free 30-token daily bonus",
       "✅ Unlimited journal history",
-      "🎟️ 50 AI analysis tokens every month",
       "💸 Money Leak Report — where your money quietly bleeds",
       "🔍 Full mistake analysis",
-      "🧭 AI Discipline Coach",
-      "🕐 Time & Day edge",
-      "🔥 Streaks & badges",
+      "🔥 Streaks & badges + Pro shareable card",
     ],
     pro: [
       "✅ Everything in Go Plus",
-      "🎟️ UNLIMITED AI analysis tokens & Trade Replays",
+      "🎟️ 600 tokens every month (~20 trade logs)",
+      "🕐 Time & Day edge",
       "📊 Setup / strategy performance",
       "🎓 Trade Grades (A–F on every trade)",
       "📐 Edge & Expectancy",
       "📏 Rules & Adherence tracking",
+      "🎬 Trade Replay on real charts",
       "📥 Broker CSV import/export",
-      "📧 Weekly email report",
-      "📅 Monthly deep-dive report",
+      "📧 Weekly email + monthly deep-dive report",
     ],
     diamond: [
       "✅ Everything in Platinum",
-      "🔮 What-If Simulator",
-      "📖 Personal Trading Playbook",
+      "🎟️ 1500 tokens every month (~50 trade logs)",
+      "🤖 AI Discipline Coach — available only on Diamond",
+      "🔮 What-If Simulator + 📖 Personal Trading Playbook",
       "👑 Priority AI + a monthly 1:1 discipline review",
-      "🗄️ Multi-year backtesting",
-      "🚀 Early access to new tools",
+      "🗄️ Multi-year backtesting + 🚀 early access",
     ],
   };
   return F[plan] || null;
