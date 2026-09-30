@@ -384,6 +384,29 @@ a.card:hover::after,.bento .card:hover::after{left:140%}
 .plan-limit b{color:var(--green)}
 .tier-diamond{border-color:rgba(245,184,73,.45);background:linear-gradient(180deg,rgba(245,184,73,.06),var(--panel))}
 .tier-platinum{border-color:rgba(25,211,197,.5)}
+/* Full plan comparison table — matches the in-app "Compare plans" grid so the
+   website shows exactly what every plan includes (all 4 fit on a phone). */
+.cmp-wrap{margin:34px auto 0;max-width:920px}
+.cmp-wrap h3{text-align:center;font-size:1.15rem;margin:0 0 4px}
+.cmp-wrap .cmp-note{text-align:center;color:var(--muted);font-size:.82rem;margin:0 0 14px}
+.cmp{width:100%;border-collapse:collapse;table-layout:fixed;background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.cmp col.c-feat{width:40%}.cmp col.c-plan{width:15%}
+.cmp th,.cmp td{border-top:1px solid var(--line);padding:9px 6px;font-size:.82rem;vertical-align:middle}
+.cmp thead th{border-top:0;text-align:center;font-weight:800;color:var(--ink);background:var(--bg)}
+.cmp thead th .pn{display:block;font-size:.9rem}
+.cmp thead th .pp{display:block;font-size:.75rem;color:var(--muted);font-weight:700}
+.cmp thead th.hot{color:var(--teal)}
+.cmp tbody td:first-child,.cmp tbody th:first-child{text-align:left;color:var(--ink-soft);font-weight:600}
+.cmp tbody td{text-align:center;color:var(--ink)}
+.cmp .yes{color:var(--green);font-weight:800}
+.cmp .no{color:var(--muted);opacity:.5}
+.cmp tbody tr:nth-child(even){background:rgba(255,255,255,.015)}
+.cmp .col-hot{background:rgba(25,211,197,.06)}
+@media(max-width:560px){
+  .cmp th,.cmp td{padding:7px 3px;font-size:.7rem}
+  .cmp thead th .pn{font-size:.74rem}.cmp thead th .pp{font-size:.62rem}
+  .cmp col.c-feat{width:34%}.cmp col.c-plan{width:16.5%}
+}
 /* token recharge strip */
 .token-strip{margin-top:26px;display:flex;flex-wrap:wrap;gap:14px 20px;justify-content:space-between;align-items:center;
   background:linear-gradient(100deg,rgba(34,224,138,.06),rgba(245,184,73,.06));border:1px solid var(--line);border-radius:16px;padding:16px 20px}

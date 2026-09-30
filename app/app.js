@@ -205,9 +205,9 @@
     // Analysis-token counter — visible in every section so people always see
     // how many analyses they have left (and can top up).
     var tks = CM.tokenState();
-    var tpill = el('<a class="side-tokens' + (tks.unlimited ? "" : (tks.total <= 0 ? " empty" : tks.total <= 2 ? " low" : "")) + '" href="#/tokens">' +
-      '<span>🎟️ <b>' + (tks.unlimited ? "∞" : tks.total) + '</b> analys' + (!tks.unlimited && tks.total === 1 ? "is" : "es") + ' left</span>' +
-      '<span class="st-cta">' + (tks.unlimited ? "Unlimited ✓" : (tks.total <= 0 ? "Top up →" : "Get more →")) + '</span></a>');
+    var tpill = el('<a class="side-tokens' + (tks.total <= 0 ? " empty" : tks.total < 30 ? " low" : "") + '" href="#/tokens">' +
+      '<span>🎟️ <b>' + tks.total + '</b> tokens left</span>' +
+      '<span class="st-cta">' + (tks.total <= 0 ? "Top up →" : "Get more →") + '</span></a>');
     tpill.addEventListener("click", function () { mobileOpen = false; });
     side.appendChild(tpill);
 
@@ -279,8 +279,10 @@
 
   // Human-friendly labels for every plan feature key (store.js uses slugs).
   var FEATURE_LABELS = {
-    "log-trades": "Log your trades", "discipline-score": "Discipline Score", "trader-personality": "Trader Personality",
-    "last-30-days": "Last 30 days of history", "basic-mistakes": "Basic mistake spotting",
+    "log-trades": "Log your trades", "log-trades-3": "Log 3 trades / month (90 tokens)", "discipline-score": "Discipline Score", "trader-personality": "Trader Personality",
+    "last-30-days": "Last 30 days of history", "basic-mistakes": "Basic mistake spotting", "free-calculators": "Free risk & position calculators",
+    "tokens-300": "300 tokens / month (~10 trade logs)", "tokens-600": "600 tokens / month (~20 trade logs)", "tokens-1500": "1500 tokens / month (~50 trade logs)",
+    "trade-replay": "🎬 Trade Replay on real charts",
     "everything-free": "Everything in Free", "unlimited-history": "Unlimited trade history",
     "full-mistake-analysis": "Full mistake analysis", "setup-and-time-insights": "Setup & time-of-day insights",
     "streaks-and-badges": "Streaks & badges", "ai-discipline-coach": "AI Discipline Coach", "pro-shareable-card": "Pro shareable card",
@@ -300,24 +302,27 @@
   // Crystal-clear "what each plan gives" comparison table.
   function planComparison(highlight) {
     var rows = [
-      ["Trades you can log", "15 / month", "Unlimited", "Unlimited", "Unlimited"],
+      ["🎟️ Tokens / month", "90", "300", "600", "1500"],
+      ["Trades you can log /mo", "3", "10", "20", "50"],
+      ["Free daily bonus (30 tok)", "✓", "✓", "✓", "✓"],
       ["Journal history", "30 days", "Unlimited", "Unlimited", "Unlimited"],
       ["Discipline Score & personality", "✓", "✓", "✓", "✓"],
+      ["Free calculators", "✓", "✓", "✓", "✓"],
       ["Full mistake analysis", "—", "✓", "✓", "✓"],
-      ["AI Discipline Coach", "—", "✓", "✓", "✓"],
-      ["AI analysis tokens", "5 free (once)", "50 / month", "Unlimited", "Unlimited"],
-      ["Trade Replay", "5 free (once)", "50 / month", "Unlimited", "Unlimited"],
-      ["Time & Day Edge", "—", "✓", "✓", "✓"],
       ["💸 Money Leak Report", "—", "✓", "✓", "✓"],
+      ["Streaks & badges", "—", "✓", "✓", "✓"],
+      ["Time & Day Edge", "—", "—", "✓", "✓"],
       ["Setup performance", "—", "—", "✓", "✓"],
-      ["📏 Rules & Adherence", "—", "—", "✓", "✓"],
       ["🎓 Trade Grades (A–F)", "—", "—", "✓", "✓"],
       ["📐 Edge & Expectancy", "—", "—", "✓", "✓"],
+      ["📏 Rules & Adherence", "—", "—", "✓", "✓"],
+      ["🎬 Trade Replay", "—", "—", "✓", "✓"],
       ["Broker CSV import", "—", "—", "✓", "✓"],
       ["Weekly email report", "—", "—", "✓", "✓"],
+      ["📅 Monthly deep-dive report", "—", "—", "✓", "✓"],
+      ["🤖 AI Discipline Coach", "—", "—", "—", "✓"],
       ["🔮 What-If Simulator", "—", "—", "—", "✓"],
       ["📖 Personal Trading Playbook", "—", "—", "—", "✓"],
-      ["📅 Monthly deep-dive report", "—", "—", "✓", "✓"],
       ["Priority AI + monthly 1:1 review", "—", "—", "—", "✓"],
       ["Multi-year backtesting", "—", "—", "—", "✓"]
     ];
@@ -1315,30 +1320,24 @@
       preview.hidden = !show;
     }
     ["#side", "#qty", "#entry", "#exit", "#sl", "#xr", "#emo"].forEach(function (id) { c.querySelector(id).addEventListener("input", updatePreview); c.querySelector(id).addEventListener("change", updatePreview); });
-    // Free-plan monthly quota indicator
-    var q0 = CM.quota();
-    if (q0.limit !== Infinity) {
-      var pctUsed = Math.min(100, Math.round(q0.used / q0.limit * 100));
-      c.appendChild(el('<div class="quota-note' + (q0.remaining <= 3 ? " low" : "") + '">' +
-        '<div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:6px"><span>Free logs this month</span><b>' + q0.used + ' / ' + q0.limit + '</b></div>' +
-        '<div class="quota-bar"><i style="width:' + pctUsed + '%"></i></div>' +
-        (q0.remaining <= 3 ? '<div style="font-size:.78rem;margin-top:6px;color:var(--gold)">' + (q0.remaining > 0 ? q0.remaining + ' free logs left — upgrade for unlimited.' : "You've used all free logs this month.") + '</div>' : '') +
-        '</div>'));
-    }
+    // Token cost indicator — logging a trade spends tokens (the paid model).
+    var ts0 = CM.tokenState(), logCost = CM.logCost();
+    c.appendChild(el('<div class="quota-note' + (ts0.total < logCost ? " low" : "") + '">' +
+      '<div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:2px"><span>🎟️ Logging a trade costs <b>' + logCost + ' tokens</b></span><b>' + ts0.total + ' left</b></div>' +
+      '<div style="font-size:.75rem;color:var(--muted)">Daily bonus ' + ts0.bonus + ' · plan ' + ts0.monthly + ' · wallet ' + ts0.wallet + '</div>' +
+      (ts0.total < logCost ? '<div style="font-size:.78rem;margin-top:6px;color:var(--gold)">Not enough tokens to log — recharge or upgrade below.</div>' : '') +
+      '</div>'));
     var save = el('<button class="btn btn-primary btn-lg">Save trade &amp; update my score</button>');
     save.addEventListener("click", function () {
       var sym = c.querySelector("#sym").value.trim(); if (!sym) { c.querySelector("#sym").focus(); return; }
-      var q = CM.quota();
-      if (!q.allowed) {
-        dialog("You've hit your free monthly limit", '<p class="hint">You\'ve logged all <b>' + q.limit + '</b> free trades this month. Upgrade to <b>Plus</b> for <b>unlimited</b> logging, full mistake analysis and the AI Discipline Coach — or come back next month, your data is safe.</p><div style="display:flex;gap:10px;margin-top:18px"><button class="btn btn-primary" id="qUpgrade">See plans</button></div>', function (b, close) { b.querySelector("#qUpgrade").addEventListener("click", function () { close(); go("profile"); render(); }); });
-        return;
-      }
+      if (!CM.canLog()) { outOfTokensDialog("log-trade"); return; }
       var slv = c.querySelector("#sl").value;
       var saved = CM.addTrade({ symbol: sym, side: c.querySelector("#side").value, qty: +c.querySelector("#qty").value || 0,
         entry: +c.querySelector("#entry").value || 0, exit: +c.querySelector("#exit").value || 0,
         plannedSL: slv === "" ? null : +slv, target: null, setup: c.querySelector("#setup").value,
         exit_reason: c.querySelector("#xr").value, emotion: c.querySelector("#emo").value,
         note: (c.querySelector("#note").value || "").trim().slice(0, 500), preCheck: takePendingPreCheck(), date: new Date().toISOString() });
+      if (!saved) { outOfTokensDialog("log-trade"); return; }
       // Instant honest feedback on the trade just logged (reinforces the loop).
       var d = CM.tradeDiscipline(saved), p = CM.pnl(saved);
       var verdict = d >= 75 ? "Disciplined trade 👏" : d >= 50 ? "Some leaks to plug" : "Undisciplined — this is what costs money";
@@ -1737,10 +1736,10 @@
     } else {
       var n = detail || 0;
       titleTxt = "🎟️ " + n + " tokens added!";
-      subTxt = "Payment successful. A receipt is on its way to your email. Each token runs one deep Trade Replay of your own past trades.";
+      subTxt = "Payment successful. A receipt is on its way to your email. Tokens power logging trades, the AI coach and deep analyses.";
       var ts = CM.tokenState();
-      listHtml = '<li>✓ ' + (ts.unlimited ? "∞" : ts.total) + ' analyses available now</li><li>✓ Purchased tokens never expire</li>';
-      ctaTxt = "Run an analysis →"; ctaGo = "replay";
+      listHtml = '<li>✓ ' + ts.total + ' tokens available now</li><li>✓ Top-up tokens valid for 2 months</li>';
+      ctaTxt = "Start logging →"; ctaGo = "log";
     }
     var d = dialog(titleTxt,
       '<p class="hint" style="margin:0 0 14px">' + subTxt + '</p>' +
@@ -1804,8 +1803,8 @@
       list.push({ id: "gift-" + (s.profile.giftAt || "x"), ic: "🎁", title: "You've received a gift!", body: s.profile.giftMsg, cta: ["Open your app", "home"] });
     }
     if (e.streak > 0 && !e.loggedToday) list.push({ id: "streak", ic: "🔥", title: e.streak + "-day streak going", body: "Log a trade today to keep your streak alive.", cta: ["Log a trade", "log"] });
-    if (!ts.unlimited && ts.total <= 0) list.push({ id: "tokens0", ic: "🎟️", title: "You're out of analyses", body: "Top up tokens or upgrade to keep running Trade Replays.", cta: ["Get tokens", "tokens"] });
-    else if (!ts.unlimited && ts.total <= 2) list.push({ id: "tokenslow", ic: "🎟️", title: "Only " + ts.total + " analyses left", body: "Top up so you never stop analysing your trades.", cta: ["Top up", "tokens"] });
+    if (ts.total <= 0) list.push({ id: "tokens0", ic: "🎟️", title: "You're out of tokens", body: "Top up or upgrade to keep logging trades and running analyses. You get a free daily bonus too.", cta: ["Get tokens", "tokens"] });
+    else if (ts.total < 30) list.push({ id: "tokenslow", ic: "🎟️", title: "Only " + ts.total + " tokens left", body: "That's less than one trade log. Top up so you never stop.", cta: ["Top up", "tokens"] });
     if (st.count && st.discipline < 60) list.push({ id: "disc", ic: "🧭", title: "Discipline needs attention", body: "Your score is " + st.discipline + ". Ask the coach what to fix first.", cta: ["Open coach", "coach"] });
     if (st.noSL > 0) list.push({ id: "nosl", ic: "🛡️", title: st.noSL + " trade(s) had no stop-loss", body: "The fastest way to lift your score is to always set a stop.", cta: ["See insights", "insights"] });
     if (plan === "free" && st.count >= 3) list.push({ id: "upsell", ic: "✨", title: "Unlock your full report", body: "Go Plus for full mistake analysis, the AI coach & time-of-day edge.", cta: ["See plans", "profile"] });
@@ -1825,9 +1824,9 @@
   }
   function openNotifications(items) {
     var rows = items.map(function (n) {
-      return '<button class="cm-notif-row" data-go="' + esc(n.cta[1]) + '" style="display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:transparent;cursor:pointer;margin-bottom:8px">' +
+      return '<button class="cm-notif-row" data-go="' + esc(n.cta[1]) + '" style="display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.02);cursor:pointer;margin-bottom:8px">' +
         '<span style="font-size:1.3rem">' + n.ic + '</span>' +
-        '<span style="flex:1"><b style="color:var(--ink)">' + esc(n.title) + '</b><div class="hint" style="margin-top:2px">' + esc(n.body) + '</div><span class="pos" style="font-size:.8rem;font-weight:700">' + esc(n.cta[0]) + ' →</span></span></button>';
+        '<span style="flex:1"><b style="color:#f4f2fb;font-size:.98rem">' + esc(n.title) + '</b><div style="margin-top:3px;color:#c3bdd8;font-size:.86rem;line-height:1.5">' + esc(n.body) + '</div><span style="display:inline-block;margin-top:6px;color:#22e08a;font-size:.82rem;font-weight:800">' + esc(n.cta[0]) + ' →</span></span></button>';
     }).join("");
     var d = dialog("🔔 Notifications", rows || '<p class="hint">You\'re all caught up.</p>', function (body, close) {
       body.querySelectorAll(".cm-notif-row").forEach(function (r) { r.addEventListener("click", function () { close(); go(r.getAttribute("data-go")); render(); }); });
@@ -2009,9 +2008,10 @@
         var rd = new FileReader();
         rd.onload = function () {
           try {
-            var n = parseCSV(String(rd.result));
-            b.querySelector("#csvnote").innerHTML = '<span class="pos">Imported ' + n + ' trade(s).</span>';
-            setTimeout(function () { close(); go("home"); render(); toast("Imported " + n + " trade(s) ✓", "ok"); }, 700);
+            var res = parseCSV(String(rd.result));
+            var msg = 'Imported ' + res.count + ' trade(s)' + (res.skipped ? ' · ' + res.skipped + ' skipped (out of tokens)' : '') + '.';
+            b.querySelector("#csvnote").innerHTML = '<span class="' + (res.skipped ? "neg" : "pos") + '">' + msg + '</span>';
+            setTimeout(function () { close(); go("home"); render(); toast("Imported " + res.count + " trade(s) ✓", "ok"); if (res.skipped) outOfTokensDialog("log-trade"); }, 700);
           } catch (err) { b.querySelector("#csvnote").innerHTML = '<span class="neg">Could not read that file.</span>'; }
         };
         rd.readAsText(f);
@@ -2042,21 +2042,23 @@
       idx[k] = -1;
       for (var a = 0; a < names.length; a++) { var p = head.indexOf(names[a]); if (p >= 0) { idx[k] = p; break; } }
     });
-    var count = 0;
+    var count = 0, skipped = 0;
     for (var i = 1; i < lines.length; i++) {
       var cells = splitCSVLine(lines[i]);
       var get = function (k) { return idx[k] >= 0 ? (cells[idx[k]] || "").trim() : ""; };
       var sym = get("symbol"); if (!sym) continue;
+      // Each imported trade costs tokens like a manual log. Stop when out.
+      if (!CM.canLog()) { skipped++; continue; }
       var sl = get("plannedSL");
       var rawSide = (get("side") || "Buy").trim();
       var side = /^s/i.test(rawSide) ? "Sell" : "Buy"; // handles SELL / S / sell
-      CM.addTrade({ symbol: sym, side: side, qty: Math.abs(+get("qty")) || 0, entry: +get("entry") || 0,
+      var ok = CM.addTrade({ symbol: sym, side: side, qty: Math.abs(+get("qty")) || 0, entry: +get("entry") || 0,
         exit: +get("exit") || 0, plannedSL: sl === "" ? null : +sl, target: null,
         setup: get("setup") || "Other", exit_reason: get("exit_reason") || "Hit target",
         emotion: get("emotion") || "Calm", note: (get("note") || "").slice(0, 500), date: get("date") || new Date().toISOString() });
-      count++;
+      if (ok) count++; else skipped++;
     }
-    return count;
+    return { count: count, skipped: skipped };
   }
   function splitCSVLine(line) {
     var out = [], cur = "", q = false;
@@ -2402,28 +2404,34 @@
       (t.preCheck ? '<div class="rp-row ' + (t.preCheck.failed && t.preCheck.failed.length ? "neg" : "pos") + '"><b>Pre-trade readiness</b><span>You scored <b>' + t.preCheck.score + '/100</b> before entering' + (t.preCheck.failed && t.preCheck.failed.length ? ' · you skipped: ' + esc(t.preCheck.failed.join("; ")) : ' · every check passed') + '</span></div>' : '') +
       (t.note ? '<div class="rp-row"><b>Your note</b><span>💬 ' + esc(t.note) + '</span></div>' : '') + '</div>';
   }
-  // Full purchase popup — token packs + the two plans, buyable in one tap.
+  // Full purchase popup — token packs + plans, buyable in one tap.
   function purchaseDialog(reason) {
     var packs = TOKEN_PACKS.map(function (p) { return '<button class="btn pk" data-n="' + p[0] + '" data-p="' + p[1] + '"><b>' + p[0] + '</b> tokens<span>₹' + p[1] + '</span></button>'; }).join("");
-    var body = '<p class="hint">' + (reason || "Top up to keep analysing your trades.") + '</p>' +
+    var body = '<p class="hint">' + (reason || "Top up to keep logging and analysing your trades.") + '</p>' +
       '<div class="buy-grid">' + packs + '</div>' +
       '<div class="buy-plans">' +
-        '<button class="btn btn-primary" data-plan="499">💎 Platinum — ₹499/mo · <b>unlimited tokens</b></button>' +
-        '<button class="btn" data-plan="199">⚡ Go Plus — ₹199/mo · 50 tokens</button>' +
+        '<button class="btn btn-primary" data-plan="999">👑 Diamond — ₹999/mo · 1500 tokens + AI</button>' +
+        '<button class="btn" data-plan="499">💎 Platinum — ₹499/mo · 600 tokens</button>' +
+        '<button class="btn" data-plan="199">⚡ Go Plus — ₹199/mo · 300 tokens</button>' +
       '</div>' +
-      '<p class="hint" style="text-align:center;margin-top:12px">1 token = 1 deep Trade Replay. Educational behaviour analysis of your <b>own past trades</b> only — no tips, no advice.</p>';
-    dialog("You're out of analyses 🎟️", body, function (b, close) {
+      '<p class="hint" style="text-align:center;margin-top:12px">Tokens power logging a trade (30), the AI coach & deep analyses. Valid 2 months. Educational analysis of your <b>own</b> trades — no tips, no advice.</p>';
+    dialog("Top up tokens 🎟️", body, function (b, close) {
       b.querySelectorAll(".pk").forEach(function (btn) { btn.addEventListener("click", function () { close(); buyTokens(+btn.getAttribute("data-n"), +btn.getAttribute("data-p")); }); });
       b.querySelectorAll("[data-plan]").forEach(function (btn) { btn.addEventListener("click", function () { close(); buyTokens(0, +btn.getAttribute("data-plan")); }); });
     });
   }
   function buyTokensPrompt() {
-    purchaseDialog("Every account gets " + CM.FREE_TOKENS + " free Trade Replays — that's all used up. Choose a top-up or go unlimited to keep going.");
+    purchaseDialog("You're out of tokens. Every account gets a free daily bonus (" + CM.DAILY_BONUS + " tokens = 1 trade); top up or upgrade for more.");
+  }
+  // Shown when an action can't be afforded — names the exact cost + balance.
+  var ACTION_LABEL = { "log-trade": "log a trade", "ai-coach": "ask the AI coach", "replay": "run a Trade Replay", "whatif": "run the What-If simulator", "deep-dive": "generate a deep-dive", "setup-scan": "run this analysis" };
+  function outOfTokensDialog(action) {
+    var ts = CM.tokenState(), cost = CM.cost(action);
+    purchaseDialog("To " + (ACTION_LABEL[action] || "do this") + " you need <b>" + cost + " tokens</b> — you have <b>" + ts.total + "</b>. You get " + CM.DAILY_BONUS + " free every day; top up or upgrade to keep going.");
   }
   function openReplay(t) {
-    var ts = CM.tokenState();
-    if (!ts.canUse) { buyTokensPrompt(); return; }
-    CM.useToken();
+    if (!CM.canAfford("replay")) { outOfTokensDialog("replay"); return; }
+    CM.spend("replay");
     var levels = { entry: t.entry, sl: t.plannedSL, exit: t.exit, target: t.target, side: t.side, qty: t.qty };
     var body = '<div id="rpChart"></div><div id="rpOut" style="margin-top:12px"><p class="hint">Loading the real market for ' + esc(t.symbol) + '…</p></div>';
     dialog(esc(t.symbol) + " · trade replay", body, function (b) {
@@ -2513,7 +2521,7 @@
     if (!trades.length) { c.appendChild(el('<p class="hint">The sample above shows how it works. Log your own trade — then replay it here to see exactly what the market did after your entry.</p>')); v.appendChild(c); return v; }
     c.appendChild(el('<div class="legal-note">📘 <b>Educational behaviour tool.</b> Trade Replay analyses <b>only your own past trades</b> on historical market data — to understand your behaviour. It is <b>not</b> investment advice, gives <b>no</b> tips, calls or future predictions, and is <b>not</b> SEBI-registered advice. No future trade is ever suggested.</div>'));
     var ts0 = CM.tokenState();
-    c.appendChild(el('<div class="tok-status"><span>🎟️ <b>' + (ts0.unlimited ? "∞" : ts0.total) + '</b> analyses left <span class="hint">' + (ts0.unlimited ? "(unlimited on your plan)" : "(" + ts0.freeLeft + " free left" + (ts0.balance ? " + " + ts0.balance + " tokens" : "") + ")") + '</span></span><a href="#/tokens" class="tok-get">Get more →</a></div>'));
+    c.appendChild(el('<div class="tok-status"><span>🎟️ <b>' + ts0.total + '</b> tokens left <span class="hint">(daily ' + ts0.bonus + ' · plan ' + ts0.monthly + ' · wallet ' + ts0.wallet + ')</span></span><a href="#/tokens" class="tok-get">Get more →</a></div>'));
     c.appendChild(el('<p class="hint" style="margin:0 0 12px">Pick a trade to replay on the real market chart of its dates, with your entry, stop and exit drawn on it. Each replay uses 1 analysis.</p>'));
     var listEl = el('<div class="replay-list"></div>');
     trades.slice(0, 60).forEach(function (t) {
@@ -2527,12 +2535,13 @@
   };
 
   // ---- ANALYSIS TOKENS (buy / balance) ------------------------------------
-  var TOKEN_PACKS = [[20, 49], [60, 99], [150, 199]];
+  // [tokens, price] — top-up packs (valid 2 months). Match worker RZP_PRODUCTS.
+  var TOKEN_PACKS = [[400, 199], [700, 499], [1600, 999], [3000, 2000]];
   // n > 0 → a token pack; n === 0 → a monthly plan (resolved by price).
   function buyTokens(n, price) {
     var live = window.CMCloud && window.CM_CONFIG && window.CM_CONFIG.razorpayKeyId && window.CMCloud.checkoutTokens;
     if (!live) {
-      dialog("Payments open soon", '<p class="hint">This switches on the moment card payments go live. Every account starts with <b>' + CM.FREE_TOKENS + ' free analyses</b>.</p>', function (b, close) { });
+      dialog("Payments open soon", '<p class="hint">This switches on the moment card payments go live. Every account gets a free <b>' + CM.DAILY_BONUS + '-token daily bonus</b> to start.</p>', function (b, close) { });
       return;
     }
     // A purchase must belong to an account so it persists and can't be faked.
@@ -2577,15 +2586,16 @@
 
   VIEWS.tokens = function () {
     var v = el('<div></div>');
-    v.appendChild(topbar("Analysis Tokens", "1 token = 1 deep Trade Replay. " + CM.FREE_TOKENS + " free per account — top up or subscribe for more."));
+    v.appendChild(topbar("Tokens", "Tokens power logging a trade (" + CM.logCost() + "), the AI coach & deep analyses. You get " + CM.DAILY_BONUS + " free every day. Top-ups valid 2 months."));
     var ts = CM.tokenState();
     var c = el('<div class="card"></div>');
-    c.appendChild(el('<div class="legal-note">🎟️ Tokens unlock <b>behaviour analysis of your own past trades</b> only — educational, not advice, no tips, no future calls.</div>'));
-    c.appendChild(el('<div class="tok-balance"><div><div class="hint">Analyses you can run now</div><div class="tok-big">' + (ts.unlimited ? "∞" : ts.total) + '</div></div><div class="tok-split">' + (ts.unlimited ? '<span>Unlimited on your plan ✓</span><span>' + ts.balance + ' extra tokens</span>' : '<span>' + ts.freeLeft + ' / ' + ts.freeLimit + ' free left (one-time)</span><span>' + ts.balance + ' purchased tokens</span>') + '</div></div>'));
-    c.appendChild(el('<h3 style="margin:18px 0 8px">Top up tokens</h3>'));
+    c.appendChild(el('<div class="legal-note">🎟️ Tokens power your <b>own</b> trade logging & behaviour analysis only — educational, not advice, no tips, no future calls. Calculators stay free.</div>'));
+    c.appendChild(el('<div class="tok-balance"><div><div class="hint">Tokens you have now</div><div class="tok-big">' + ts.total + '</div></div><div class="tok-split"><span>Daily bonus ' + ts.bonus + ' · plan ' + ts.monthly + '</span><span>' + ts.wallet + ' top-up tokens' + (ts.walletExpiry ? ' · exp ' + new Date(ts.walletExpiry).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : '') + '</span></div></div>'));
+    c.appendChild(el('<p class="hint" style="margin:10px 0 0">Costs: log a trade <b>' + CM.cost("log-trade") + '</b> · AI coach <b>' + CM.cost("ai-coach") + '</b> · Trade Replay <b>' + CM.cost("replay") + '</b> · deep-dive <b>' + CM.cost("deep-dive") + '</b> tokens.</p>'));
+    c.appendChild(el('<h3 style="margin:18px 0 8px">Top up tokens <span class="hint" style="font-weight:400">· valid 2 months</span></h3>'));
     var packs = el('<div class="grid g3"></div>');
     TOKEN_PACKS.forEach(function (p) {
-      var card = el('<div class="card tok-pack-card" style="text-align:center;padding:16px"><div class="tok-pack-n">' + p[0] + ' tokens</div><div class="tok-pack-p">₹' + p[1] + '</div><div class="hint">₹' + (p[1] / p[0]).toFixed(1) + ' / analysis</div></div>');
+      var card = el('<div class="card tok-pack-card" style="text-align:center;padding:16px"><div class="tok-pack-n">' + p[0] + ' tokens</div><div class="tok-pack-p">₹' + p[1] + '</div><div class="hint">' + Math.floor(p[0] / CM.cost("log-trade")) + ' trade logs</div></div>');
       var buy = el('<button class="btn btn-primary btn-sm" style="margin-top:10px;width:100%">Top up</button>');
       buy.addEventListener("click", function () { buyTokens(p[0], p[1]); });
       card.appendChild(buy); packs.appendChild(card);
@@ -2596,14 +2606,14 @@
     var curId = CM.load().profile.plan || "free";
     var curP = CM.PLANS[curId];
     c.appendChild(el('<h3 style="margin:18px 0 8px">Your subscription</h3>'));
-    var banner = el('<div class="tok-sub" style="border-color:var(--violet);background:rgba(139,92,246,.10);align-items:center"><div><div style="font-weight:800">✓ You\'re on ' + curP.name + (curP.price ? ' — ₹' + curP.price + '/month' : ' (free)') + '</div><p class="hint" style="margin:4px 0 0">' + (ts.unlimited ? "Unlimited analyses included on your plan." : curId === "plus" ? "50 AI tokens a month + unlimited logging." : "You have " + (ts.unlimited ? "∞" : ts.total) + " analyses available. Upgrade for more.") + '</p></div><button class="btn btn-sm" id="tManage">Manage</button></div>');
+    var banner = el('<div class="tok-sub" style="border-color:var(--violet);background:rgba(139,92,246,.10);align-items:center"><div><div style="font-weight:800">✓ You\'re on ' + curP.name + (curP.price ? ' — ₹' + curP.price + '/month' : ' (free)') + '</div><p class="hint" style="margin:4px 0 0">' + (CM.PLAN_TOKENS[curId] || 0) + ' tokens/month included' + (curId === "diamond" ? " + AI coach." : ".") + ' You have ' + ts.total + ' now.</p></div><button class="btn btn-sm" id="tManage">Manage</button></div>');
     c.appendChild(banner);
     banner.querySelector("#tManage").addEventListener("click", function () { go("profile"); render(); });
 
     c.appendChild(el('<h3 style="margin:18px 0 8px">' + (curId === "free" ? "Subscribe" : "Change plan") + '</h3>'));
-    [["plus", "⚡", "Go Plus", "Unlimited trades &amp; full mistake analysis, plus <b>50 AI tokens a month</b>."],
-     ["pro", "💎", "Platinum", "<b>Unlimited AI tokens</b>, unlimited Trade Replays, broker import, setup performance &amp; weekly reports."],
-     ["diamond", "👑", "Diamond", "Everything in Platinum, plus priority AI, a monthly 1:1 review, multi-year backtesting &amp; early access."]
+    [["plus", "⚡", "Go Plus", "<b>300 tokens/month</b> (~10 trade logs), unlimited history, full mistake analysis &amp; the Money Leak Report."],
+     ["pro", "💎", "Platinum", "<b>600 tokens/month</b> (~20 trade logs), setup performance, trade grades, edge, Trade Replay, broker import &amp; weekly reports."],
+     ["diamond", "👑", "Diamond", "<b>1500 tokens/month</b> (~50 trade logs) + the <b>AI Discipline Coach</b>, What-If simulator, playbook, monthly 1:1 &amp; backtesting."]
     ].forEach(function (p) {
       var id = p[0], price = CM.PLANS[id].price, isCur = id === curId, lower = RANK[id] < RANK[curId];
       var tag = isCur ? ' <span class="badge b-navy">Current</span>' : (id === "pro" ? ' <span class="badge b-green">Most popular</span>' : "");
@@ -2615,7 +2625,7 @@
       else { btn = el('<button class="btn btn-primary">Upgrade · ₹' + price + '</button>'); btn.addEventListener("click", function () { buyTokens(0, price); }); }
       row.appendChild(btn); c.appendChild(row);
     });
-    c.appendChild(el('<p class="hint" style="margin-top:14px">1 token = one deep analysis (Trade Replay of one past trade). The ' + CM.FREE_TOKENS + ' free tokens are one-time per account; purchased tokens stay until used.</p>'));
+    c.appendChild(el('<p class="hint" style="margin-top:14px">Every account gets a free <b>' + CM.DAILY_BONUS + '-token daily bonus</b> (1 trade/day). Plan tokens reset monthly (use-it-or-lose-it); top-up tokens are valid <b>2 months</b>. Tokens are non-refundable once granted.</p>'));
     v.appendChild(c);
     v.appendChild(planComparison(curId));
     // Walkthrough video sits at the bottom (below the balance & plans).
@@ -3024,6 +3034,9 @@
   }
   var _coachAI = null; // null=unknown, true=online, false=use local
   function ask(q, box) {
+    // Each AI question spends tokens (Diamond-only feature).
+    if (!CM.canAfford("ai-coach")) { outOfTokensDialog("ai-coach"); return; }
+    CM.spend("ai-coach");
     chat.push({ r: "u", t: q }); box.appendChild(bubble(chat[chat.length - 1]));
     CM.load().usage.aiQuestions++; CM.save();
     // Typing indicator
@@ -3246,38 +3259,41 @@
     curCard.appendChild(billRow);
     v.appendChild(curCard);
 
-    // 7-day Pro trial
+    // 1-day Platinum trial
     var trialLeft = s.profile.trialEndsAt ? Math.ceil((new Date(s.profile.trialEndsAt) - Date.now()) / 86400000) : 0;
     if (trialLeft > 0) {
-      v.appendChild(el('<div class="notice" style="background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.35);color:#148a3c">🎉 Pro trial active — <b>' + trialLeft + ' day(s)</b> left. Enjoy every feature.</div>'));
+      v.appendChild(el('<div class="notice" style="background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.35);color:#148a3c">🎉 Platinum trial active — <b>' + trialLeft + ' day</b> left. Explore the paid features today.</div>'));
     } else if (s.profile.plan === "free") {
-      var tb = el('<div class="card" style="border-color:var(--emerald);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><b>Try Pro free for 7 days</b><div class="hint">Unlock everything — no card needed in this preview.</div></div></div>');
-      var tbtn = el('<button class="btn btn-primary">Start 7-day trial</button>');
-      tbtn.addEventListener("click", function () { CM.setProfile({ plan: "pro", trialEndsAt: new Date(Date.now() + 7 * 86400000).toISOString() }); render(); });
+      var tb = el('<div class="card" style="border-color:var(--emerald);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><b>Try Platinum free for 1 day</b><div class="hint">A 24-hour look at the paid features. Tokens still apply.</div></div></div>');
+      var tbtn = el('<button class="btn btn-primary">Start 1-day trial</button>');
+      tbtn.addEventListener("click", function () {
+        CM.setProfile({ plan: "pro", trialEndsAt: new Date(Date.now() + 1 * 86400000).toISOString() });
+        toast("Platinum trial started — 1 day ⏳", "ok"); render();
+      });
       tb.appendChild(tbtn); v.appendChild(tb);
     }
     // Plans — one horizontal swipe row of boxed cards. Price/trades/tokens all
     // come from CM.PLANS, so admin-panel price changes reflect here live.
     v.appendChild(el('<div style="display:flex;justify-content:space-between;align-items:baseline;margin:18px 2px 6px"><h2 style="font-size:1.15rem;margin:0">Plans</h2><span class="hint">swipe to compare →</span></div>'));
     var SPEC = {
-      free: { trades: "15 / month", tokens: "5 free (once)" },
-      plus: { trades: "Unlimited", tokens: "50 / month" },
-      pro: { trades: "Unlimited", tokens: "Unlimited" },
-      diamond: { trades: "Unlimited", tokens: "Unlimited" }
+      free: { trades: "3 / month", tokens: "90 / month" },
+      plus: { trades: "10 / month", tokens: "300 / month" },
+      pro: { trades: "20 / month", tokens: "600 / month" },
+      diamond: { trades: "50 / month", tokens: "1500 / month" }
     };
     var BADGEF = { plus: "plus", pro: "platinum", diamond: "diamond" };
     var RANKP = { free: 0, plus: 1, pro: 2, diamond: 3 };
     // Benefit-led selling copy — the promise, in the trader's own words.
     var PLAN_SELL = {
-      free: "See the truth about how you trade — free forever. Get your Discipline Score, trader personality and basic mistakes.",
-      plus: "Where most traders finally improve. Unlimited journaling, and the 💸 Money Leak Report shows the exact ₹ your habits cost you — with an AI coach to fix them.",
-      pro: "For traders who want a real edge. Grade every trade A–F, measure your true expectancy, import from your broker, and get weekly + monthly deep-dives.",
-      diamond: "The complete edge, white-glove. Everything in Platinum + a What-If simulator, your Personal Playbook, priority AI and a monthly 1:1 review."
+      free: "See the truth about how you trade — free. 90 tokens/month (3 logs) + a free daily bonus, your Discipline Score, personality and basic mistakes.",
+      plus: "Where most traders finally improve. 300 tokens/month, unlimited history, full mistake analysis and the 💸 Money Leak Report — the exact ₹ your habits cost you.",
+      pro: "For serious, systematic traders. 600 tokens/month, setup performance, trade grades A–F, edge & expectancy, Trade Replay, broker import and weekly + monthly deep-dives.",
+      diamond: "The complete edge + AI. 1500 tokens/month plus the AI Discipline Coach, What-If simulator, Personal Playbook, priority AI, a monthly 1:1 and multi-year backtesting."
     };
     var PLAN_WORTH = {
       plus: "Worth it if one avoided revenge-trade saves you more than ₹199.",
       pro: "Worth it if a sharper edge saves you one bad trade a month.",
-      diamond: "Worth it if a 1:1 review keeps you disciplined through one volatile week."
+      diamond: "The only plan with the AI coach — worth it if it keeps you disciplined."
     };
     var plans = el('<div class="plan-slider" style="display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:4px 2px 14px;margin:0 -2px"></div>');
     Object.keys(CM.PLANS).forEach(function (id) {
