@@ -323,35 +323,53 @@
     ];
     // Short column headers + abbreviated values so all 4 plans fit on a phone
     // with no horizontal scroll.
-    var cols = [["free", "Free", "₹0"], ["plus", "Plus", "₹199"], ["pro", "Plat", "₹499"], ["diamond", "💎", "₹999"]];
+    var cols = [["free", "Free", "₹0", ""], ["plus", "Plus", "₹199", "plus"], ["pro", "Plat", "₹499", "platinum"], ["diamond", "Diamond", "₹999", "diamond"]];
     var ids = cols.map(function (c) { return c[0]; });
     var hi = highlight && ids.indexOf(highlight) >= 0 ? ids.indexOf(highlight) : -1;
     function abbr(v) {
       if (v === "✓") return '<span style="color:var(--emerald);font-weight:800">✓</span>';
-      if (v === "—") return '<span style="color:var(--muted);opacity:.6">–</span>';
-      return '<b style="font-size:.72rem">' + esc(v.replace("Unlimited", "∞").replace(" / month", "/mo").replace(" days", "d").replace("5 free (once)", "5×")) + '</b>';
+      if (v === "—") return '<span style="color:var(--muted);opacity:.5">–</span>';
+      return '<b style="font-size:.7rem">' + esc(v.replace("Unlimited", "∞").replace(" / month", "/mo").replace(" days", "d").replace("5 free (once)", "5×")) + '</b>';
     }
     var card = el('<div class="card" style="margin-top:16px"></div>');
-    card.appendChild(el('<div class="card-hd"><h3>Compare plans</h3><span class="hint">∞ = unlimited</span></div>'));
+    card.appendChild(el('<div class="card-hd"><h3>Compare plans</h3><span class="hint">all 4 · ∞ = unlimited</span></div>'));
     var t = el('<table style="width:100%;border-collapse:collapse;table-layout:fixed"></table>');
-    // colgroup: feature 40%, four plan cols 15% each
-    t.appendChild(el('<colgroup><col style="width:40%"/><col style="width:15%"/><col style="width:15%"/><col style="width:15%"/><col style="width:15%"/></colgroup>'));
-    var thead = '<tr><th style="text-align:left;padding:6px 4px;font-size:.72rem;color:var(--muted)">Feature</th>' +
+    t.appendChild(el('<colgroup><col style="width:38%"/><col style="width:15.5%"/><col style="width:15.5%"/><col style="width:15.5%"/><col style="width:15.5%"/></colgroup>'));
+    function colHl(i) { return i === hi ? "background:rgba(34,224,138,.10);" : ""; }
+    // Header: tiny badge + short name
+    var thead = '<tr><th style="text-align:left;padding:8px 4px;font-size:.7rem;color:var(--muted)">Plan</th>' +
       cols.map(function (c, i) {
-        var hlt = i === hi ? "color:var(--emerald)" : "color:var(--ink)";
-        return '<th style="text-align:center;padding:6px 2px;font-size:.74rem;' + hlt + '">' + c[1] + '<div style="font-size:.64rem;color:var(--muted);font-weight:600">' + c[2] + '</div></th>';
+        var icon = c[3] ? '<img src="/assets/badge-' + c[3] + '.png" alt="" style="width:24px;height:24px;display:block;margin:0 auto 2px"/>' : '<div style="font-size:1.1rem;line-height:24px">🆓</div>';
+        return '<th style="text-align:center;padding:8px 2px;font-size:.72rem;font-weight:800;color:' + (i === hi ? "var(--emerald)" : "var(--ink)") + ';' + colHl(i) + 'border-top-left-radius:8px;border-top-right-radius:8px">' + icon + c[1] + '</th>';
       }).join("") + '</tr>';
-    var tbody = rows.map(function (r) {
+    // Prominent price row
+    var priceRow = '<tr><td style="padding:8px 4px;font-size:.72rem;font-weight:700;color:var(--muted);border-top:1px solid var(--line)">Price / month</td>' +
+      cols.map(function (c, i) { return '<td style="text-align:center;padding:8px 2px;font-weight:800;font-size:.82rem;color:' + (i === hi ? "var(--emerald)" : "var(--ink)") + ';border-top:1px solid var(--line);' + colHl(i) + '">' + c[2] + '</td>'; }).join("") + '</tr>';
+    var tbody = priceRow + rows.map(function (r) {
       return '<tr>' +
-        '<td style="text-align:left;padding:8px 4px;font-size:.74rem;color:var(--ink);border-top:1px solid var(--line);line-height:1.25">' + esc(r[0]) + '</td>' +
+        '<td style="text-align:left;padding:8px 4px;font-size:.73rem;color:var(--ink);border-top:1px solid var(--line);line-height:1.25">' + esc(r[0]) + '</td>' +
         [1, 2, 3, 4].map(function (ci) {
-          var hlt = (ci - 1) === hi ? "background:rgba(34,224,138,.08);" : "";
-          return '<td style="text-align:center;padding:8px 2px;border-top:1px solid var(--line);' + hlt + '">' + abbr(r[ci]) + '</td>';
+          return '<td style="text-align:center;padding:8px 2px;border-top:1px solid var(--line);' + colHl(ci - 1) + '">' + abbr(r[ci]) + '</td>';
         }).join("") + '</tr>';
     }).join("");
     t.innerHTML += '<thead>' + thead + '</thead><tbody>' + tbody + '</tbody>';
     card.appendChild(t);
-    if (hi >= 0) card.appendChild(el('<p class="hint" style="margin-top:10px;color:var(--emerald)">✓ ' + esc(cols[hi][1] === "💎" ? "Diamond" : cols[hi][1]) + ' is your current plan.</p>'));
+    // Upgrade buttons for plans above the user's current one.
+    var rank = { free: 0, plus: 1, pro: 2, diamond: 3 };
+    var cur = rank[highlight] != null ? rank[highlight] : -1;
+    var ups = cols.filter(function (c) { return c[0] !== "free" && rank[c[0]] > cur; });
+    if (ups.length) {
+      var upWrap = el('<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"></div>');
+      ups.forEach(function (c) {
+        var full = c[0] === "pro" ? "Platinum" : c[0] === "plus" ? "Go Plus" : "Diamond";
+        var b = el('<button class="btn btn-sm btn-primary" style="flex:1;min-width:120px">Upgrade to ' + full + ' · ' + c[2] + '</button>');
+        b.addEventListener("click", function () { go("profile"); render(); });
+        upWrap.appendChild(b);
+      });
+      card.appendChild(upWrap);
+    } else if (hi >= 0) {
+      card.appendChild(el('<p class="hint" style="margin-top:10px;color:var(--emerald)">✓ You\'re on ' + esc(cols[hi][1] === "Plat" ? "Platinum" : cols[hi][1]) + ' — the top of your tier. 🎉</p>'));
+    }
     return card;
   }
 
