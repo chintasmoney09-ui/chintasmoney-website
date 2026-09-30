@@ -578,6 +578,8 @@ async function handleAdminData(request, env) {
       joined: (u.created_at || "").slice(0, 10),
       last: (u.last_sign_in_at || "").slice(0, 10),
       ai: (st.usage && st.usage.aiQuestions) || 0,
+      referrals: prof.referrals || 0,
+      referredBy: prof.referredBy || "",
       status: "active",
     };
   });

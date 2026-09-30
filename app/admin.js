@@ -708,6 +708,29 @@
       });
       v.appendChild(mixCard);
 
+      // ---- Top referrers & affiliates --------------------------------------
+      v.appendChild(el('<h3 style="margin:18px 0 8px">Top referrers &amp; affiliates</h3>'));
+      var byId = {}; users.forEach(function (u) { if (u.id) byId[u.id] = u; });
+      var paidBy = {}; // referrerId -> paid conversions
+      users.forEach(function (u) { if (u.referredBy && u.plan && u.plan !== "free") paidBy[u.referredBy] = (paidBy[u.referredBy] || 0) + 1; });
+      var referrers = users.filter(function (u) { return (u.referrals || 0) > 0 || paidBy[u.id]; })
+        .map(function (u) { return { name: u.name, email: u.email, refs: u.referrals || 0, paid: paidBy[u.id] || 0 }; })
+        .sort(function (a, b) { return (b.paid - a.paid) || (b.refs - a.refs); }).slice(0, 15);
+      if (!referrers.length) {
+        v.appendChild(el('<div class="cm-note">No referrals yet. Users share their link from the app (Refer &amp; Earn); affiliates apply on the partners page and land in Leads &amp; CRM. Approve them and send their link.</div>'));
+      } else {
+        var rt = el('<div class="cm-card" style="padding:0;overflow:auto"></div>');
+        var tb = el('<table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:10px 12px">Referrer</th><th style="text-align:left;padding:10px 12px">Signups</th><th style="text-align:left;padding:10px 12px">Paid conversions</th></tr></thead><tbody></tbody></table>');
+        var body = tb.querySelector("tbody");
+        referrers.forEach(function (r) {
+          body.appendChild(el('<tr><td style="padding:9px 12px;border-top:1px solid #eef2f7"><b>' + esc(r.name || "—") + '</b><div class="hint" style="font-size:.78rem;color:#64748b">' + esc(r.email || "") + '</div></td>' +
+            '<td style="padding:9px 12px;border-top:1px solid #eef2f7;font-weight:700">' + r.refs + '</td>' +
+            '<td style="padding:9px 12px;border-top:1px solid #eef2f7;font-weight:800;color:#16a34a">' + r.paid + '</td></tr>'));
+        });
+        rt.appendChild(tb); v.appendChild(rt);
+        v.appendChild(el('<div class="cm-note" style="margin-top:8px;font-size:.82rem">💡 Reward your top referrers — gift them tokens or a plan from People/Gift to keep them promoting you.</div>'));
+      }
+
       // ---- Next-move hints (turn numbers into action) -----------------------
       var tips = [];
       if (nLeads > 0 && leadConv < 30) tips.push("Only " + leadConv + "% of leads became users — send a welcome campaign from the Emailer to convert more.");
