@@ -897,10 +897,55 @@ async function sendReengageEmail(env, o) {
     lifeCta("Pick up where I left off") + lifeSign();
   await sendEmail(env, { to: o.email, subject: "📓 Your ChintasMoney journal misses you", html: emailShell(inner) });
 }
+// Weekly owner digest — the business reports itself to you every Monday.
+async function sendOwnerDigest(env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY || !env.RESEND_API_KEY) return;
+  const base = env.SUPABASE_URL.replace(/\/$/, "");
+  const h = { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: "Bearer " + env.SUPABASE_SERVICE_ROLE_KEY };
+  const weekAgo = Date.now() - 7 * 86400000;
+  // Users + plans + referrers.
+  let users = [];
+  try {
+    for (let page = 1; page <= 50; page++) {
+      const ur = await fetch(base + "/auth/v1/admin/users?page=" + page + "&per_page=200", { headers: h });
+      if (!ur.ok) break; const uj = await ur.json(); const batch = uj.users || (Array.isArray(uj) ? uj : []);
+      if (!batch.length) break; users = users.concat(batch); if (batch.length < 200) break;
+    }
+  } catch (e) {}
+  const states = {};
+  try { const sr = await fetch(base + "/rest/v1/user_state?select=user_id,data", { headers: h }); if (sr.ok) (await sr.json()).forEach(function (r) { states[r.user_id] = r.data || {}; }); } catch (e) {}
+  const nUsers = users.length;
+  const newUsers = users.filter(function (u) { return u.created_at && new Date(u.created_at).getTime() >= weekAgo; }).length;
+  let paying = 0; const refCount = {};
+  users.forEach(function (u) { const p = (states[u.id] && states[u.id].profile) || {}; if (p.plan && p.plan !== "free") paying++; if (p.referredBy) refCount[p.referredBy] = (refCount[p.referredBy] || 0) + 1; });
+  // Leads.
+  let nLeads = 0, newLeads = 0;
+  try { const lr = await fetch(base + "/rest/v1/leads?select=created_at&limit=5000", { headers: h }); if (lr.ok) { const arr = await lr.json(); nLeads = arr.length; newLeads = arr.filter(function (r) { return r.created_at && new Date(r.created_at).getTime() >= weekAgo; }).length; } } catch (e) {}
+  // Payments this week + all-time net.
+  let weekRev = 0, grossAll = 0;
+  try { const pr = await fetch(base + "/rest/v1/payments?select=amount,status,created_at&limit=5000", { headers: h }); if (pr.ok) (await pr.json()).forEach(function (p) { if (p.status && p.status !== "paid") return; const a = (p.amount || 0); grossAll += a; if (p.created_at && new Date(p.created_at).getTime() >= weekAgo) weekRev += a; }); } catch (e) {}
+  // Top referrer name.
+  let topRef = "—", topN = 0;
+  Object.keys(refCount).forEach(function (id) { if (refCount[id] > topN) { topN = refCount[id]; const u = users.filter(function (x) { return x.id === id; })[0]; topRef = (u && ((states[id] && states[id].profile && states[id].profile.name) || u.email)) || id; } });
+  const conv = nUsers ? Math.round(paying / nUsers * 100) : 0;
+  function card(label, val, sub) { return '<td style="padding:10px;border:1px solid #e6ebf5;border-radius:10px;text-align:center;width:33%"><div style="font-size:1.5rem;font-weight:800;color:#0f1730">' + val + '</div><div style="font-size:12px;color:#5b6b8c">' + label + '</div>' + (sub ? '<div style="font-size:11px;color:#98a6c4">' + sub + '</div>' : '') + '</td>'; }
+  const inner =
+    '<h2 style="margin:0 0 4px;font-size:1.35rem">📊 Your ChintasMoney week</h2>' +
+    '<p style="color:#5b6b8c;margin:0 0 14px">A quick snapshot so you always know where the business stands.</p>' +
+    '<table style="width:100%;border-collapse:separate;border-spacing:6px;margin:0 0 6px"><tr>' +
+    card("New signups", "+" + newUsers, nUsers + " total") + card("New leads", "+" + newLeads, nLeads + " total") + card("Revenue (7d)", rupees(weekRev), rupees(grossAll) + " all-time") +
+    '</tr><tr>' +
+    card("Paying users", paying, conv + "% of users") + card("Top referrer", esc(String(topRef).split(/\s+/)[0] || "—"), topN ? topN + " signups" : "none yet") + card("All-time gross", rupees(grossAll), "") +
+    '</tr></table>' +
+    '<div style="text-align:center;margin:18px 0 6px"><a href="' + SITE_URL + '/app/admin" style="display:inline-block;background:linear-gradient(135deg,#22e08a,#12b39a);color:#04231b;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:800">Open the Growth Cockpit →</a></div>' +
+    '<p style="color:#5b6b8c;font-size:13px;margin:14px 0 0">' + (newLeads === 0 && newUsers === 0 ? "Quiet week — share your free tools and use Prospect Radar to find people to help. 💪" : "Keep the momentum — reward your top referrer and send a campaign to your leads. 🚀") + '</p>';
+  await sendEmail(env, { to: (env && env.OWNER_EMAIL) || OWNER_EMAIL, subject: "📊 ChintasMoney weekly: +" + newUsers + " users, +" + newLeads + " leads, " + rupees(weekRev), html: emailShell(inner) });
+}
 async function sendWeeklyReports(env) {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY || !env.RESEND_API_KEY) return;
   const base = env.SUPABASE_URL.replace(/\/$/, "");
   const h = { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: "Bearer " + env.SUPABASE_SERVICE_ROLE_KEY };
+  try { await sendOwnerDigest(env); } catch (e) {}
   // Map user_id -> {email, last sign-in} from auth.
   const meta = {};
   try {
