@@ -128,6 +128,24 @@
     return merged;
   }
 
+  // The AUTHORITATIVE plan comes from the server (payments keyed to THIS email,
+  // or an admin override) — never from local/device state. This is what stops a
+  // paid plan on one Google account showing up on a different account signed in
+  // on the same device. Fail-safe: if the server can't determine it (ok:false),
+  // we leave the current plan untouched so a real payer is never locked out.
+  function applyEntitlement() {
+    if (!Cloud.token) return Promise.resolve();
+    return fetch("/api/entitlement", { headers: { Authorization: "Bearer " + Cloud.token } })
+      .then(function (r) { return r.json(); })
+      .then(function (e) {
+        if (!e || e.ok !== true || !e.plan) return;
+        var cur = (window.CM.load().profile.plan) || "free";
+        if (e.plan !== cur) window.CM.setProfile({ plan: e.plan });
+      })
+      .catch(function () {});
+  }
+  Cloud.applyEntitlement = applyEntitlement;
+
   function pull() {
     var localBefore = window.CM.load();
     var po = prevOwner();
@@ -242,11 +260,11 @@
     patchSave();
     Cloud.client.auth.getSession().then(function (r) {
       var session = r && r.data && r.data.session;
-      if (session) { Cloud.user = session.user; Cloud.token = session.access_token; Cloud.state = "authed"; maybeWelcome(session.user); maybeReferral(session.user); pull().then(rerender); }
+      if (session) { Cloud.user = session.user; Cloud.token = session.access_token; Cloud.state = "authed"; maybeWelcome(session.user); maybeReferral(session.user); pull().then(applyEntitlement).then(rerender); }
       else { Cloud.state = "anon"; rerender(); }
     });
     Cloud.client.auth.onAuthStateChange(function (_evt, session) {
-      if (session && session.user) { Cloud.user = session.user; Cloud.token = session.access_token; Cloud.state = "authed"; maybeWelcome(session.user); maybeReferral(session.user); pull().then(rerender); }
+      if (session && session.user) { Cloud.user = session.user; Cloud.token = session.access_token; Cloud.state = "authed"; maybeWelcome(session.user); maybeReferral(session.user); pull().then(applyEntitlement).then(rerender); }
       else { Cloud.user = null; Cloud.token = null; Cloud.state = "anon"; rerender(); }
     });
   }).catch(function () { Cloud.state = "error"; rerender(); });

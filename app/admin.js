@@ -186,14 +186,15 @@
     var nameF = el('<label class="cm-fld"><span>Name</span><input id="euName"/></label>'); nameF.querySelector("input").value = u.name || "";
     var planF = el('<label class="cm-fld"><span>Plan</span><select id="euPlan">' +
       ["free", "plus", "pro", "diamond"].map(function (p) { return '<option value="' + p + '"' + (u.plan === p ? " selected" : "") + '">' + CM.PLANS[p].name + '</option>'; }).join("") + '</select></label>');
-    var tokF = el('<label class="cm-fld"><span>Grant tokens (+) or remove (−)</span><input id="euTok" type="number" value="0" step="1"/></label>');
+    var tokF = el('<label class="cm-fld"><span>Grant tokens (+, valid 2 months)</span><input id="euTok" type="number" value="0" step="1"/></label>');
     box.appendChild(nameF); box.appendChild(planF); box.appendChild(tokF);
+    box.appendChild(el('<p class="cm-hint" style="font-size:.78rem;color:#64748b;margin:2px 0 8px">Plan change is authoritative (overrides payments) — use to upgrade, or to degrade after a refund. Only the email that paid keeps a paid plan otherwise.</p>'));
     var msg = el('<div class="cm-err" style="color:#475569"></div>'); box.appendChild(msg);
     var row = el('<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px"></div>');
     var cancel = el('<button class="cm-btn sm">Cancel</button>'); cancel.addEventListener("click", close);
     var save = el('<button class="cm-btn sm p">Save changes</button>');
     save.addEventListener("click", function () {
-      var body = { user_id: u.id, name: box.querySelector("#euName").value.trim(), plan: box.querySelector("#euPlan").value };
+      var body = { user_id: u.id, email: u.email || "", name: box.querySelector("#euName").value.trim(), plan: box.querySelector("#euPlan").value };
       var td = parseInt(box.querySelector("#euTok").value, 10); if (td) body.tokensDelta = td;
       save.disabled = true; save.textContent = "Saving…"; msg.style.color = "#475569"; msg.textContent = "";
       adminPost("/api/admin/update-user", body).then(function (r) {
