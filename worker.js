@@ -188,6 +188,42 @@ function productDesc(product) {
   };
   return M[product] || { name: "ChintasMoney subscription", service: "Trading-behaviour analytics service", duration: "1 month" };
 }
+// The full, accurate list of what each plan unlocks — for the welcome email so
+// customers see everything they get (trades, tokens, every premium feature).
+function planFeatureLines(plan) {
+  const F = {
+    plus: [
+      "✅ Unlimited trades logged (Free is capped at 15/month)",
+      "✅ Unlimited journal history",
+      "🎟️ 50 AI analysis tokens every month",
+      "💸 Money Leak Report — where your money quietly bleeds",
+      "🔍 Full mistake analysis",
+      "🧭 AI Discipline Coach",
+      "🕐 Time & Day edge",
+      "🔥 Streaks & badges",
+    ],
+    pro: [
+      "✅ Everything in Go Plus",
+      "🎟️ UNLIMITED AI analysis tokens & Trade Replays",
+      "📊 Setup / strategy performance",
+      "🎓 Trade Grades (A–F on every trade)",
+      "📐 Edge & Expectancy",
+      "📏 Rules & Adherence tracking",
+      "📥 Broker CSV import/export",
+      "📧 Weekly email report",
+      "📅 Monthly deep-dive report",
+    ],
+    diamond: [
+      "✅ Everything in Platinum",
+      "🔮 What-If Simulator",
+      "📖 Personal Trading Playbook",
+      "👑 Priority AI + a monthly 1:1 discipline review",
+      "🗄️ Multi-year backtesting",
+      "🚀 Early access to new tools",
+    ],
+  };
+  return F[plan] || null;
+}
 
 // Shared branded shell: logo header + warm footer with support + links.
 function emailShell(inner) {
@@ -292,7 +328,7 @@ async function hmacHex(secret, msg) {
 async function sendSubWelcomeEmail(env, o) {
   if (!o || !o.email || !o.plan) return;
   var d = productDesc(o.plan);
-  var feats = (d && d.feats) ? d.feats : ["Full mistake analysis", "Your AI trading coach", "Deeper analytics & history"];
+  var feats = planFeatureLines(o.plan) || ["Full mistake analysis", "Your AI trading coach", "Deeper analytics & history"];
   var firstName = o.name ? String(o.name).trim().split(/\s+/)[0] : "";
   var greet = firstName ? "Hi " + esc(firstName) + " 👋" : "Welcome aboard 👋";
   var inner =
