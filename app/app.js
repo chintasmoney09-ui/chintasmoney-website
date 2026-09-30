@@ -708,6 +708,39 @@
   }
 
   // ---- Engagement bar (level · XP · streak · daily goal) -------------------
+  // Getting-started checklist — drives activation. Auto-hides once all done
+  // (or once the user dismisses it). Each step deep-links to the right screen.
+  function onboardingCard() {
+    var s = CM.load(), st = CM.stats(), e = CM.engagement();
+    var dismissed = false; try { dismissed = localStorage.getItem("cm.onboard.done") === "1"; } catch (x) {}
+    if (dismissed) return null;
+    var pushOn = false; try { pushOn = (typeof pushIsOn === "function") && pushIsOn(); } catch (x) {}
+    var steps = [
+      { done: st.count >= 1, ic: "📝", label: "Log your first trade", cta: "log" },
+      { done: st.count >= 5, ic: "🔎", label: "Log 5 trades to unlock Insights", cta: "log" },
+      { done: (s.dreams || []).length >= 1, ic: "💭", label: "Set a money dream", cta: "dreams" },
+      { done: pushOn, ic: "🔔", label: "Turn on alerts", cta: "profile" },
+      { done: (s.profile.referrals || 0) >= 1, ic: "🎁", label: "Invite a trader friend", cta: "refer" }
+    ];
+    var done = steps.filter(function (x) { return x.done; }).length;
+    if (done >= steps.length) { try { localStorage.setItem("cm.onboard.done", "1"); } catch (x) {} return null; }
+    var pct = Math.round(done / steps.length * 100);
+    var card = el('<div class="card" style="margin-bottom:16px;border-color:var(--emerald)"></div>');
+    var hd = el('<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><b style="font-size:1.05rem">🚀 Get set up (' + done + '/' + steps.length + ')</b><div class="hint">A few quick wins to get the most from ChintasMoney.</div></div></div>');
+    var close = el('<button class="btn btn-sm ghost" title="Hide">✕</button>');
+    close.addEventListener("click", function () { try { localStorage.setItem("cm.onboard.done", "1"); } catch (x) {} render(); });
+    hd.appendChild(close); card.appendChild(hd);
+    card.appendChild(el('<div class="bar" style="margin:10px 0 4px"><i style="width:' + pct + '%"></i></div>'));
+    steps.forEach(function (stp) {
+      var row = el('<div style="display:flex;align-items:center;gap:10px;padding:8px 2px;border-top:1px solid var(--line)"></div>');
+      row.appendChild(el('<span style="font-size:1.2rem;width:26px;text-align:center">' + (stp.done ? "✅" : stp.ic) + '</span>'));
+      row.appendChild(el('<span style="flex:1;' + (stp.done ? "color:var(--muted);text-decoration:line-through" : "color:var(--ink);font-weight:600") + '">' + esc(stp.label) + '</span>'));
+      if (!stp.done) { var b = el('<button class="btn btn-sm btn-primary">Do it →</button>'); b.addEventListener("click", function () { go(stp.cta); render(); }); row.appendChild(b); }
+      card.appendChild(row);
+    });
+    return card;
+  }
+
   function engagementBar() {
     var e = CM.engagement();
     var w = el('<div class="card" style="margin-bottom:16px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;border-color:var(--line-2)"></div>');
@@ -984,6 +1017,8 @@
     var v = el('<div></div>');
     v.appendChild(topbar("Your Trader Report Card", "Hi " + (s.profile.name || "trader") + " — this is your honest mirror, not tips.", [logBtn()]));
 
+    var onb = onboardingCard();
+    if (onb) v.appendChild(onb);
     v.appendChild(engagementBar());
     var hero = el('<div class="card" style="display:flex;gap:24px;align-items:center;flex-wrap:wrap"></div>');
     var gwrap = el('<div></div>'); hero.appendChild(gwrap); mountGauge(gwrap, st.discipline);
