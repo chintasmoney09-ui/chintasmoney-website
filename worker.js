@@ -1041,13 +1041,39 @@ async function handleLead(request, env) {
   const source = (b && typeof b.source === "string" ? b.source : "site").slice(0, 60);
   const note = (b && typeof b.note === "string" ? b.note : "").slice(0, 300);
   const base = env.SUPABASE_URL.replace(/\/$/, "");
+  // Is this a brand-new lead? (so we welcome them exactly once)
+  let isNew = false;
+  try {
+    const ex = await fetch(base + "/rest/v1/leads?email=eq." + encodeURIComponent(email) + "&select=email", { headers: await sbHeaders(env) });
+    if (ex.ok) { const arr = await ex.json(); isNew = !(arr && arr.length); }
+  } catch (e) {}
   try {
     await fetch(base + "/rest/v1/leads?on_conflict=email", {
       method: "POST", headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=merge-duplicates" }),
       body: JSON.stringify({ email: email, source: source, note: note, created_at: new Date().toISOString() }),
     });
   } catch (e) {}
+  // Instant welcome + the promised checklist — starts trust the moment they opt in.
+  if (isNew && source !== "affiliate") { try { await sendLeadWelcomeEmail(env, email); } catch (e) {} }
   return aRes({ ok: true }, 200);
+}
+// Instant welcome to a newly captured lead: delivers the Trader Discipline checklist.
+async function sendLeadWelcomeEmail(env, email) {
+  if (!email) return;
+  const inner =
+    emailBanner(WELCOME_BANNER) +
+    '<h2 style="margin:0 0 6px;font-size:1.35rem">Your Trader Discipline checklist 📋</h2>' +
+    '<p style="color:#5b6b8c;margin:0 0 14px">Thanks for grabbing it — here are the 5 things disciplined traders do on <b>every</b> trade:</p>' +
+    '<ol style="color:#0f1730;font-size:15px;line-height:1.9;margin:0 0 14px;padding-left:20px">' +
+    '<li>Risk a fixed 1–2% per trade — never a gut-feeling amount.</li>' +
+    '<li>Set the stop-loss <b>before</b> entering, not after it moves against you.</li>' +
+    '<li>Size the position from the stop (use our position-size calculator).</li>' +
+    '<li>Write the reason for the trade. No reason = no trade.</li>' +
+    '<li>Review weekly: which setups actually made money?</li></ol>' +
+    '<p style="color:#5b6b8c;margin:0 0 14px">Most traders don\'t lose from bad stocks — they lose from oversizing, holding losers and never reviewing. That\'s exactly what ChintasMoney scores for you, free.</p>' +
+    '<div style="text-align:center;margin:20px 0 8px"><a href="' + APP_URL + '" style="display:inline-block;background:linear-gradient(135deg,#22e08a,#12b39a);color:#04231b;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:800">Get my free Discipline Score →</a></div>' +
+    '<p style="color:#5b6b8c;font-size:14px;margin:20px 0 0">To your discipline. 💚<br>— Team ChintasMoney<br><span style="font-size:12px;color:#98a6c4">You\'re getting this because you opted in at chintasmoney.com. Reply "unsubscribe" to stop.</span></p>';
+  await sendEmail(env, { to: email, subject: "📋 Your Trader Discipline checklist (as promised)", html: emailShell(inner) });
 }
 
 // Prospect Radar — LIVE search of public Reddit for people asking about
