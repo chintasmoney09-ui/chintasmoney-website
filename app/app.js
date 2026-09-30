@@ -321,42 +321,37 @@
       ["Priority AI + monthly 1:1 review", "—", "—", "—", "✓"],
       ["Multi-year backtesting", "—", "—", "—", "✓"]
     ];
-    var cols = [["free", "Free", ""], ["plus", "Go Plus", "199"], ["pro", "Platinum", "499"], ["diamond", "Diamond", "999"]];
+    // Short column headers + abbreviated values so all 4 plans fit on a phone
+    // with no horizontal scroll.
+    var cols = [["free", "Free", "₹0"], ["plus", "Plus", "₹199"], ["pro", "Plat", "₹499"], ["diamond", "💎", "₹999"]];
     var ids = cols.map(function (c) { return c[0]; });
-    var sel = highlight && ids.indexOf(highlight) >= 0 ? highlight : "plus";
-    var card = el('<div class="card" style="margin-top:16px"></div>');
-    card.appendChild(el('<div class="card-hd"><h3>Compare plans</h3><span class="hint">tap a plan to see what it unlocks</span></div>'));
-    // Plan selector chips (scrollable row, never overflows the screen).
-    var chipRow = el('<div style="display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;-webkit-overflow-scrolling:touch"></div>');
-    var body = el('<div></div>');
-    function badgeFile(id) { return id === "pro" ? "platinum" : (id === "diamond" ? "diamond" : (id === "plus" ? "plus" : "")); }
-    function draw() {
-      // chips
-      chipRow.innerHTML = "";
-      cols.forEach(function (c) {
-        var on = c[0] === sel;
-        var chip = el('<button class="btn btn-sm' + (on ? " btn-primary" : "") + '" style="white-space:nowrap;flex:0 0 auto">' + c[1] + (c[2] ? ' · ₹' + c[2] : "") + '</button>');
-        chip.addEventListener("click", function () { sel = c[0]; draw(); });
-        chipRow.appendChild(chip);
-      });
-      // selected plan card body
-      var ci = ids.indexOf(sel);
-      body.innerHTML = "";
-      var bf = badgeFile(sel);
-      var head = el('<div style="display:flex;align-items:center;gap:12px;padding:6px 2px 12px">' +
-        (bf ? '<img src="/assets/badge-' + bf + '.png" alt="" style="width:54px;height:54px;flex:0 0 auto"/>' : '<div style="font-size:2rem">🆓</div>') +
-        '<div><div style="font-weight:800;font-size:1.1rem;color:var(--ink)">' + esc(cols[ci][1]) + '</div>' +
-        '<div class="hint">' + (cols[ci][2] ? "₹" + cols[ci][2] + "/month" : "Free forever") + (sel === highlight ? ' · <span style="color:var(--emerald);font-weight:700">your plan</span>' : "") + '</div></div></div>');
-      body.appendChild(head);
-      rows.forEach(function (r) {
-        var v = r[ci + 1];
-        var val = v === "✓" ? '<span style="color:var(--emerald);font-weight:800">✓ Included</span>'
-          : v === "—" ? '<span class="muted">—</span>' : '<b style="color:var(--ink)">' + esc(v) + '</b>';
-        var dim = v === "—" ? "opacity:.55;" : "";
-        body.appendChild(el('<div style="display:flex;justify-content:space-between;gap:12px;padding:9px 2px;border-bottom:1px solid var(--line);' + dim + '"><span>' + esc(r[0]) + '</span><span style="text-align:right;white-space:nowrap">' + val + '</span></div>'));
-      });
+    var hi = highlight && ids.indexOf(highlight) >= 0 ? ids.indexOf(highlight) : -1;
+    function abbr(v) {
+      if (v === "✓") return '<span style="color:var(--emerald);font-weight:800">✓</span>';
+      if (v === "—") return '<span style="color:var(--muted);opacity:.6">–</span>';
+      return '<b style="font-size:.72rem">' + esc(v.replace("Unlimited", "∞").replace(" / month", "/mo").replace(" days", "d").replace("5 free (once)", "5×")) + '</b>';
     }
-    card.appendChild(chipRow); card.appendChild(body); draw();
+    var card = el('<div class="card" style="margin-top:16px"></div>');
+    card.appendChild(el('<div class="card-hd"><h3>Compare plans</h3><span class="hint">∞ = unlimited</span></div>'));
+    var t = el('<table style="width:100%;border-collapse:collapse;table-layout:fixed"></table>');
+    // colgroup: feature 40%, four plan cols 15% each
+    t.appendChild(el('<colgroup><col style="width:40%"/><col style="width:15%"/><col style="width:15%"/><col style="width:15%"/><col style="width:15%"/></colgroup>'));
+    var thead = '<tr><th style="text-align:left;padding:6px 4px;font-size:.72rem;color:var(--muted)">Feature</th>' +
+      cols.map(function (c, i) {
+        var hlt = i === hi ? "color:var(--emerald)" : "color:var(--ink)";
+        return '<th style="text-align:center;padding:6px 2px;font-size:.74rem;' + hlt + '">' + c[1] + '<div style="font-size:.64rem;color:var(--muted);font-weight:600">' + c[2] + '</div></th>';
+      }).join("") + '</tr>';
+    var tbody = rows.map(function (r) {
+      return '<tr>' +
+        '<td style="text-align:left;padding:8px 4px;font-size:.74rem;color:var(--ink);border-top:1px solid var(--line);line-height:1.25">' + esc(r[0]) + '</td>' +
+        [1, 2, 3, 4].map(function (ci) {
+          var hlt = (ci - 1) === hi ? "background:rgba(34,224,138,.08);" : "";
+          return '<td style="text-align:center;padding:8px 2px;border-top:1px solid var(--line);' + hlt + '">' + abbr(r[ci]) + '</td>';
+        }).join("") + '</tr>';
+    }).join("");
+    t.innerHTML += '<thead>' + thead + '</thead><tbody>' + tbody + '</tbody>';
+    card.appendChild(t);
+    if (hi >= 0) card.appendChild(el('<p class="hint" style="margin-top:10px;color:var(--emerald)">✓ ' + esc(cols[hi][1] === "💎" ? "Diamond" : cols[hi][1]) + ' is your current plan.</p>'));
     return card;
   }
 
