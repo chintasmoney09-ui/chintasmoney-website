@@ -240,14 +240,17 @@
   function chintaTip(seed) { return CHINTA_TIPS[(seed || Math.floor(Date.now() / 86400000)) % CHINTA_TIPS.length]; }
 
   // ---- Wealth / dream projection (compounding — illustrative, not a promise) -
+  // SIP contribution is added at the START of each month (annuity due) — the
+  // convention every popular SIP calculator (Groww, Zerodha, etc.) uses, so our
+  // numbers match what people expect.
   function project(start, monthly, ratePct, years) {
     var rm = ratePct / 100 / 12, months = Math.round(years * 12), bal = start || 0, series = [bal];
-    for (var m = 1; m <= months; m++) { bal = bal * (1 + rm) + (monthly || 0); if (m % 12 === 0) series.push(bal); }
+    for (var m = 1; m <= months; m++) { bal = (bal + (monthly || 0)) * (1 + rm); if (m % 12 === 0) series.push(bal); }
     return { fv: bal, series: series, invested: (start || 0) + (monthly || 0) * months };
   }
   function monthsToTarget(start, monthly, ratePct, target) {
     var rm = ratePct / 100 / 12, bal = start || 0, m = 0;
-    while (bal < target && m < 1200) { bal = bal * (1 + rm) + (monthly || 0); m++; }
+    while (bal < target && m < 1200) { bal = (bal + (monthly || 0)) * (1 + rm); m++; }
     return m >= 1200 ? null : m;
   }
 
