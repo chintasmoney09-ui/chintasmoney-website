@@ -127,9 +127,11 @@ const RZP_PRODUCTS = {
   plus:    { amount: 19900, type: "plan",   plan: "plus",    label: "ChintasMoney · Go Plus (monthly)" },
   pro:     { amount: 49900, type: "plan",   plan: "pro",     label: "ChintasMoney · Platinum (monthly)" },
   diamond: { amount: 99900, type: "plan",   plan: "diamond", label: "ChintasMoney · Diamond (monthly)" },
-  tok20:   { amount: 4900,  type: "tokens", tokens: 20,      label: "ChintasMoney · 20 analysis tokens" },
-  tok60:   { amount: 9900,  type: "tokens", tokens: 60,      label: "ChintasMoney · 60 analysis tokens" },
-  tok150:  { amount: 19900, type: "tokens", tokens: 150,     label: "ChintasMoney · 150 analysis tokens" },
+  // Token top-up packs (valid 2 months). Prices per the token model.
+  tok400:  { amount: 19900,  type: "tokens", tokens: 400,   label: "ChintasMoney · 400 tokens (₹199)" },
+  tok700:  { amount: 49900,  type: "tokens", tokens: 700,   label: "ChintasMoney · 700 tokens (₹499)" },
+  tok1600: { amount: 99900,  type: "tokens", tokens: 1600,  label: "ChintasMoney · 1600 tokens (₹999)" },
+  tok3000: { amount: 200000, type: "tokens", tokens: 3000,  label: "ChintasMoney · 3000 tokens (₹2000)" },
 };
 
 // Rupee string from paise, for emails/receipts.

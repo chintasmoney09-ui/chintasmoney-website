@@ -230,9 +230,10 @@
     });
   };
   Cloud.checkoutTokens = function (n, price, onPaid) {
-    var product = n === 20 ? "tok20" : n === 60 ? "tok60" : n === 150 ? "tok150" : null;
+    // Map by token count (new packs: 400/700/1600/3000).
+    var product = n === 400 ? "tok400" : n === 700 ? "tok700" : n === 1600 ? "tok1600" : n === 3000 ? "tok3000" : null;
     if (!product) { alert("Unknown token pack."); return; }
-    rzpPay(product, function () { if (onPaid) onPaid(); });
+    rzpPay(product, function (grant) { if (onPaid) onPaid(grant); });
   };
 
   // ---- init ----------------------------------------------------------------

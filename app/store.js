@@ -14,29 +14,34 @@
   var KEY = "chintasmoney.trader.v1";
 
   // ---- Plans (admin-configurable) -------------------------------------------
+  // Token-metered model: every premium ACTION (log a trade, AI coach, replay,
+  // deep-dive, what-if…) spends tokens. Each plan includes a monthly token grant
+  // (use-it-or-lose-it); top-ups add wallet tokens valid 2 months. Nothing is
+  // unlimited — see the token economy section below. AI is Diamond-only.
   var PLANS = {
     free:  { id: "free",  name: "Free",  price: 0,   cadence: "forever",
       blurb: "Score your discipline.",
-      features: ["log-trades", "discipline-score", "trader-personality", "last-30-days", "basic-mistakes"],
-      limits: { history: 30, tradesPerMonth: 15 } },
+      features: ["log-trades-3", "discipline-score", "trader-personality", "last-30-days", "basic-mistakes", "free-calculators"],
+      limits: { history: 30 } },
     plus:  { id: "plus",  name: "Go Plus",  price: 199, cadence: "month",
-      blurb: "See every leak in your trading.",
-      features: ["everything-free", "unlimited-history", "full-mistake-analysis", "money-leak-report", "time-day-edge", "streaks-and-badges", "ai-discipline-coach", "pro-shareable-card"],
+      blurb: "Journal more, see your leaks.",
+      features: ["everything-free", "tokens-300", "unlimited-history", "full-mistake-analysis", "money-leak-report", "streaks-and-badges", "pro-shareable-card"],
       limits: { history: Infinity } },
     pro:   { id: "pro",   name: "Platinum",   price: 499, cadence: "month",
       blurb: "For serious, systematic traders.",
-      features: ["everything-plus", "strategy-performance", "trade-grades", "edge-expectancy", "rules-adherence", "csv-import-export", "weekly-report", "monthly-deep-dive"],
+      features: ["everything-plus", "tokens-600", "time-day-edge", "strategy-performance", "trade-grades", "edge-expectancy", "rules-adherence", "trade-replay", "csv-import-export", "weekly-report", "monthly-deep-dive"],
       limits: { history: Infinity } },
     diamond: { id: "diamond", name: "Diamond", price: 999, cadence: "month",
-      blurb: "Everything, white-glove.",
-      features: ["everything-pro", "what-if-simulator", "trading-playbook", "priority-ai", "monthly-1-1-review", "multi-year-backtest", "early-access"],
+      blurb: "Everything + AI, white-glove.",
+      features: ["everything-pro", "tokens-1500", "ai-discipline-coach", "what-if-simulator", "trading-playbook", "priority-ai", "monthly-1-1-review", "multi-year-backtest", "early-access"],
       limits: { history: Infinity } }
   };
+  // Minimum plan required to OPEN each area. AI coach is Diamond-only now.
   var FEATURE_MATRIX = {
     home: "free", log: "free", trades: "free", card: "free", profile: "free", calc: "free", analytics: "free", markets: "free", today: "free", report: "free", dreams: "free",
-    insights: "plus", coach: "plus", badges: "plus", leaderboard: "plus", timing: "plus", leak: "plus",
-    strategy: "pro", replay: "pro", rules: "pro", grade: "pro", edge: "pro",
-    whatif: "diamond", playbook: "diamond"
+    insights: "plus", badges: "plus", leaderboard: "plus", leak: "plus",
+    timing: "pro", strategy: "pro", replay: "pro", rules: "pro", grade: "pro", edge: "pro",
+    coach: "diamond", whatif: "diamond", playbook: "diamond"
   };
   var PLAN_RANK = { free: 0, plus: 1, pro: 2, diamond: 3 };
   function planAllows(p, area) { return PLAN_RANK[p] >= PLAN_RANK[FEATURE_MATRIX[area] || "free"]; }
@@ -277,55 +282,87 @@
     addDream: function (d) { d.id = uid("dm"); (load().dreams = load().dreams || []).unshift(d); save(); return d; },
     deleteDream: function (id) { var s = load(); s.dreams = (s.dreams || []).filter(function (d) { return d.id !== id; }); save(); },
     setProfile: function (patch) { Object.assign(load().profile, patch); save(); },
-    // Analysis tokens: each account gets FREE_TOKENS free replays ONCE (lifetime,
-    // not daily); after that, only purchased tokens (profile.tokens) work.
-    FREE_TOKENS: 5,
-    // Plan token entitlements: Platinum/Diamond = unlimited; Go Plus = 50/month.
-    _planMonthly: function (plan) { return plan === "plus" ? 50 : 0; },
-    _syncPlan: function (p) {
+
+    // ===== TOKEN ECONOMY =====================================================
+    // Real money runs on this — every premium ACTION spends tokens. Calculators
+    // and viewing already-logged data stay free. Three buckets, spent in order:
+    //   1) bonus  — a daily +30 login bonus (1 free trade/day), never stacks
+    //   2) monthly — the plan's monthly grant, use-it-or-lose-it (resets monthly)
+    //   3) wallet  — purchased top-ups, each batch valid 2 MONTHS (then expires)
+    // Nothing is unlimited. Extra tokens are ONLY added by a real payment or the
+    // admin panel. Tokens are non-refundable once granted.
+    TOKEN_COSTS: { "log-trade": 30, "ai-coach": 30, "replay": 30, "whatif": 30, "deep-dive": 50, "setup-scan": 20 },
+    PLAN_TOKENS: { free: 90, plus: 300, pro: 600, diamond: 1500 },   // per month
+    TOPUP_PACKS: { t199: { price: 199, tokens: 400 }, t499: { price: 499, tokens: 700 }, t999: { price: 999, tokens: 1600 }, t2000: { price: 2000, tokens: 3000 } },
+    DAILY_BONUS: 30,          // 1 free log-trade per day, for every account
+    WALLET_TTL_DAYS: 60,      // purchased tokens valid 2 months
+    _monthKey: function (d) { d = d || new Date(); return d.getFullYear() + "-" + d.getMonth(); },
+    _dayKey: function (d) { d = d || new Date(); return d.toISOString().slice(0, 10); },
+    // Bring the profile's token buckets up to date: grant the monthly allowance,
+    // add today's login bonus, and drop expired wallet batches.
+    _refreshTokens: function (p) {
       var plan = p.plan || "free";
-      if (plan === "pro" || plan === "diamond") return { unlimited: true, monthly: 0 };
-      var allow = this._planMonthly(plan);
-      if (allow > 0) {
-        var d = new Date(), key = d.getFullYear() + "-" + d.getMonth();
-        if (p.planMonth !== key) { p.planMonth = key; p.planTokens = allow; save(); }
-        return { unlimited: false, monthly: Math.max(0, p.planTokens || 0) };
-      }
-      return { unlimited: false, monthly: 0 };
+      var grant = this.PLAN_TOKENS[plan] != null ? this.PLAN_TOKENS[plan] : this.PLAN_TOKENS.free;
+      var mk = this._monthKey();
+      if (p.planMonth !== mk) { p.planMonth = mk; p.planTokens = grant; }
+      else if (p.planTokens == null) { p.planTokens = grant; }
+      // If plan changed to a higher tier mid-month, top the monthly bucket up to
+      // the new grant (never take away what they already have).
+      if ((p.planTokens || 0) < grant && p.planGrantedFor !== plan) { p.planTokens = grant; }
+      p.planGrantedFor = plan;
+      var dk = this._dayKey();
+      if (p.bonusDay !== dk) { p.bonusDay = dk; p.bonusTokens = this.DAILY_BONUS; }   // does not stack
+      var now = Date.now();
+      p.wallet = (p.wallet || []).filter(function (b) { return b && b.n > 0 && b.exp > now; });
     },
+    _walletBalance: function (p) { return (p.wallet || []).reduce(function (a, b) { return a + (b.n || 0); }, 0); },
+    _tokenTotal: function (p) { return (p.bonusTokens || 0) + (p.planTokens || 0) + this._walletBalance(p); },
+    cost: function (action) { return this.TOKEN_COSTS[action] || 0; },
     tokenState: function () {
-      var p = load().profile;
-      var ps = this._syncPlan(p);
-      var free = Math.max(0, this.FREE_TOKENS - (p.freeUsedTotal || 0));
-      var bal = p.tokens || 0;
-      if (ps.unlimited) return { unlimited: true, freeLeft: free, freeLimit: this.FREE_TOKENS, balance: bal, monthly: 0, total: Infinity, canUse: true };
-      return { unlimited: false, freeLeft: free, freeLimit: this.FREE_TOKENS, balance: bal, monthly: ps.monthly, total: free + ps.monthly + bal, canUse: (free + ps.monthly + bal) > 0 };
+      var p = load().profile; this._refreshTokens(p); save();
+      var wallet = this._walletBalance(p), total = (p.bonusTokens || 0) + (p.planTokens || 0) + wallet;
+      return {
+        unlimited: false, total: total, canUse: total > 0,
+        bonus: p.bonusTokens || 0, monthly: p.planTokens || 0, wallet: wallet,
+        planGrant: this.PLAN_TOKENS[p.plan || "free"] || 0,
+        balance: wallet, walletExpiry: (p.wallet || []).map(function (b) { return b.exp; }).sort()[0] || null
+      };
     },
-    useToken: function () {
-      var p = load().profile;
-      var ps = this._syncPlan(p);
-      if (ps.unlimited) return true; // Platinum/Diamond — never decrement
-      var free = Math.max(0, this.FREE_TOKENS - (p.freeUsedTotal || 0));
-      if (free > 0) { p.freeUsedTotal = (p.freeUsedTotal || 0) + 1; save(); return true; }
-      if ((p.planTokens || 0) > 0) { p.planTokens = p.planTokens - 1; save(); return true; }
-      if ((p.tokens || 0) > 0) { p.tokens = p.tokens - 1; save(); return true; }
-      return false;
+    canAfford: function (action) { var p = load().profile; this._refreshTokens(p); return this._tokenTotal(p) >= (this.TOKEN_COSTS[action] || 0); },
+    // Spend tokens for an action name (or a raw number). Returns true if paid.
+    spend: function (action) {
+      var need = typeof action === "number" ? action : (this.TOKEN_COSTS[action] || 0);
+      var p = load().profile; this._refreshTokens(p);
+      if (this._tokenTotal(p) < need) { save(); return false; }
+      var rem = need;
+      var b = Math.min(p.bonusTokens || 0, rem); p.bonusTokens = (p.bonusTokens || 0) - b; rem -= b;
+      if (rem > 0) { var m = Math.min(p.planTokens || 0, rem); p.planTokens = (p.planTokens || 0) - m; rem -= m; }
+      if (rem > 0) {
+        p.wallet = (p.wallet || []).sort(function (x, y) { return x.exp - y.exp; });
+        for (var i = 0; i < p.wallet.length && rem > 0; i++) { var take = Math.min(p.wallet[i].n, rem); p.wallet[i].n -= take; rem -= take; }
+        p.wallet = p.wallet.filter(function (x) { return x.n > 0; });
+      }
+      save(); return true;
     },
-    addTokens: function (n) { var p = load().profile; p.tokens = (p.tokens || 0) + (+n || 0); save(); return p.tokens; },
-    // Free-plan monthly logging quota (paid plans are unlimited).
-    quota: function () {
-      var s = load(), plan = PLANS[s.profile.plan] || PLANS.free;
-      var limit = (plan.limits && plan.limits.tradesPerMonth) || Infinity;
-      var now = new Date(), m = now.getMonth(), y = now.getFullYear();
-      var used = s.trades.filter(function (t) {
-        var d = new Date(t.date);
-        return !/^s\d+$/.test(t.id || "") && d.getMonth() === m && d.getFullYear() === y;
-      }).length;
-      return { plan: s.profile.plan, used: used, limit: limit,
-        remaining: limit === Infinity ? Infinity : Math.max(0, limit - used),
-        allowed: limit === Infinity || used < limit };
+    // Back-compat: older callers used useToken() for one AI/replay use.
+    useToken: function (action) { return this.spend(action || "ai-coach"); },
+    // Add purchased/admin tokens as a wallet batch valid WALLET_TTL_DAYS.
+    addTokens: function (n) {
+      var p = load().profile; n = +n || 0; if (n <= 0) return this._walletBalance(p);
+      p.wallet = p.wallet || [];
+      p.wallet.push({ n: n, exp: Date.now() + this.WALLET_TTL_DAYS * 86400000, at: Date.now() });
+      save(); return this._walletBalance(p);
     },
-    addTrade: function (t) { t.id = uid("t"); load().trades.unshift(t); save(); return t; },
+    tokensForPack: function (product) { var pk = this.TOPUP_PACKS[product]; return pk ? pk.tokens : 0; },
+    // Can the user log another trade right now? (tokens govern this now.)
+    canLog: function () { return this.canAfford("log-trade"); },
+    logCost: function () { return this.TOKEN_COSTS["log-trade"]; },
+    addTrade: function (t) {
+      // Logging a trade spends tokens. Refuse (return null) if unaffordable so the
+      // caller can show the recharge paywall — this is the core of the paid model.
+      if (!this.spend("log-trade")) return null;
+      t.id = uid("t"); load().trades.unshift(t); save(); return t;
+    },
     deleteTrade: function (id) { var s = load(); s.trades = s.trades.filter(function (t) { return t.id !== id; }); save(); },
     updateTrade: function (id, patch) { var s = load(), t = null; for (var i = 0; i < s.trades.length; i++) { if (s.trades[i].id === id) { t = s.trades[i]; break; } } if (t) { Object.assign(t, patch); save(); } return t; }
   };
