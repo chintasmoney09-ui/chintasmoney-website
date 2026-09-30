@@ -195,7 +195,7 @@
       var nextName = s.profile.plan === "free" ? "Plus" : "Platinum";
       var nextPrice = s.profile.plan === "free" ? "₹199" : "₹499";
       var up = el('<a class="side-upsell" href="#/profile">' +
-        '<span class="su-badge">💎 7-day trial free</span>' +
+        '<span class="su-badge">💎 1-day trial free</span>' +
         '<div class="su-title">Go ' + nextName + '</div>' +
         '<div class="su-feats">✓ Unlimited logging<br>✓ AI Discipline Coach<br>✓ Deep analytics &amp; league</div>' +
         '<div class="su-cta">Upgrade — from ' + nextPrice + '/mo →</div></a>');
@@ -420,7 +420,7 @@
         '<h2 class="pw-title">Unlock ' + esc(s.title) + '</h2>' +
         '<p class="pw-tag">' + esc(s.tag) + '</p></div>' +
       '<div class="pw-feats">' + s.feats.map(function (f) { return '<div class="pw-feat"><span>✓</span> ' + esc(f) + '</div>'; }).join("") + '</div>' +
-      '<div class="pw-price"><b>' + priceTxt + '</b>' + (plan.price ? '<span> · 7-day trial · cancel anytime</span>' : '') + '</div>';
+      '<div class="pw-price"><b>' + priceTxt + '</b>' + (plan.price ? '<span> · 1-day trial · cancel anytime</span>' : '') + '</div>';
     var b = el('<button class="btn btn-primary btn-lg" style="width:100%;justify-content:center;margin-top:14px">Upgrade to ' + plan.name + ' →</button>');
     b.addEventListener("click", function () { go("profile"); render(); });
     c.appendChild(b);
