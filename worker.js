@@ -459,6 +459,70 @@ async function handleLifecycle(request, env) {
   }
   return aRes({ ok: true, sent: sent }, 200);
 }
+// ---- Entitlement: the AUTHORITATIVE plan for the signed-in account ----------
+// Security: a plan is granted ONLY to the exact email that paid (or an admin
+// override), read server-side from the payments table — never from the client's
+// local state. This stops one Google account's paid plan showing up on a
+// different Google account signed in on the same device/browser.
+// Fail-SAFE: `ok` is true only when we actually read the payments table, so a
+// transient error can never silently downgrade a real payer (the app keeps its
+// current plan when ok is false).
+const PLAN_RANK_W = { free: 0, plus: 1, pro: 2, diamond: 3 };
+const ENTITLEMENT_PERIOD_MS = 33 * 86400000; // a monthly plan stays active ~33 days
+async function handleEntitlement(request, env) {
+  const out = { ok: false, plan: "free", source: "none", paidUntil: null, email: null };
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return aRes(out, 200);
+  const authz = request.headers.get("Authorization") || "";
+  const userTok = authz.replace(/^Bearer\s+/i, "").trim();
+  if (!userTok) return aRes(out, 200);
+  const base = env.SUPABASE_URL.replace(/\/$/, "");
+  let user;
+  try {
+    const ur = await fetch(base + "/auth/v1/user", { headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: "Bearer " + userTok } });
+    if (!ur.ok) return aRes(out, 200);
+    user = await ur.json();
+  } catch (e) { return aRes(out, 200); }
+  const email = user && user.email; if (!email) return aRes(out, 200);
+  out.email = email;
+  const now = Date.now();
+  // 1) Plan derived from verified payments for THIS email (last ~33 days).
+  let bestPlan = "free", paidUntil = null, determined = false;
+  try {
+    const pr = await fetch(base + "/rest/v1/payments?select=plan,status,created_at&email=eq." + encodeURIComponent(email) + "&order=created_at.desc", { headers: await sbHeaders(env) });
+    if (pr.ok) {
+      determined = true;
+      const rows = await pr.json();
+      (rows || []).forEach(function (r) {
+        if (!r || (r.status && r.status !== "paid")) return;
+        const plan = r.plan; if (PLAN_RANK_W[plan] == null || plan === "free") return; // only plan rows
+        const ts = r.created_at ? new Date(r.created_at).getTime() : 0;
+        if (now - ts > ENTITLEMENT_PERIOD_MS) return; // subscription period lapsed
+        if (PLAN_RANK_W[plan] > PLAN_RANK_W[bestPlan]) { bestPlan = plan; paidUntil = new Date(ts + ENTITLEMENT_PERIOD_MS).toISOString(); }
+      });
+    }
+  } catch (e) { /* determined stays false → app keeps current plan */ }
+  if (bestPlan !== "free") { out.plan = bestPlan; out.source = "payment"; out.paidUntil = paidUntil; }
+  // 2) Admin override (optional `entitlements` table: email, plan, until, tokens).
+  //    Lets the owner promote/degrade an account from the admin panel. Wins when
+  //    active and at least as high as the payment-derived plan.
+  try {
+    const er = await fetch(base + "/rest/v1/entitlements?select=plan,until,tokens,updated_at&email=eq." + encodeURIComponent(email.toLowerCase()) + "&order=updated_at.desc&limit=1", { headers: await sbHeaders(env) });
+    if (er.ok) {
+      determined = true;
+      const ent = (await er.json())[0];
+      if (ent && ent.plan != null && PLAN_RANK_W[ent.plan] != null) {
+        const active = !ent.until || new Date(ent.until).getTime() > now;
+        // An active admin entitlement is AUTHORITATIVE — it can raise OR lower the
+        // plan (e.g. a manual upgrade, or a downgrade after a refund).
+        if (active) {
+          out.plan = ent.plan; out.source = "admin"; if (ent.until) out.paidUntil = ent.until; if (ent.tokens) out.grantTokens = ent.tokens;
+        }
+      }
+    }
+  } catch (e) {}
+  out.ok = determined;
+  return aRes(out, 200);
+}
 async function handleRzpVerify(request, env) {
   if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) return jsonRes({ error: "payments not configured" }, 0);
   if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) return jsonRes({ error: "payments not configured" }, 0);
@@ -771,10 +835,27 @@ async function handleAdminUpdateUser(request, env) {
   if (sr.ok) { const arr = await sr.json(); if (arr && arr[0] && arr[0].data) data = arr[0].data; }
   if (!data.profile || typeof data.profile !== "object") data.profile = {};
   if (typeof b.name === "string") data.profile.name = b.name;
+  const email = (typeof b.email === "string" && b.email.trim()) ? b.email.trim() : (data.profile.email || "");
   if (typeof b.plan === "string" && ["free", "plus", "pro", "diamond"].indexOf(b.plan) !== -1) {
     data.profile.plan = b.plan; data.profile.plan_since = new Date().toISOString();
+    // Write the AUTHORITATIVE override to `entitlements` (keyed by email) so the
+    // change survives the entitlement check on next login — otherwise the
+    // payment-derived plan would overwrite it. Needs the user's email.
+    if (email) {
+      try {
+        await fetch(base + "/rest/v1/entitlements?on_conflict=email", {
+          method: "POST",
+          headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" }),
+          body: JSON.stringify({ email: email.toLowerCase(), plan: b.plan, until: null, note: (b.note || "admin"), updated_at: new Date().toISOString() }),
+        });
+      } catch (e) { /* table may not exist yet; user_state.plan still updated */ }
+    }
   }
-  if (b.tokensDelta) data.profile.tokens = Math.max(0, (data.profile.tokens || 0) + Number(b.tokensDelta));
+  // One-time token grant: add a wallet batch valid 60 days (matches the app model).
+  if (b.tokensDelta && Number(b.tokensDelta) > 0) {
+    if (!Array.isArray(data.profile.wallet)) data.profile.wallet = [];
+    data.profile.wallet.push({ n: Number(b.tokensDelta), exp: Date.now() + 60 * 86400000, at: Date.now() });
+  }
   // Upsert the row (create if the user has never synced).
   const up = await fetch(base + "/rest/v1/user_state?on_conflict=user_id", {
     method: "POST", headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" }),
@@ -1511,6 +1592,7 @@ export default {
     if (request.method === "POST" && url.pathname === "/api/admin/broadcast") return handleAdminBroadcast(request, env);
     if (request.method === "GET" && url.pathname === "/api/admin/prospects") return handleAdminProspects(request, env);
     if (request.method === "POST" && url.pathname === "/api/lifecycle") return handleLifecycle(request, env);
+    if (request.method === "GET" && url.pathname === "/api/entitlement") return handleEntitlement(request, env);
     if (request.method === "POST" && url.pathname === "/api/push/subscribe") return handlePushSubscribe(request, env);
     if (request.method === "POST" && url.pathname === "/api/admin/push") return handleAdminPush(request, env);
     if (request.method === "GET" && url.pathname === "/api/admin/razorpay") return handleAdminRazorpay(request, env);

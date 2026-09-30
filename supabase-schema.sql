@@ -104,3 +104,19 @@ create table if not exists public.email_log (
 );
 create unique index if not exists email_log_user_kind_key on public.email_log(user_id, kind);
 alter table public.email_log enable row level security;
+
+-- Entitlements: the AUTHORITATIVE plan override, set from the Admin panel.
+-- Read server-side by /api/entitlement together with the payments table, so a
+-- paid plan is granted ONLY to the exact email that paid (or an admin override).
+-- Lets the owner promote/degrade any account (e.g. a manual upgrade, or a
+-- downgrade after a refund). `until` NULL = permanent; a future timestamp expires.
+create table if not exists public.entitlements (
+  email       text primary key,
+  plan        text not null default 'free',   -- free | plus | pro | diamond
+  until       timestamptz,                     -- NULL = no expiry
+  tokens      integer,                          -- optional note of a token grant
+  note        text,
+  updated_at  timestamptz not null default now()
+);
+-- RLS on with no policy = only the service-role (Worker) can read/write it.
+alter table public.entitlements enable row level security;
