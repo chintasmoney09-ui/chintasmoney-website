@@ -121,6 +121,24 @@
       f.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); play(); } });
     })();
   </script>
+  <script>
+    // Reveal-on-scroll (this page doesn't load the full script.js). Without this,
+    // every .reveal block stays at opacity:0 and the page looks blank. Also
+    // degrades gracefully: if IntersectionObserver is missing, show everything.
+    (function () {
+      var els = document.querySelectorAll(".reveal");
+      if (!("IntersectionObserver" in window)) {
+        els.forEach(function (el) { el.classList.add("in"); });
+        return;
+      }
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
+      }, { rootMargin: "0px 0px -8% 0px" });
+      els.forEach(function (el) { io.observe(el); });
+      // Safety net: reveal anything still hidden shortly after load.
+      setTimeout(function () { els.forEach(function (el) { el.classList.add("in"); }); }, 1200);
+    })();
+  </script>
   <script src="consent.js"></script>
   <script src="analytics.js"></script>
 </body>
