@@ -3263,6 +3263,18 @@
     };
     var BADGEF = { plus: "plus", pro: "platinum", diamond: "diamond" };
     var RANKP = { free: 0, plus: 1, pro: 2, diamond: 3 };
+    // Benefit-led selling copy — the promise, in the trader's own words.
+    var PLAN_SELL = {
+      free: "See the truth about how you trade — free forever. Get your Discipline Score, trader personality and basic mistakes.",
+      plus: "Where most traders finally improve. Unlimited journaling, and the 💸 Money Leak Report shows the exact ₹ your habits cost you — with an AI coach to fix them.",
+      pro: "For traders who want a real edge. Grade every trade A–F, measure your true expectancy, import from your broker, and get weekly + monthly deep-dives.",
+      diamond: "The complete edge, white-glove. Everything in Platinum + a What-If simulator, your Personal Playbook, priority AI and a monthly 1:1 review."
+    };
+    var PLAN_WORTH = {
+      plus: "Worth it if one avoided revenge-trade saves you more than ₹199.",
+      pro: "Worth it if a sharper edge saves you one bad trade a month.",
+      diamond: "Worth it if a 1:1 review keeps you disciplined through one volatile week."
+    };
     var plans = el('<div class="plan-slider" style="display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:4px 2px 14px;margin:0 -2px"></div>');
     Object.keys(CM.PLANS).forEach(function (id) {
       var p = CM.PLANS[id], cur = s.profile.plan === id, bf = BADGEF[id], sp = SPEC[id] || { trades: "—", tokens: "—" };
@@ -3276,6 +3288,7 @@
         '<div class="hint" style="font-size:.8rem">' + esc(p.blurb) + '</div></div></div>' +
         '<div style="margin:10px 0 4px"><span style="font-size:1.7rem;font-weight:800;color:var(--ink)">' + (p.price ? "₹" + p.price : "Free") + '</span><span class="hint"> ' + (p.price ? "/ " + p.cadence : "forever") + '</span></div>';
       card.appendChild(el('<div>' + headHtml + '</div>'));
+      if (PLAN_SELL[id]) card.appendChild(el('<p style="font-size:.82rem;color:var(--ink-soft);margin:0 0 10px;line-height:1.5">' + esc(PLAN_SELL[id]) + '</p>'));
       // Headline specs
       card.appendChild(el('<div style="display:flex;gap:8px;margin:8px 0 10px">' +
         '<div style="flex:1;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center"><div style="font-size:.65rem;color:var(--muted)">📝 Trades</div><div style="font-weight:800;font-size:.82rem;color:var(--ink)">' + sp.trades.replace("Unlimited", "∞") + '</div></div>' +
@@ -3286,6 +3299,7 @@
       var payMode = window.CM_CONFIG && window.CM_CONFIG.cloud && window.CM_CONFIG.razorpayKeyId && id !== "free";
       var lower = RANKP[id] < RANKP[s.profile.plan];
       var label = cur ? "✓ Current plan" : (lower ? "Downgrade to " + p.name : (id === "free" ? "Switch to Free" : (payMode ? "Upgrade · ₹" + p.price : "Choose " + p.name)));
+      if (!cur && !lower && PLAN_WORTH[id]) card.appendChild(el('<p class="hint" style="font-size:.72rem;margin:0 0 8px;color:var(--emerald)">💡 ' + esc(PLAN_WORTH[id]) + '</p>'));
       var b = el('<button class="btn ' + (cur ? "" : (lower ? "btn-ghost" : "btn-primary")) + '" style="width:100%;justify-content:center"' + (cur ? " disabled" : "") + '>' + label + '</button>');
       b.addEventListener("click", function () {
         if (cur) return;
