@@ -1072,6 +1072,25 @@
       }
       goBtn.addEventListener("click", runRadar);
 
+      // Also search on platforms we can't fetch live (they block bots) — one tap
+      // opens their search for your current query in a new tab.
+      var launchWrap = el('<div style="margin:10px 0 4px"><div style="font-size:.8rem;color:#64748b;font-weight:700;margin-bottom:4px">Also search on ↗</div></div>');
+      var launchRow = el('<div style="display:flex;gap:6px;flex-wrap:wrap"></div>');
+      var LAUNCH = [
+        ["𝕏 Twitter/X", function (q) { return "https://twitter.com/search?f=live&q=" + encodeURIComponent(q); }],
+        ["❓ Quora", function (q) { return "https://www.quora.com/search?q=" + encodeURIComponent(q); }],
+        ["📘 Facebook", function (q) { return "https://www.facebook.com/search/posts?q=" + encodeURIComponent(q); }],
+        ["✈️ Telegram", function (q) { return "https://www.google.com/search?q=" + encodeURIComponent("site:t.me " + q + " india trading"); }],
+        ["🔎 Google", function (q) { return "https://www.google.com/search?q=" + encodeURIComponent(q + " india trading forum"); }]
+      ];
+      LAUNCH.forEach(function (l) {
+        var b = el('<button type="button" class="cm-btn sm ghost" style="font-size:.78rem">' + l[0] + '</button>');
+        b.addEventListener("click", function () { window.open(l[1](qIn.value.trim() || "trading discipline"), "_blank", "noopener"); });
+        launchRow.appendChild(b);
+      });
+      launchWrap.appendChild(launchRow);
+      radar.appendChild(launchWrap);
+
       v.appendChild(el('<h3 style="margin:22px 0 6px">📍 Where your buyers gather</h3>'));
       v.appendChild(el('<div class="cm-note" style="margin-bottom:14px">And the playbook: go to these places, add value, drop your link (chintasmoney.com), and log who you contacted below. No scraping, no spam — just showing up where Indian traders already are.</div>'));
 
