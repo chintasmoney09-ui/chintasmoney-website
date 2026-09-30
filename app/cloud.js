@@ -79,11 +79,20 @@
     var orig = CM.save;
     CM.save = function () { orig.apply(CM, arguments); schedulePush(); scheduleLifecycle(); };
   }
-  // Merge two app states so signing in never destroys data logged on another
-  // device or while offline. Trades & dreams are unioned by id (never dropped);
-  // for single-value fields (profile, plan) the remote copy wins, since that's
-  // the account's source of truth, but a paid plan is never downgraded.
-  function mergeStates(remote, local) {
+  // Which account the data currently on THIS device belongs to. Used to stop one
+  // account's plan/data leaking into a different email that signs in on the same
+  // device (the source of a "logged in with a new email, still shows Diamond" bug).
+  function prevOwner() { try { return localStorage.getItem("cm.owner"); } catch (e) { return null; } }
+  function setOwner(id) { try { localStorage.setItem("cm.owner", id || ""); } catch (e) {} }
+
+  // Merge the account's server state (remote — the source of truth) with this
+  // device's local state so signing in never destroys data logged offline.
+  // SECURITY: a device's local plan can NEVER raise the account's plan. Only the
+  // account's own server row (written by a verified payment) sets a paid plan.
+  //   opts.sameOwner  — the local data belongs to the SAME account signing in.
+  //   opts.anonDevice — this device was never signed in (anonymous trial use).
+  function mergeStates(remote, local, opts) {
+    opts = opts || {};
     if (!remote || typeof remote !== "object") return local;
     if (!local || typeof local !== "object") return remote;
     function unionById(a, b) {
@@ -95,15 +104,25 @@
       });
       return out;
     }
-    var merged = Object.assign({}, local, remote);
-    merged.trades = unionById(remote.trades, local.trades);
-    merged.dreams = unionById(remote.dreams, local.dreams);
-    // Keep the higher plan so an offline change can't silently downgrade a payer.
     var rank = { free: 0, plus: 1, platinum: 2, pro: 2, diamond: 3 };
     var rp = (remote.profile && remote.profile.plan) || "free";
     var lp = (local.profile && local.profile.plan) || "free";
+    var merged = Object.assign({}, local, remote);
+    // Carry this device's trades/dreams into the account only when they belong to
+    // the same account or the device was anonymous. A DIFFERENT previous owner's
+    // data (and plan) must never bleed into the account now signing in.
+    if (opts.sameOwner || opts.anonDevice) {
+      merged.trades = unionById(remote.trades, local.trades);
+      merged.dreams = unionById(remote.dreams, local.dreams);
+    } else {
+      merged.trades = remote.trades || [];
+      merged.dreams = remote.dreams || [];
+    }
     merged.profile = Object.assign({}, local.profile, remote.profile);
-    merged.profile.plan = (rank[lp] > rank[rp] ? lp : rp);
+    // Plan: the account (remote) wins. Keep a higher LOCAL plan only for the same
+    // account, purely to survive the brief window right after a payment before it
+    // syncs — never across accounts or from an anonymous device.
+    merged.profile.plan = (opts.sameOwner && rank[lp] > rank[rp]) ? lp : rp;
     // Onboarding is sticky — once done anywhere, it's done.
     merged.profile.onboarded = !!((remote.profile && remote.profile.onboarded) || (local.profile && local.profile.onboarded));
     return merged;
@@ -111,15 +130,32 @@
 
   function pull() {
     var localBefore = window.CM.load();
+    var po = prevOwner();
+    var sameOwner = !!po && po === Cloud.user.id;
+    var anonDevice = po == null || po === "";
     return Cloud.client.from("user_state").select("data").eq("user_id", Cloud.user.id).maybeSingle()
       .then(function (r) {
         if (r && r.data && r.data.data) {
-          var merged = mergeStates(r.data.data, localBefore);
+          var merged = mergeStates(r.data.data, localBefore, { sameOwner: sameOwner, anonDevice: anonDevice });
           window.CM.hydrate(merged);
+          setOwner(Cloud.user.id);
           // Push the merged result back so the account row reflects the union.
           return Cloud.client.from("user_state").upsert({ user_id: Cloud.user.id, data: merged, updated_at: new Date().toISOString() });
-        } else { // first login → seed a fresh row from current local state
-          return Cloud.client.from("user_state").upsert({ user_id: Cloud.user.id, data: localBefore, updated_at: new Date().toISOString() });
+        } else {
+          // First login for this account (no server row yet). A brand-new account
+          // has NOT paid, so it never inherits a paid plan from the device — the
+          // plan always starts free (a 7-day trial can be started in-app, and a
+          // real payment writes the plan straight to the server). Carry the
+          // device's own trades only when it was anonymous or the same account.
+          var keepData = sameOwner || anonDevice;
+          var seed = {
+            profile: Object.assign({}, localBefore.profile, { plan: "free", plan_since: null, trialEndsAt: null }),
+            trades: keepData ? (localBefore.trades || []) : [],
+            dreams: keepData ? (localBefore.dreams || []) : []
+          };
+          window.CM.hydrate(seed);
+          setOwner(Cloud.user.id);
+          return Cloud.client.from("user_state").upsert({ user_id: Cloud.user.id, data: seed, updated_at: new Date().toISOString() });
         }
       })
       .then(function (res) { try { scheduleLifecycle(); } catch (e) {} return res; });
@@ -137,7 +173,17 @@
     // the only hash — otherwise a double hash breaks session detection on return.
     return Cloud.client.auth.signInWithOAuth({ provider: provider, options: { redirectTo: location.origin + location.pathname } });
   };
-  Cloud.signOut = function () { return Cloud.client.auth.signOut().then(function () { location.reload(); }); };
+  Cloud.signOut = function () {
+    return Cloud.client.auth.signOut().then(function () {
+      // Clear the device's account tag and drop any paid plan locally so the next
+      // person to use this device (or an anonymous session) never inherits it.
+      try {
+        localStorage.removeItem("cm.owner");
+        if (window.CM && window.CM.setProfile) window.CM.setProfile({ plan: "free", plan_since: null, trialEndsAt: null });
+      } catch (e) {}
+      location.reload();
+    });
+  };
 
   // ---- Razorpay checkout (server-created order + verified signature) ----------
   // The Worker verifies the payment signature and re-reads the order's true
