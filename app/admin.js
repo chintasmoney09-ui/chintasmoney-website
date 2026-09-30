@@ -849,7 +849,15 @@
       card.appendChild(el('<label style="font-weight:700;font-size:.85rem;color:#334155">📷 Image / photo URL (optional)</label>'));
       var imgUrl = el('<input placeholder="https://chintasmoney.com/assets/logo-full.png" style="padding:11px 12px;background:#fff;color:#0f172a;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit"/>');
       card.appendChild(imgUrl);
-      card.appendChild(el('<div style="font-size:.78rem;color:#94a3b8;margin-top:-4px">Paste a public image link to show a banner at the top of the email. Tip: upload your image to the site or any host, then paste its URL.</div>'));
+      // One-tap: drop in a ready branded banner/badge (your images from the assets).
+      var imgPicks = el('<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px"></div>');
+      [["🎉 Welcome banner", "email-welcome-banner.png"], ["🏆 Celebration banner", "email-milestone-banner.png"], ["🥇 Plus badge", "badge-plus.png"], ["🥈 Platinum badge", "badge-platinum.png"], ["💎 Diamond badge", "badge-diamond.png"], ["✖ None", ""]].forEach(function (p) {
+        var b = el('<button type="button" class="cm-btn sm ghost" style="font-size:.76rem">' + p[0] + '</button>');
+        b.addEventListener("click", function () { imgUrl.value = p[1] ? ("https://chintasmoney.com/assets/" + p[1]) : ""; });
+        imgPicks.appendChild(b);
+      });
+      card.appendChild(imgPicks);
+      card.appendChild(el('<div style="font-size:.78rem;color:#94a3b8;margin-top:-2px">Tap a button above to use one of your branded images, or paste any public image URL for a banner at the top of the email.</div>'));
 
       card.appendChild(el('<label style="font-weight:700;font-size:.85rem;color:#334155">Message</label>'));
       var msg = el('<textarea rows="9" placeholder="Write your message here. Plain text — line breaks are kept. Your logo, footer and unsubscribe line are added automatically." style="width:100%;box-sizing:border-box;padding:11px 12px;background:#fff;color:#0f172a;border:1px solid #cbd5e1;border-radius:10px;font-size:.95rem;font-family:inherit;line-height:1.6"></textarea>');
