@@ -12,10 +12,18 @@
   //   RECEIPT_FROM     — (optional) e.g. "ChintasMoney <receipts@chintasmoney.com>"
   //   ANTHROPIC_API_KEY — (optional) enables the real AI Discipline Coach (Claude)
   //   COACH_MODEL      — (optional) override AI model id (default claude-haiku-4-5)
+  // Plain (non-secret) vars live here so every deploy sets them — Cloudflare
+  // wipes dashboard-only plain vars on deploy, so anything NOT secret must be
+  // declared here. Secrets (RESEND_API_KEY, VAPID_PRIVATE_KEY, RAZORPAY_KEY_SECRET,
+  // ADMIN_PASSWORD, ADMIN_SESSION_SECRET, SUPABASE_SERVICE_ROLE_KEY, ANTHROPIC_API_KEY)
+  // stay in the Cloudflare dashboard only and are never committed.
   "vars": {
     "RAZORPAY_KEY_ID": "rzp_live_TghHwuaNLfCqIx",
     "ADMIN_USER": "chintasmoney",
-    "SUPABASE_URL": "https://voycwperlvcozshjambo.supabase.co"
+    "SUPABASE_URL": "https://voycwperlvcozshjambo.supabase.co",
+    "RECEIPT_FROM": "ChintasMoney <receipts@chintasmoney.com>",
+    "OWNER_EMAIL": "chintasmoney@gmail.com",
+    "VAPID_PUBLIC_KEY": "BJL78AyLgYx7eFt2hFgccnlyO0dA4SvOqjp4NtIJUXgJOTocA_gOiP8-twZmaWub4j0q3sArjvHPjW5IBLA2His"
   },
   "assets": {
     "directory": ".",
