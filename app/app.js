@@ -339,7 +339,7 @@
     // Header: tiny badge + short name
     var thead = '<tr><th style="text-align:left;padding:8px 4px;font-size:.7rem;color:var(--muted)">Plan</th>' +
       cols.map(function (c, i) {
-        var icon = c[3] ? '<img src="/assets/badge-' + c[3] + '.png" alt="" style="width:24px;height:24px;display:block;margin:0 auto 2px"/>' : '<div style="font-size:1.1rem;line-height:24px">🆓</div>';
+        var icon = c[3] ? '<img src="/assets/badge-' + c[3] + '.png" alt="" width="24" height="24" loading="lazy" decoding="async" style="width:24px;height:24px;display:block;margin:0 auto 2px"/>' : '<div style="font-size:1.1rem;line-height:24px">🆓</div>';
         return '<th style="text-align:center;padding:8px 2px;font-size:.72rem;font-weight:800;color:' + (i === hi ? "var(--emerald)" : "var(--ink)") + ';' + colHl(i) + 'border-top-left-radius:8px;border-top-right-radius:8px">' + icon + c[1] + '</th>';
       }).join("") + '</tr>';
     // Prominent price row
@@ -3208,7 +3208,7 @@
     var sinceTxt = since ? new Date(since).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : null;
     var curCard = el('<div class="card" style="border-color:var(--violet)"></div>');
     var badgeFile = s.profile.plan === "pro" ? "platinum" : (s.profile.plan === "diamond" ? "diamond" : (s.profile.plan === "plus" ? "plus" : ""));
-    if (badgeFile) curCard.appendChild(el('<div style="text-align:center;margin:4px 0 2px"><img src="/assets/badge-' + badgeFile + '.png" alt="' + esc(curPlan.name) + '" style="width:120px;max-width:45%;height:auto"/></div>'));
+    if (badgeFile) curCard.appendChild(el('<div style="text-align:center;margin:4px 0 2px"><img src="/assets/badge-' + badgeFile + '.png" alt="' + esc(curPlan.name) + '" width="120" height="120" loading="lazy" decoding="async" style="width:120px;max-width:45%;height:auto"/></div>'));
     curCard.appendChild(el('<div class="card-hd"><h3>Your plan: ' + esc(curPlan.name) +
       (curPlan.price ? ' <span class="badge b-navy">₹' + curPlan.price + '/' + curPlan.cadence + '</span>' : ' <span class="badge b-navy">Free</span>') + '</h3></div>'));
     curCard.appendChild(el('<p class="hint" style="margin:0 0 10px">' + (sinceTxt ? "Member since " + esc(sinceTxt) + ". " : "") +
@@ -3283,7 +3283,7 @@
       var tag = cur ? '<span class="badge b-green" style="align-self:flex-start;margin-bottom:6px">✓ Your plan</span>' : (id === "pro" ? '<span class="badge b-navy" style="align-self:flex-start;margin-bottom:6px">Most popular</span>' : "");
       var headHtml = tag +
         '<div style="display:flex;align-items:center;gap:10px">' +
-        (bf ? '<img src="/assets/badge-' + bf + '.png" alt="" style="width:38px;height:38px"/>' : '<div style="font-size:1.8rem">🆓</div>') +
+        (bf ? '<img src="/assets/badge-' + bf + '.png" alt="" width="38" height="38" loading="lazy" decoding="async" style="width:38px;height:38px"/>' : '<div style="font-size:1.8rem">🆓</div>') +
         '<div><div style="font-weight:800;font-size:1.15rem;color:var(--ink)">' + esc(p.name) + '</div>' +
         '<div class="hint" style="font-size:.8rem">' + esc(p.blurb) + '</div></div></div>' +
         '<div style="margin:10px 0 4px"><span style="font-size:1.7rem;font-weight:800;color:var(--ink)">' + (p.price ? "₹" + p.price : "Free") + '</span><span class="hint"> ' + (p.price ? "/ " + p.cadence : "forever") + '</span></div>';
