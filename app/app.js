@@ -894,7 +894,7 @@
     var acts = [dl, pr];
     // Monthly deep-dive — branded report for Platinum & Diamond.
     if (CM.planAllows(CM.load().profile.plan, "strategy")) {
-      var md = el('<button class="btn btn-primary btn-sm">📅 Monthly deep-dive</button>');
+      var md = el('<button class="btn btn-primary btn-sm">📅 Monthly deep-dive · ' + CM.cost("deep-dive") + ' 🎟️</button>');
       md.addEventListener("click", function () { printMonthlyReport(); });
       acts.push(md);
     }
@@ -1338,6 +1338,7 @@
         exit_reason: c.querySelector("#xr").value, emotion: c.querySelector("#emo").value,
         note: (c.querySelector("#note").value || "").trim().slice(0, 500), preCheck: takePendingPreCheck(), date: new Date().toISOString() });
       if (!saved) { outOfTokensDialog("log-trade"); return; }
+      tokSpent("log-trade");
       // Instant honest feedback on the trade just logged (reinforces the loop).
       var d = CM.tradeDiscipline(saved), p = CM.pnl(saved);
       var verdict = d >= 75 ? "Disciplined trade 👏" : d >= 50 ? "Some leaks to plug" : "Undisciplined — this is what costs money";
@@ -1596,7 +1597,7 @@
     if (!CM.canAfford("deep-dive")) { outOfTokensDialog("deep-dive"); return; }
     var win = window.open("", "_blank");
     if (!win) { toast("Allow pop-ups to open your report", "err"); return; }
-    CM.spend("deep-dive");
+    CM.spend("deep-dive"); tokSpent("deep-dive");
     var now = new Date(), m = now.getMonth(), y = now.getFullYear();
     var all = CM.load().trades.filter(function (t) { var d = new Date(t.date); return d.getMonth() === m && d.getFullYear() === y; });
     var st = CM.stats(), ms = CM.mistakes(), sp = CM.setupPerformance(), e = CM.engagement();
@@ -2428,13 +2429,15 @@
   }
   // Shown when an action can't be afforded — names the exact cost + balance.
   var ACTION_LABEL = { "log-trade": "log a trade", "ai-coach": "ask the AI coach", "replay": "run a Trade Replay", "whatif": "run the What-If simulator", "deep-dive": "generate a deep-dive", "setup-scan": "run this analysis" };
+  // Transparency: confirm every token deduction so a charge is never a surprise.
+  function tokSpent(action) { try { var ts = CM.tokenState(); toast("−" + CM.cost(action) + " tokens · " + ts.total + " left", "ok"); } catch (e) {} }
   function outOfTokensDialog(action) {
     var ts = CM.tokenState(), cost = CM.cost(action);
     purchaseDialog("To " + (ACTION_LABEL[action] || "do this") + " you need <b>" + cost + " tokens</b> — you have <b>" + ts.total + "</b>. You get " + CM.DAILY_BONUS + " free every day; top up or upgrade to keep going.");
   }
   function openReplay(t) {
     if (!CM.canAfford("replay")) { outOfTokensDialog("replay"); return; }
-    CM.spend("replay");
+    CM.spend("replay"); tokSpent("replay");
     var levels = { entry: t.entry, sl: t.plannedSL, exit: t.exit, target: t.target, side: t.side, qty: t.qty };
     var body = '<div id="rpChart"></div><div id="rpOut" style="margin-top:12px"><p class="hint">Loading the real market for ' + esc(t.symbol) + '…</p></div>';
     dialog(esc(t.symbol) + " · trade replay", body, function (b) {
@@ -2529,7 +2532,7 @@
     var listEl = el('<div class="replay-list"></div>');
     trades.slice(0, 60).forEach(function (t) {
       var p = CM.pnl(t), d = CM.tradeDiscipline(t);
-      var row = el('<button class="replay-row"><div class="rr-main"><b>' + esc(t.symbol) + '</b><span class="hint">' + esc(t.side) + ' ' + t.qty + ' · ' + new Date(t.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" }) + '</span></div><div class="rr-side"><span class="' + (p >= 0 ? "pos" : "neg") + '">' + money(p) + '</span><span class="badge b-navy">D' + d + '</span><span class="rr-go">Replay →</span></div></button>');
+      var row = el('<button class="replay-row"><div class="rr-main"><b>' + esc(t.symbol) + '</b><span class="hint">' + esc(t.side) + ' ' + t.qty + ' · ' + new Date(t.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" }) + '</span></div><div class="rr-side"><span class="' + (p >= 0 ? "pos" : "neg") + '">' + money(p) + '</span><span class="badge b-navy">D' + d + '</span><span class="rr-go">Replay · ' + CM.cost("replay") + ' 🎟️ →</span></div></button>');
       row.addEventListener("click", function () { openReplay(t); });
       listEl.appendChild(row);
     });
@@ -2874,7 +2877,7 @@
     v.appendChild(runBar); v.appendChild(results);
     runBar.querySelector("#wiRun").addEventListener("click", function () {
       if (!CM.canAfford("whatif")) { outOfTokensDialog("whatif"); return; }
-      CM.spend("whatif"); runBar.remove(); buildWhatIf();
+      CM.spend("whatif"); tokSpent("whatif"); runBar.remove(); buildWhatIf();
     });
     function buildWhatIf() {
     var g = el('<div class="grid g2" style="margin-top:14px"></div>');
@@ -3023,7 +3026,7 @@
     var sug = el('<div class="suggest"></div>');
     ["Why is my discipline score low?", "What's my biggest mistake?", "Am I improving this week?", "How's my win rate and R:R?", "Which setup should I drop?", "Am I overtrading?", "How do I stop revenge trading?"].forEach(function (q) { var b = el('<button>' + q + '</button>'); b.addEventListener("click", function () { ask(q, box); }); sug.appendChild(b); });
     c.appendChild(sug);
-    var comp = el('<div class="composer"><input placeholder="Ask your coach…" /><button class="btn btn-primary">Ask</button></div>');
+    var comp = el('<div class="composer"><input placeholder="Ask your coach…" /><button class="btn btn-primary">Ask · ' + CM.cost("ai-coach") + ' 🎟️</button></div>');
     var i = comp.querySelector("input"), b = comp.querySelector("button");
     function send() { var q = i.value.trim(); if (q) { i.value = ""; ask(q, box); } }
     b.addEventListener("click", send); i.addEventListener("keydown", function (e) { if (e.key === "Enter") send(); });
@@ -3050,7 +3053,7 @@
   function ask(q, box) {
     // Each AI question spends tokens (Diamond-only feature).
     if (!CM.canAfford("ai-coach")) { outOfTokensDialog("ai-coach"); return; }
-    CM.spend("ai-coach");
+    CM.spend("ai-coach"); tokSpent("ai-coach");
     chat.push({ r: "u", t: q }); box.appendChild(bubble(chat[chat.length - 1]));
     CM.load().usage.aiQuestions++; CM.save();
     // Typing indicator
