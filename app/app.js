@@ -3311,9 +3311,8 @@
       });
       tb.appendChild(tbtn); v.appendChild(tb);
     }
-    // Plans — one horizontal swipe row of boxed cards. Price/trades/tokens all
-    // come from CM.PLANS, so admin-panel price changes reflect here live.
-    v.appendChild(el('<div style="display:flex;justify-content:space-between;align-items:baseline;margin:18px 2px 6px"><h2 style="font-size:1.15rem;margin:0">Plans</h2><span class="hint">swipe to compare →</span></div>'));
+    // Plans — a horizontal one-line TAB bar; tap a plan to see its full services.
+    v.appendChild(el('<div style="display:flex;justify-content:space-between;align-items:baseline;margin:18px 2px 6px"><h2 style="font-size:1.15rem;margin:0">Plans</h2><span class="hint">tap a plan →</span></div>'));
     var SPEC = {
       free: { trades: "3 / month", tokens: "90 / month" },
       plus: { trades: "10 / month", tokens: "300 / month" },
@@ -3322,7 +3321,6 @@
     };
     var BADGEF = { plus: "plus", pro: "platinum", diamond: "diamond" };
     var RANKP = { free: 0, plus: 1, pro: 2, diamond: 3 };
-    // Benefit-led selling copy — the promise, in the trader's own words.
     var PLAN_SELL = {
       free: "See the truth about how you trade — free. 90 tokens/month (3 logs) + a free daily bonus, your Discipline Score, personality and basic mistakes.",
       plus: "Where most traders finally improve. 300 tokens/month, unlimited history, full mistake analysis and the 💸 Money Leak Report — the exact ₹ your habits cost you.",
@@ -3334,40 +3332,96 @@
       pro: "Worth it if a sharper edge saves you one bad trade a month.",
       diamond: "The only plan with the AI coach — worth it if it keeps you disciplined."
     };
-    var plans = el('<div class="plan-slider" style="display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:4px 2px 14px;margin:0 -2px"></div>');
-    Object.keys(CM.PLANS).forEach(function (id) {
+    // Short description for every service, so each card explains what you get.
+    var FEATURE_DESC = {
+      "log-trades-3": "Journal up to 3 trades a month (90 tokens).",
+      "discipline-score": "A 0–100 score of how disciplined each trade was.",
+      "trader-personality": "Your dominant trading behaviour, named.",
+      "last-30-days": "See your last 30 days of history.",
+      "basic-mistakes": "Spot your top repeating mistakes.",
+      "free-calculators": "Risk, position-size & R:R calculators — always free.",
+      "tokens-300": "300 tokens every month (~10 trade logs).",
+      "tokens-600": "600 tokens every month (~20 trade logs).",
+      "tokens-1500": "1500 tokens every month (~50 trade logs).",
+      "everything-free": "Everything in the Free plan.",
+      "everything-plus": "Everything in Go Plus.",
+      "everything-pro": "Everything in Platinum.",
+      "unlimited-history": "Keep & analyse your entire trade history.",
+      "full-mistake-analysis": "Deep breakdown of every leak, ranked by ₹ cost.",
+      "money-leak-report": "The exact rupees your habits cost you.",
+      "streaks-and-badges": "Build streaks and earn discipline badges.",
+      "pro-shareable-card": "A polished card to share your stats.",
+      "time-day-edge": "Which days & times you trade best.",
+      "strategy-performance": "Win-rate & P&L broken down by setup.",
+      "trade-grades": "An A–F grade on every single trade.",
+      "edge-expectancy": "Your true edge & expectancy per trade.",
+      "rules-adherence": "Track how well you follow your own rules.",
+      "trade-replay": "Replay a trade on the real market chart (30 tokens).",
+      "csv-import-export": "Import from your broker, export anytime.",
+      "weekly-report": "A weekly discipline email.",
+      "monthly-deep-dive": "A branded monthly deep-dive report (50 tokens).",
+      "ai-discipline-coach": "An AI that coaches YOUR behaviour (30 tokens/question).",
+      "what-if-simulator": "See the ₹ your habits cost — simulated (30 tokens).",
+      "trading-playbook": "Your personal, data-built trading playbook.",
+      "priority-ai": "Faster, priority AI responses.",
+      "monthly-1-1-review": "A monthly 1:1 discipline review.",
+      "multi-year-backtest": "Backtest your discipline over years of data.",
+      "early-access": "First access to new tools."
+    };
+    var order = ["free", "plus", "pro", "diamond"];
+    var activePlan = order.indexOf(s.profile.plan) >= 0 ? s.profile.plan : "free";
+    var tabBar = el('<div style="display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px;margin:0 -2px 12px"></div>');
+    var detail = el('<div></div>');
+    var tabEls = {};
+    function styleTab(id) {
+      var t = tabEls[id], on = id === activePlan, cur = s.profile.plan === id;
+      t.style.cssText = "flex:1 0 auto;min-width:76px;cursor:pointer;border-radius:12px;padding:8px 10px;text-align:center;font-weight:800;font-size:.82rem;border:1.5px solid " + (on ? "var(--emerald)" : "var(--line)") + ";background:" + (on ? "rgba(34,224,138,.12)" : "var(--bg-2)") + ";color:var(--ink)";
+      t.innerHTML = esc(CM.PLANS[id].name) + '<div style="font-size:.7rem;font-weight:700;color:var(--muted)">' + (CM.PLANS[id].price ? "₹" + CM.PLANS[id].price : "Free") + (cur ? " ·✓" : "") + '</div>';
+    }
+    function renderDetail(id) {
       var p = CM.PLANS[id], cur = s.profile.plan === id, bf = BADGEF[id], sp = SPEC[id] || { trades: "—", tokens: "—" };
       var accent = cur ? "var(--emerald)" : (id === "pro" ? "var(--violet)" : "var(--line)");
-      var card = el('<div style="scroll-snap-align:start;flex:0 0 84%;max-width:300px;box-sizing:border-box;border:1.5px solid ' + accent + ';border-radius:16px;padding:16px;background:var(--bg-2);display:flex;flex-direction:column"></div>');
+      detail.innerHTML = "";
+      var card = el('<div style="box-sizing:border-box;border:1.5px solid ' + accent + ';border-radius:16px;padding:16px;background:var(--bg-2);display:flex;flex-direction:column"></div>');
       var tag = cur ? '<span class="badge b-green" style="align-self:flex-start;margin-bottom:6px">✓ Your plan</span>' : (id === "pro" ? '<span class="badge b-navy" style="align-self:flex-start;margin-bottom:6px">Most popular</span>' : "");
-      var headHtml = tag +
+      card.appendChild(el('<div>' + tag +
         '<div style="display:flex;align-items:center;gap:10px">' +
-        (bf ? '<img src="/assets/badge-' + bf + '.png" alt="" width="38" height="38" loading="lazy" decoding="async" style="width:38px;height:38px"/>' : '<div style="font-size:1.8rem">🆓</div>') +
-        '<div><div style="font-weight:800;font-size:1.15rem;color:var(--ink)">' + esc(p.name) + '</div>' +
-        '<div class="hint" style="font-size:.8rem">' + esc(p.blurb) + '</div></div></div>' +
-        '<div style="margin:10px 0 4px"><span style="font-size:1.7rem;font-weight:800;color:var(--ink)">' + (p.price ? "₹" + p.price : "Free") + '</span><span class="hint"> ' + (p.price ? "/ " + p.cadence : "forever") + '</span></div>';
-      card.appendChild(el('<div>' + headHtml + '</div>'));
-      if (PLAN_SELL[id]) card.appendChild(el('<p style="font-size:.82rem;color:var(--ink-soft);margin:0 0 10px;line-height:1.5">' + esc(PLAN_SELL[id]) + '</p>'));
-      // Headline specs
-      card.appendChild(el('<div style="display:flex;gap:8px;margin:8px 0 10px">' +
-        '<div style="flex:1;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center"><div style="font-size:.65rem;color:var(--muted)">📝 Trades</div><div style="font-weight:800;font-size:.82rem;color:var(--ink)">' + sp.trades.replace("Unlimited", "∞") + '</div></div>' +
-        '<div style="flex:1;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center"><div style="font-size:.65rem;color:var(--muted)">🎟️ Tokens</div><div style="font-weight:800;font-size:.82rem;color:var(--ink)">' + sp.tokens.replace("Unlimited", "∞").replace(" / month", "/mo").replace(" free (once)", " free") + '</div></div>' +
+        (bf ? '<img src="/assets/badge-' + bf + '.png" alt="" width="44" height="44" loading="lazy" decoding="async" style="width:44px;height:44px"/>' : '<div style="font-size:2rem">🆓</div>') +
+        '<div><div style="font-weight:800;font-size:1.25rem;color:var(--ink)">' + esc(p.name) + '</div>' +
+        '<div class="hint" style="font-size:.82rem">' + esc(p.blurb) + '</div></div></div>' +
+        '<div style="margin:10px 0 4px"><span style="font-size:1.9rem;font-weight:800;color:var(--ink)">' + (p.price ? "₹" + p.price : "Free") + '</span><span class="hint"> ' + (p.price ? "/ " + p.cadence : "forever") + '</span></div></div>'));
+      if (PLAN_SELL[id]) card.appendChild(el('<p style="font-size:.84rem;color:var(--ink-soft);margin:0 0 10px;line-height:1.5">' + esc(PLAN_SELL[id]) + '</p>'));
+      card.appendChild(el('<div style="display:flex;gap:8px;margin:8px 0 12px">' +
+        '<div style="flex:1;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px;text-align:center"><div style="font-size:.66rem;color:var(--muted)">📝 Trades / mo</div><div style="font-weight:800;font-size:.9rem;color:var(--ink)">' + sp.trades.replace(" / month", "") + '</div></div>' +
+        '<div style="flex:1;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px;text-align:center"><div style="font-size:.66rem;color:var(--muted)">🎟️ Tokens / mo</div><div style="font-weight:800;font-size:.9rem;color:var(--ink)">' + sp.tokens.replace(" / month", "") + '</div></div>' +
+        '<div style="flex:1;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px;text-align:center"><div style="font-size:.66rem;color:var(--muted)">🎁 Daily</div><div style="font-weight:800;font-size:.9rem;color:var(--ink)">+' + CM.DAILY_BONUS + '</div></div>' +
         '</div>'));
-      card.appendChild(el('<ul style="list-style:none;padding:0;margin:0 0 12px;display:grid;gap:5px;flex:1">' +
-        p.features.map(function (f) { return '<li style="font-size:.82rem;color:var(--ink-soft)"><span style="color:var(--emerald);font-weight:800">✓</span> ' + esc(featLabel(f)) + '</li>'; }).join("") + '</ul>'));
+      // Full service list WITH a short description per service.
+      card.appendChild(el('<div style="font-weight:800;font-size:.86rem;margin:2px 0 6px">Everything included</div>'));
+      card.appendChild(el('<ul style="list-style:none;padding:0;margin:0 0 12px;display:grid;gap:9px">' +
+        p.features.map(function (f) {
+          var d = FEATURE_DESC[f];
+          return '<li style="display:flex;gap:8px"><span style="color:var(--emerald);font-weight:800;flex:0 0 auto">✓</span><span><b style="font-size:.84rem;color:var(--ink)">' + esc(featLabel(f)) + '</b>' + (d ? '<div class="hint" style="font-size:.76rem;margin-top:1px">' + esc(d) + '</div>' : '') + '</span></li>';
+        }).join("") + '</ul>'));
       var payMode = window.CM_CONFIG && window.CM_CONFIG.cloud && window.CM_CONFIG.razorpayKeyId && id !== "free";
       var lower = RANKP[id] < RANKP[s.profile.plan];
       var label = cur ? "✓ Current plan" : (lower ? "Downgrade to " + p.name : (id === "free" ? "Switch to Free" : (payMode ? "Upgrade · ₹" + p.price : "Choose " + p.name)));
-      if (!cur && !lower && PLAN_WORTH[id]) card.appendChild(el('<p class="hint" style="font-size:.72rem;margin:0 0 8px;color:var(--emerald)">💡 ' + esc(PLAN_WORTH[id]) + '</p>'));
+      if (!cur && !lower && PLAN_WORTH[id]) card.appendChild(el('<p class="hint" style="font-size:.74rem;margin:0 0 8px;color:var(--emerald)">💡 ' + esc(PLAN_WORTH[id]) + '</p>'));
       var b = el('<button class="btn ' + (cur ? "" : (lower ? "btn-ghost" : "btn-primary")) + '" style="width:100%;justify-content:center"' + (cur ? " disabled" : "") + '>' + label + '</button>');
       b.addEventListener("click", function () {
         if (cur) return;
         if (payMode) { signInThen(function () { buyTokens(0, p.price); }); }
         else { CM.setProfile({ plan: id }); render(); }
       });
-      card.appendChild(b); plans.appendChild(card);
+      card.appendChild(b);
+      detail.appendChild(card);
+    }
+    order.forEach(function (id) {
+      var t = el('<button></button>'); tabEls[id] = t;
+      t.addEventListener("click", function () { activePlan = id; order.forEach(styleTab); renderDetail(id); });
+      tabBar.appendChild(t); styleTab(id);
     });
-    v.appendChild(plans);
+    v.appendChild(tabBar); v.appendChild(detail); renderDetail(activePlan);
     v.appendChild(planComparison(s.profile.plan));
     // Data backup / restore (all data lives in this browser — let people take it with them)
     var dataCard = el('<div class="card" style="margin-top:20px"><div class="card-hd"><h3>Your data</h3></div><p class="hint" style="margin:0 0 12px">Download a copy of your journal to keep, or restore one you saved earlier.</p></div>');
