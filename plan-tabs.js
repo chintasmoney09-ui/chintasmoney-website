@@ -105,7 +105,8 @@
         '<div style="display:flex;align-items:center;gap:12px">' +
         (bf ? '<img src="/assets/badge-' + bf + '.png" alt="" width="46" height="46" loading="lazy" decoding="async" style="width:46px;height:46px"/>' : '<div style="font-size:2rem">🆓</div>') +
         '<div><div style="font-weight:800;font-size:1.3rem;color:var(--ink)">' + esc(p.name) + '</div><div style="font-size:.85rem;color:var(--muted)">' + esc(p.blurb) + '</div></div></div>' +
-        '<div style="margin:12px 0 6px"><span style="font-size:2rem;font-weight:800;color:var(--ink)">' + (p.price ? "₹" + p.price : "Free") + '</span><span style="color:var(--muted)"> ' + (p.price ? "/ " + p.cadence : "forever") + '</span></div>' +
+        '<div style="margin:12px 0 2px"><span style="font-size:2rem;font-weight:800;color:var(--ink)">' + (p.price ? "₹" + p.price : "Free") + '</span><span style="color:var(--muted)"> ' + (p.price ? "/ " + p.cadence : "forever") + '</span></div>' +
+        (p.price ? '<div style="color:var(--green);font-size:.82rem;font-weight:700;margin:0 0 6px">or ₹' + (p.price * 10) + '/yr — 2 months free</div>' : '') +
         '<p style="font-size:.86rem;color:var(--ink-soft);margin:0 0 12px;line-height:1.55">' + esc(PLAN_SELL[id]) + '</p>' +
         '<div style="display:flex;gap:8px;margin:0 0 14px">' +
           tile("📝 Trades / mo", sp.trades) + tile("🎟️ Tokens / mo", sp.tokens) + tile("🎁 Daily", "+" + DAILY_BONUS) +
