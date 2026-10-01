@@ -60,37 +60,7 @@
   <section class="section" style="padding-top:26px">
     <div class="container">
       <div class="center reveal"><span class="eyebrow">Pricing</span><h2>Start free. <span class="grad">Level up when you're ready.</span></h2><p class="sub">Log your first trades free. Upgrade for unlimited history, AI coaching and deeper analytics — cancel anytime.</p></div>
-      <div class="plans plans-4">
-        <div class="plan reveal">
-          <span class="plan-tier free">🌱 Free</span>
-          <div class="amt">₹0<span> /forever</span></div>
-          <div class="plan-limit"><b>5 trade logs / month</b> · 150 tokens + free daily bonus</div>
-          <ul><li>Log trades &amp; Discipline Score</li><li>Trader personality</li><li>Free risk &amp; position calculators</li><li>Basic mistakes · last 30 days</li></ul>
-          <a href="app/" class="btn btn-ghost">Start free</a>
-        </div>
-        <div class="plan reveal">
-          <span class="plan-tier plus">⚡ Go Plus</span>
-          <div class="amt">₹199<span> /month</span></div>
-          <div class="plan-limit"><b>600 tokens / month</b> (~20 trade logs)</div>
-          <ul><li>Everything in Free</li><li>Unlimited history &amp; full mistake analysis</li><li>💸 Money Leak Report</li><li>Streaks, badges &amp; shareable card</li></ul>
-          <a href="app/" class="btn btn-ghost">Choose Go Plus</a>
-        </div>
-        <div class="plan feat reveal tier-platinum">
-          <span class="badge">Most popular · 3-day trial</span>
-          <span class="plan-tier platinum">💎 Platinum</span>
-          <div class="amt">₹499<span> /month</span></div>
-          <div class="plan-limit"><b>1200 tokens / month</b> (~40 trade logs)</div>
-          <ul><li>Everything in Go Plus</li><li>Setup performance, trade grades &amp; edge</li><li>Rules &amp; adherence + Trade Replay</li><li>CSV / broker import</li><li>Weekly &amp; monthly deep-dive reports</li></ul>
-          <a href="app/" class="btn btn-primary">Start 3-day trial</a>
-        </div>
-        <div class="plan reveal tier-diamond">
-          <span class="plan-tier diamond">👑 Diamond</span>
-          <div class="amt">₹999<span> /month</span></div>
-          <div class="plan-limit"><b>3000 tokens / month</b> (~100 logs) + AI</div>
-          <ul><li>Everything in Platinum</li><li>🤖 AI Discipline Coach (Diamond only)</li><li>What-If simulator &amp; Personal Playbook</li><li>Priority AI + monthly 1:1 review</li><li>Multi-year backtesting · early access</li></ul>
-          <a href="app/" class="btn btn-ghost">Go Diamond</a>
-        </div>
-      </div>
+      <div id="planTabs" class="reveal"></div>
 
       <!-- Full plan comparison (mirrors the in-app Compare Plans table) -->
       <div class="cmp-wrap reveal">
@@ -133,10 +103,6 @@
         </table>
         <p class="cmp-note" style="margin-top:12px">Tokens: log a trade <b>30</b> · AI coach <b>30</b> (Diamond only) · Trade Replay <b>30</b> · deep-dive <b>50</b>. Every account gets a free <b>30-token daily bonus</b>. Plan tokens reset monthly; top-up tokens valid <b>2 months</b>.</p>
       </div>
-      <details class="cmp-wrap reveal" style="margin-top:16px">
-        <summary style="cursor:pointer;font-weight:800;font-size:1.02rem;padding:6px 0">What each feature means ▾</summary>
-        <div style="margin-top:6px"><div style="padding:8px 0;border-top:1px solid var(--line)"><b>🎟️ Tokens</b><div class="cmp-note" style="margin:2px 0 0;text-align:left">Power every premium action. Plan tokens reset monthly; top-ups valid 2 months; every account gets a free 30-token daily bonus.</div></div><div style="padding:8px 0;border-top:1px solid var(--line)"><b>📝 Log a trade</b><div class="cmp-note" style="margin:2px 0 0;text-align:left">Journal a trade (entry, stop, exit, emotion) — costs 30 tokens.</div></div><div style="padding:8px 0;border-top:1px solid var(--line)"><b>Discipline Score</b><div class="cmp-note" style="margin:2px 0 0;text-align:left">A 0–100 score of how disciplined each trade was.</div></div><div style="padding:8px 0;border-top:1px solid var(--line)"><b>Trader Personality</b><div class="cmp-note" style="margin:2px 0 0;text-align:left">Your dominant trading behaviour, named.</div></div><div style="padding:8px 0;border-top:1px solid var(--line)"><b>💸 Money Leak Report</b><div class="cmp-note" style="margin:2px 0 0;text-align:left">The exact rupees your habits cost you.</div></div><div style="padding:8px 0;border-top:1px solid var(--line)"><b>Setup performance</b><div class="cmp-note" style="margin:2px 0 0;text-align:left">Win-rate & P&L broken down by setup.</div></div><div style="padding:8px 0;border-top:1px solid var(--line)"><b>🎓 Trade Grades</b><div class="cmp-note" style="margin:2px 0 0;text-align:left">An A–F grade on every single trade.</div></div><div style="padding:8px 0;border-top:1px solid var(--line)"><b>📐 Edge & Expectancy</b><div class="cmp-note" style="margin:2px 0 0;text-align:left">Your true edge & expectancy per trade.</div></div><div style="padding:8px 0;border-top:1px solid var(--line)"><b>🎬 Trade Replay</b><div class="cmp-note" style="margin:2px 0 0;text-align:left">Replay a trade on the real market chart — 30 tokens.</div></div><div style="padding:8px 0;border-top:1px solid var(--line)"><b>📅 Monthly deep-dive</b><div class="cmp-note" style="margin:2px 0 0;text-align:left">A branded monthly deep-dive report — 50 tokens.</div></div><div style="padding:8px 0;border-top:1px solid var(--line)"><b>🤖 AI Discipline Coach</b><div class="cmp-note" style="margin:2px 0 0;text-align:left">An AI that coaches YOUR behaviour (Diamond only) — 30 tokens/question.</div></div><div style="padding:8px 0;border-top:1px solid var(--line)"><b>🔮 What-If Simulator</b><div class="cmp-note" style="margin:2px 0 0;text-align:left">See the ₹ your habits cost — simulated — 30 tokens.</div></div><div style="padding:8px 0;border-top:1px solid var(--line)"><b>Multi-year backtesting</b><div class="cmp-note" style="margin:2px 0 0;text-align:left">Backtest your discipline over years of data.</div></div></div>
-      </details>
 
       <div class="token-strip reveal">
         <div><span class="tok-ic">🎟️</span> <b>Out of tokens?</b> Top up anytime — valid 2 months, no subscription needed.</div>
@@ -221,5 +187,6 @@
   </script>
   <script src="consent.js"></script>
   <script src="analytics.js"></script>
+  <script src="plan-tabs.js"></script>
 </body>
 </html>
