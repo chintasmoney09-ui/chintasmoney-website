@@ -2590,6 +2590,24 @@
     return v;
   };
 
+  // Per-plan token budget — shows how the monthly grant maps to each section the
+  // plan unlocks, so every paid plan can clearly afford what it includes.
+  function tokenBudgetPanel(planId) {
+    var grant = CM.PLAN_TOKENS[planId] || 0;
+    var RANK = { free: 0, plus: 1, pro: 2, diamond: 3 }, r = RANK[planId] || 0;
+    var acts = [["log-trade", "📝 Log a trade"]];
+    if (r >= 2) { acts.push(["replay", "🎬 Trade Replay"]); acts.push(["deep-dive", "📅 Monthly deep-dive"]); }
+    if (r >= 3) { acts.push(["ai-coach", "🤖 AI Discipline Coach"]); acts.push(["whatif", "🔮 What-If simulator"]); }
+    var wrap = el('<div class="card" style="margin-top:14px"></div>');
+    wrap.appendChild(el('<div class="card-hd"><h3>What your ' + esc(CM.PLANS[planId].name) + ' tokens cover</h3><span class="hint">' + grant + '/mo + ' + CM.DAILY_BONUS + '/day free</span></div>'));
+    wrap.appendChild(el('<div>' + acts.map(function (a) {
+      var cost = CM.cost(a[0]);
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--line)"><span>' + a[1] + ' <span class="hint">· ' + cost + ' 🎟️</span></span><b style="color:var(--emerald)">up to ' + Math.floor(grant / cost) + ' / month</b></div>';
+    }).join("") + '</div>'));
+    wrap.appendChild(el('<p class="hint" style="margin:10px 0 0">Each number assumes you spend the whole grant on that one action — mix and match freely. The free <b>' + CM.DAILY_BONUS + '-token daily bonus</b> adds up to ~' + (CM.DAILY_BONUS * 30) + ' more a month if you log in daily. Need more? Top up below (valid 2 months).</p>'));
+    return wrap;
+  }
+
   VIEWS.tokens = function () {
     var v = el('<div></div>');
     v.appendChild(topbar("Tokens", "Tokens power logging a trade (" + CM.logCost() + "), the AI coach & deep analyses. You get " + CM.DAILY_BONUS + " free every day. Top-ups valid 2 months."));
@@ -2598,6 +2616,10 @@
     c.appendChild(el('<div class="legal-note">🎟️ Tokens power your <b>own</b> trade logging & behaviour analysis only — educational, not advice, no tips, no future calls. Calculators stay free.</div>'));
     c.appendChild(el('<div class="tok-balance"><div><div class="hint">Tokens you have now</div><div class="tok-big">' + ts.total + '</div></div><div class="tok-split"><span>Daily bonus ' + ts.bonus + ' · plan ' + ts.monthly + '</span><span>' + ts.wallet + ' top-up tokens' + (ts.walletExpiry ? ' · exp ' + new Date(ts.walletExpiry).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : '') + '</span></div></div>'));
     c.appendChild(el('<p class="hint" style="margin:10px 0 0">Costs: log a trade <b>' + CM.cost("log-trade") + '</b> · AI coach <b>' + CM.cost("ai-coach") + '</b> · Trade Replay <b>' + CM.cost("replay") + '</b> · What-If <b>' + CM.cost("whatif") + '</b> · deep-dive <b>' + CM.cost("deep-dive") + '</b> tokens.</p>'));
+    v.appendChild(c);
+    // What the current plan's monthly tokens actually cover, section by section.
+    v.appendChild(tokenBudgetPanel(CM.load().profile.plan || "free"));
+    c = el('<div class="card" style="margin-top:14px"></div>');
     c.appendChild(el('<h3 style="margin:18px 0 8px">Top up tokens <span class="hint" style="font-weight:400">· valid 2 months</span></h3>'));
     var packs = el('<div class="grid g3"></div>');
     TOKEN_PACKS.forEach(function (p) {
