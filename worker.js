@@ -1691,12 +1691,72 @@ async function sendStreakReminders(env) {
   } catch (e) {}
 }
 
+// Renewal reminder — paid plans are one-time, so nudge by email 1–3 days before a
+// plan lapses. Recovers churn that would otherwise happen silently. Deduped per
+// user+expiry so each renewal cycle sends at most one reminder per day.
+async function sendRenewalReminders(env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return;
+  const base = env.SUPABASE_URL.replace(/\/$/, "");
+  const h = { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: "Bearer " + env.SUPABASE_SERVICE_ROLE_KEY };
+  // email -> user_id (for dedup via email_log).
+  const idByEmail = {};
+  try {
+    for (let page = 1; page <= 50; page++) {
+      const ur = await fetch(base + "/auth/v1/admin/users?page=" + page + "&per_page=200", { headers: h });
+      if (!ur.ok) break; const uj = await ur.json(); const batch = uj.users || (Array.isArray(uj) ? uj : []);
+      if (!batch.length) break; batch.forEach(function (u) { if (u.email) idByEmail[u.email.toLowerCase()] = u.id; });
+      if (batch.length < 200) break;
+    }
+  } catch (e) {}
+  let rows = [];
+  try {
+    const pr = await fetch(base + "/rest/v1/payments?select=email,plan,created_at,period_days,status&order=created_at.desc", { headers: h });
+    if (pr.ok) rows = await pr.json();
+  } catch (e) { return; }
+  const now = Date.now(), RANK = { free: 0, plus: 1, pro: 2, diamond: 3 };
+  // Latest plan payment per email.
+  const latest = {};
+  (rows || []).forEach(function (r) {
+    if (!r || !r.email || (r.status && r.status !== "paid")) return;
+    if (RANK[r.plan] == null || r.plan === "free") return;
+    const e = r.email.toLowerCase();
+    if (!latest[e] || new Date(r.created_at) > new Date(latest[e].created_at)) latest[e] = r;
+  });
+  for (const email of Object.keys(latest)) {
+    const r = latest[email];
+    const period = (r.period_days ? r.period_days : 33) * 86400000;
+    const expiry = new Date(r.created_at).getTime() + period;
+    const daysLeft = Math.ceil((expiry - now) / 86400000);
+    if (daysLeft < 1 || daysLeft > 3) continue; // only the 1–3 day window
+    const uid = idByEmail[email];
+    if (uid) {
+      let claimed = false;
+      try {
+        const ins = await fetch(base + "/rest/v1/email_log?on_conflict=user_id,kind", {
+          method: "POST", headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=ignore-duplicates,return=representation" }),
+          body: JSON.stringify({ user_id: uid, kind: "renew-" + new Date(expiry).toISOString().slice(0, 10), email: email, created_at: new Date().toISOString() }),
+        });
+        if (ins.ok) { const rr = await ins.json().catch(function () { return []; }); claimed = Array.isArray(rr) && rr.length > 0; }
+      } catch (e) {}
+      if (!claimed) continue;
+    }
+    const d = productDesc(r.plan);
+    const name = d ? d.name : r.plan;
+    const inner =
+      '<h2 style="margin:0 0 6px;font-size:1.4rem">Your ' + esc(name) + ' plan ends in ' + daysLeft + ' day' + (daysLeft === 1 ? "" : "s") + ' ⏳</h2>' +
+      '<p style="color:#5b6b8c;margin:0 0 14px">Renew now to keep your monthly tokens, the tools you rely on' + (r.plan === "diamond" ? " and your AI Discipline Coach" : "") + ' — no break in access. Discipline compounds; don\'t lose your momentum.</p>' +
+      '<div style="text-align:center;margin:20px 0 8px"><a href="' + APP_URL + '#/profile" style="display:inline-block;background:linear-gradient(135deg,#22e08a,#12b39a);color:#04231b;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:800">Renew my ' + esc(name) + ' →</a></div>' +
+      '<p style="color:#5b6b8c;font-size:13px;text-align:center;margin:6px 0 0">Tip: switch to yearly and get <b>2 months free</b>.</p>';
+    try { await sendEmail(env, { to: email, subject: "⏳ Your ChintasMoney " + name + " ends in " + daysLeft + " day" + (daysLeft === 1 ? "" : "s") + " — renew to keep access", html: emailShell(inner) }); } catch (e) {}
+  }
+}
+
 export default {
   async scheduled(event, env, ctx) {
     // Weekly report runs on Monday 04:00 UTC; the daily streak nudge runs every
     // evening. We route by the cron string so each fires its own job.
     if (event && event.cron === "0 4 * * 1") ctx.waitUntil(sendWeeklyReports(env));
-    else if (event && event.cron === "30 12 * * *") ctx.waitUntil(sendStreakReminders(env));
+    else if (event && event.cron === "30 12 * * *") ctx.waitUntil((async function () { try { await sendStreakReminders(env); } catch (e) {} try { await sendRenewalReminders(env); } catch (e) {} })());
     else ctx.waitUntil(sendWeeklyReports(env));
   },
   async fetch(request, env, ctx) {
