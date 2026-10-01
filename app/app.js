@@ -1809,6 +1809,11 @@
     if (e.streak > 0 && !e.loggedToday) list.push({ id: "streak", ic: "🔥", title: e.streak + "-day streak going", body: "Log a trade today to keep your streak alive.", cta: ["Log a trade", "log"] });
     if (ts.total <= 0) list.push({ id: "tokens0", ic: "🎟️", title: "You're out of tokens", body: "Top up or upgrade to keep logging trades and running analyses. You get a free daily bonus too.", cta: ["Get tokens", "tokens"] });
     else if (ts.total < 30) list.push({ id: "tokenslow", ic: "🎟️", title: "Only " + ts.total + " tokens left", body: "That's less than one trade log. Top up so you never stop.", cta: ["Top up", "tokens"] });
+    // Heads-up before top-up tokens expire (valid 2 months) — no silent vanishing.
+    if (ts.wallet > 0 && ts.walletExpiry) {
+      var days = Math.ceil((new Date(ts.walletExpiry) - Date.now()) / 86400000);
+      if (days >= 0 && days <= 7) list.push({ id: "tokexp-" + new Date(ts.walletExpiry).toISOString().slice(0, 10), ic: "⏳", title: ts.wallet + " top-up tokens expiring soon", body: "Your purchased tokens expire in " + (days <= 0 ? "today" : days + " day" + (days === 1 ? "" : "s")) + ". Use them before they lapse — they can't be refunded.", cta: ["Use tokens", "log"] });
+    }
     if (st.count && st.discipline < 60) list.push({ id: "disc", ic: "🧭", title: "Discipline needs attention", body: "Your score is " + st.discipline + ". Ask the coach what to fix first.", cta: ["Open coach", "coach"] });
     if (st.noSL > 0) list.push({ id: "nosl", ic: "🛡️", title: st.noSL + " trade(s) had no stop-loss", body: "The fastest way to lift your score is to always set a stop.", cta: ["See insights", "insights"] });
     if (plan === "free" && st.count >= 3) list.push({ id: "upsell", ic: "✨", title: "Unlock your full report", body: "Go Plus for full mistake analysis, the AI coach & time-of-day edge.", cta: ["See plans", "profile"] });
