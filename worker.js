@@ -521,6 +521,106 @@ async function handleEntitlement(request, env) {
   out.ok = determined;
   return aRes(out, 200);
 }
+
+// ---- Server-authoritative token wallet --------------------------------------
+// The client meters tokens for UX; THIS is the source of truth the Worker
+// enforces for server-compute actions (the AI coach), so a tampered browser
+// can't drain real API spend. Mirrors the client token model.
+const SV_PLAN_TOKENS = { free: 150, plus: 600, pro: 1200, diamond: 3000 };
+const SV_DAILY_BONUS = 30;
+const SV_WALLET_TTL_MS = 60 * 86400000;
+// Resolve the authoritative plan for an email (payments + admin entitlements).
+async function serverResolvePlan(env, email) {
+  if (!email || !env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return "free";
+  const base = env.SUPABASE_URL.replace(/\/$/, ""), now = Date.now();
+  let plan = "free";
+  try {
+    const pr = await fetch(base + "/rest/v1/payments?select=plan,status,created_at&email=eq." + encodeURIComponent(email) + "&order=created_at.desc", { headers: await sbHeaders(env) });
+    if (pr.ok) (await pr.json() || []).forEach(function (r) {
+      if (!r || (r.status && r.status !== "paid")) return;
+      if (PLAN_RANK_W[r.plan] == null || r.plan === "free") return;
+      var ts = r.created_at ? new Date(r.created_at).getTime() : 0;
+      if (now - ts <= ENTITLEMENT_PERIOD_MS && PLAN_RANK_W[r.plan] > PLAN_RANK_W[plan]) plan = r.plan;
+    });
+  } catch (e) {}
+  try {
+    const er = await fetch(base + "/rest/v1/entitlements?select=plan,until&email=eq." + encodeURIComponent(email.toLowerCase()) + "&order=updated_at.desc&limit=1", { headers: await sbHeaders(env) });
+    if (er.ok) { const ent = (await er.json())[0]; if (ent && PLAN_RANK_W[ent.plan] != null) { var active = !ent.until || new Date(ent.until).getTime() > now; if (active) plan = ent.plan; } }
+  } catch (e) {}
+  return plan;
+}
+// Load the token row, applying the monthly grant, daily bonus and wallet expiry.
+// Returns { acct, total } or null if the table/DB is unavailable (caller fail-opens).
+async function tokenAccountRefresh(env, uid, email, plan) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return null;
+  const base = env.SUPABASE_URL.replace(/\/$/, ""), now = new Date();
+  var acct = null;
+  try {
+    const r = await fetch(base + "/rest/v1/token_accounts?user_id=eq." + encodeURIComponent(uid) + "&select=*", { headers: await sbHeaders(env) });
+    if (!r.ok) return null; // table missing / error → fail-open
+    acct = (await r.json())[0] || { user_id: uid, email: email, plan_month: null, plan_tokens: 0, bonus_day: null, bonus_tokens: 0, wallet: [] };
+  } catch (e) { return null; }
+  var grant = SV_PLAN_TOKENS[plan] != null ? SV_PLAN_TOKENS[plan] : SV_PLAN_TOKENS.free;
+  var mk = now.getFullYear() + "-" + now.getMonth();
+  if (acct.plan_month !== mk) { acct.plan_month = mk; acct.plan_tokens = grant; }
+  else if (acct.plan_tokens < grant) { acct.plan_tokens = grant; } // mid-month upgrade top-up
+  var dk = now.toISOString().slice(0, 10);
+  if (acct.bonus_day !== dk) { acct.bonus_day = dk; acct.bonus_tokens = SV_DAILY_BONUS; }
+  var tnow = Date.now();
+  acct.wallet = (acct.wallet || []).filter(function (b) { return b && b.n > 0 && b.exp > tnow; });
+  acct.email = email;
+  var total = (acct.bonus_tokens || 0) + (acct.plan_tokens || 0) + acct.wallet.reduce(function (a, b) { return a + (b.n || 0); }, 0);
+  return { acct: acct, total: total };
+}
+async function tokenAccountSave(env, acct) {
+  const base = env.SUPABASE_URL.replace(/\/$/, "");
+  acct.updated_at = new Date().toISOString();
+  try {
+    await fetch(base + "/rest/v1/token_accounts?on_conflict=user_id", {
+      method: "POST", headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" }),
+      body: JSON.stringify(acct),
+    });
+  } catch (e) {}
+}
+// Debit `need` tokens server-side (bonus → monthly → wallet). Returns {ok,balance}.
+// Fail-OPEN: if the ledger is unavailable, allow the action (never block a payer).
+async function tokenSpendServer(env, uid, email, plan, need) {
+  const rr = await tokenAccountRefresh(env, uid, email, plan);
+  if (!rr) return { ok: true, balance: null, failOpen: true };
+  if (rr.total < need) return { ok: false, balance: rr.total };
+  var a = rr.acct, rem = need;
+  var b = Math.min(a.bonus_tokens || 0, rem); a.bonus_tokens -= b; rem -= b;
+  if (rem > 0) { var m = Math.min(a.plan_tokens || 0, rem); a.plan_tokens -= m; rem -= m; }
+  if (rem > 0) { a.wallet.sort(function (x, y) { return x.exp - y.exp; }); for (var i = 0; i < a.wallet.length && rem > 0; i++) { var t = Math.min(a.wallet[i].n, rem); a.wallet[i].n -= t; rem -= t; } a.wallet = a.wallet.filter(function (x) { return x.n > 0; }); }
+  await tokenAccountSave(env, a);
+  return { ok: true, balance: rr.total - need };
+}
+// Credit purchased top-up tokens to the server wallet (valid 2 months).
+async function tokenCreditServer(env, uid, email, plan, n) {
+  if (!(n > 0)) return;
+  const rr = await tokenAccountRefresh(env, uid, email, plan);
+  if (!rr) return;
+  rr.acct.wallet.push({ n: n, exp: Date.now() + SV_WALLET_TTL_MS, at: Date.now() });
+  await tokenAccountSave(env, rr.acct);
+}
+// GET /api/tokens — authoritative balance for the signed-in user.
+async function handleTokensGet(request, env) {
+  const authz = request.headers.get("Authorization") || "";
+  const tok = authz.replace(/^Bearer\s+/i, "").trim();
+  if (!tok || !env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return aRes({ ok: false }, 200);
+  let user;
+  try {
+    const ur = await fetch(env.SUPABASE_URL.replace(/\/$/, "") + "/auth/v1/user", { headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: "Bearer " + tok } });
+    if (!ur.ok) return aRes({ ok: false }, 200);
+    user = await ur.json();
+  } catch (e) { return aRes({ ok: false }, 200); }
+  if (!user || !user.id) return aRes({ ok: false }, 200);
+  const plan = await serverResolvePlan(env, user.email);
+  const rr = await tokenAccountRefresh(env, user.id, user.email, plan);
+  if (!rr) return aRes({ ok: false }, 200);
+  await tokenAccountSave(env, rr.acct);
+  return aRes({ ok: true, plan: plan, total: rr.total, bonus: rr.acct.bonus_tokens, monthly: rr.acct.plan_tokens, wallet: rr.acct.wallet.reduce(function (a, b) { return a + b.n; }, 0) }, 200);
+}
 async function handleRzpVerify(request, env) {
   if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) return jsonRes({ error: "payments not configured" }, 0);
   if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) return jsonRes({ error: "payments not configured" }, 0);
@@ -1124,10 +1224,21 @@ async function handleCoach(request, env) {
   // Verify the caller is a real signed-in user (guards API spend).
   const token = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
   if (!token || !env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return aRes({ error: "unauthorized" }, 401);
+  let user;
   try {
     const ur = await fetch(env.SUPABASE_URL.replace(/\/$/, "") + "/auth/v1/user", { headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: "Bearer " + token } });
     if (!ur.ok) return aRes({ error: "unauthorized" }, 401);
+    user = await ur.json();
   } catch (e) { return aRes({ error: "unauthorized" }, 401); }
+  if (!user || !user.id) return aRes({ error: "unauthorized" }, 401);
+  // SERVER-ENFORCED entitlement: the AI coach is Diamond-only AND costs tokens.
+  // This protects real Anthropic API spend from a tampered client — the gate is
+  // here, not in the browser. Token debit fails OPEN if the ledger is down so a
+  // genuine Diamond user is never blocked by infra.
+  const plan = await serverResolvePlan(env, user.email);
+  if (PLAN_RANK_W[plan] < PLAN_RANK_W.diamond) return aRes({ error: "upgrade_required", plan: plan, need: "diamond" }, 403);
+  const spend = await tokenSpendServer(env, user.id, user.email, plan, 30);
+  if (!spend.ok) return aRes({ error: "insufficient_tokens", balance: spend.balance }, 402);
   const question = String((b && b.question) || "").slice(0, 600);
   const context = String((b && b.context) || "").slice(0, 2500);
   const history = Array.isArray(b && b.history) ? b.history.slice(-6) : [];
@@ -1591,6 +1702,7 @@ export default {
     if (request.method === "GET" && url.pathname === "/api/admin/prospects") return handleAdminProspects(request, env);
     if (request.method === "POST" && url.pathname === "/api/lifecycle") return handleLifecycle(request, env);
     if (request.method === "GET" && url.pathname === "/api/entitlement") return handleEntitlement(request, env);
+    if (request.method === "GET" && url.pathname === "/api/tokens") return handleTokensGet(request, env);
     if (request.method === "POST" && url.pathname === "/api/push/subscribe") return handlePushSubscribe(request, env);
     if (request.method === "POST" && url.pathname === "/api/admin/push") return handleAdminPush(request, env);
     if (request.method === "GET" && url.pathname === "/api/admin/razorpay") return handleAdminRazorpay(request, env);

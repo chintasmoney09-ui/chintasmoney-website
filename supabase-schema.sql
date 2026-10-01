@@ -120,3 +120,22 @@ create table if not exists public.entitlements (
 );
 -- RLS on with no policy = only the service-role (Worker) can read/write it.
 alter table public.entitlements enable row level security;
+
+-- Server-authoritative token wallet. The client meters tokens for UX, but this
+-- is the SOURCE OF TRUTH the Worker enforces for server-compute actions (the AI
+-- coach), so a tampered browser can't drain real API spend. One row per user.
+--   plan_tokens  — remaining monthly grant (reset each month to the plan amount)
+--   bonus_tokens — remaining daily login bonus (refills to 30 each day)
+--   wallet       — purchased top-up batches [{n, exp}] (expire after 2 months)
+create table if not exists public.token_accounts (
+  user_id      uuid primary key,
+  email        text,
+  plan_month   text,
+  plan_tokens  integer not null default 0,
+  bonus_day    text,
+  bonus_tokens integer not null default 0,
+  wallet       jsonb   not null default '[]'::jsonb,
+  updated_at   timestamptz not null default now()
+);
+-- RLS on with no policy = only the service-role (Worker) can read/write it.
+alter table public.token_accounts enable row level security;
