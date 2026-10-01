@@ -140,7 +140,11 @@
       .then(function (e) {
         if (!e || e.ok !== true || !e.plan) return;
         var cur = (window.CM.load().profile.plan) || "free";
-        if (e.plan !== cur) window.CM.setProfile({ plan: e.plan });
+        var patch = {};
+        if (e.plan !== cur) patch.plan = e.plan;
+        // Remember when the paid plan lapses so the app can nudge a renewal.
+        patch.plan_until = (e.plan !== "free" && e.paidUntil) ? e.paidUntil : null;
+        window.CM.setProfile(patch);
       })
       .catch(function () {});
   }
