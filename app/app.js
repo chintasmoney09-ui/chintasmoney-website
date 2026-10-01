@@ -1592,8 +1592,11 @@
 
   // Branded monthly deep-dive report (Platinum/Diamond). Opens printable window.
   function printMonthlyReport() {
+    // Generating a deep-dive report spends tokens.
+    if (!CM.canAfford("deep-dive")) { outOfTokensDialog("deep-dive"); return; }
     var win = window.open("", "_blank");
     if (!win) { toast("Allow pop-ups to open your report", "err"); return; }
+    CM.spend("deep-dive");
     var now = new Date(), m = now.getMonth(), y = now.getFullYear();
     var all = CM.load().trades.filter(function (t) { var d = new Date(t.date); return d.getMonth() === m && d.getFullYear() === y; });
     var st = CM.stats(), ms = CM.mistakes(), sp = CM.setupPerformance(), e = CM.engagement();
@@ -2591,7 +2594,7 @@
     var c = el('<div class="card"></div>');
     c.appendChild(el('<div class="legal-note">🎟️ Tokens power your <b>own</b> trade logging & behaviour analysis only — educational, not advice, no tips, no future calls. Calculators stay free.</div>'));
     c.appendChild(el('<div class="tok-balance"><div><div class="hint">Tokens you have now</div><div class="tok-big">' + ts.total + '</div></div><div class="tok-split"><span>Daily bonus ' + ts.bonus + ' · plan ' + ts.monthly + '</span><span>' + ts.wallet + ' top-up tokens' + (ts.walletExpiry ? ' · exp ' + new Date(ts.walletExpiry).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : '') + '</span></div></div>'));
-    c.appendChild(el('<p class="hint" style="margin:10px 0 0">Costs: log a trade <b>' + CM.cost("log-trade") + '</b> · AI coach <b>' + CM.cost("ai-coach") + '</b> · Trade Replay <b>' + CM.cost("replay") + '</b> · deep-dive <b>' + CM.cost("deep-dive") + '</b> tokens.</p>'));
+    c.appendChild(el('<p class="hint" style="margin:10px 0 0">Costs: log a trade <b>' + CM.cost("log-trade") + '</b> · AI coach <b>' + CM.cost("ai-coach") + '</b> · Trade Replay <b>' + CM.cost("replay") + '</b> · What-If <b>' + CM.cost("whatif") + '</b> · deep-dive <b>' + CM.cost("deep-dive") + '</b> tokens.</p>'));
     c.appendChild(el('<h3 style="margin:18px 0 8px">Top up tokens <span class="hint" style="font-weight:400">· valid 2 months</span></h3>'));
     var packs = el('<div class="grid g3"></div>');
     TOKEN_PACKS.forEach(function (p) {
@@ -2862,8 +2865,18 @@
       { id: "emo", label: "If you only traded when calm", ic: "🧘", pred: function (t) { return /fomo|fear|greed|revenge|overconfident/i.test(t.emotion || ""); } }
     ];
     var hero = el('<div class="today-hero" style="max-width:none"></div>');
-    hero.innerHTML = '<div class="th-row"><div><div class="th-hi">🔮 Your real P&L: <span class="mono">' + money(realPnl) + '</span></div><div class="th-sub">Discipline ' + realDisc + '. Below: what each habit is costing your bottom line.</div></div></div>';
+    hero.innerHTML = '<div class="th-row"><div><div class="th-hi">🔮 Your real P&L: <span class="mono">' + money(realPnl) + '</span></div><div class="th-sub">Discipline ' + realDisc + '. Run the simulation to see what each habit is costing you.</div></div></div>';
     v.appendChild(hero);
+    // Running the simulation spends tokens — reveal results only on an explicit tap.
+    var cost = CM.cost("whatif");
+    var results = el('<div></div>');
+    var runBar = el('<div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn btn-primary" id="wiRun">🔮 Run simulation · ' + cost + ' tokens</button><span class="hint">You have ' + CM.tokenState().total + ' tokens.</span></div>');
+    v.appendChild(runBar); v.appendChild(results);
+    runBar.querySelector("#wiRun").addEventListener("click", function () {
+      if (!CM.canAfford("whatif")) { outOfTokensDialog("whatif"); return; }
+      CM.spend("whatif"); runBar.remove(); buildWhatIf();
+    });
+    function buildWhatIf() {
     var g = el('<div class="grid g2" style="margin-top:14px"></div>');
     scenarios.forEach(function (sc) {
       var r = scenario(sc.pred);
@@ -2876,11 +2889,12 @@
         '<div style="display:flex;justify-content:space-between;align-items:baseline"><span class="hint">Discipline</span><b>' + realDisc + ' → ' + r.disc + '</b></div>' +
         '<div class="hint" style="margin-top:6px">Based on ' + r.removed + ' trade(s) with this habit.</div></div>'));
     });
-    v.appendChild(g);
+    results.appendChild(g);
     // Best opportunity
     var best = scenarios.map(function (sc) { return { sc: sc, r: scenario(sc.pred) }; }).filter(function (x) { return x.r.removed; }).sort(function (a, b) { return b.r.delta - a.r.delta; })[0];
-    if (best && best.r.delta > 0) v.appendChild(el('<div class="notice" style="margin-top:12px">🎯 Your biggest opportunity: <b>' + esc(best.sc.label.toLowerCase().replace("if you ", "")) + '</b> — worth about <b class="pos">+' + money(best.r.delta) + '</b> to your P&L. Start there.</div>'));
-    v.appendChild(el('<p class="hint" style="margin-top:10px"><span class="mock-tag">SIMULATION</span> Models your history with those trades removed — illustrative, not a promise. Your real edge is not making them in the first place.</p>'));
+    if (best && best.r.delta > 0) results.appendChild(el('<div class="notice" style="margin-top:12px">🎯 Your biggest opportunity: <b>' + esc(best.sc.label.toLowerCase().replace("if you ", "")) + '</b> — worth about <b class="pos">+' + money(best.r.delta) + '</b> to your P&L. Start there.</div>'));
+    results.appendChild(el('<p class="hint" style="margin-top:10px"><span class="mock-tag">SIMULATION</span> Models your history with those trades removed — illustrative, not a promise. Your real edge is not making them in the first place.</p>'));
+    }
     return v;
   };
 
