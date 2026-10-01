@@ -298,20 +298,29 @@
     WALLET_TTL_DAYS: 60,      // purchased tokens valid 2 months
     _monthKey: function (d) { d = d || new Date(); return d.getFullYear() + "-" + d.getMonth(); },
     _dayKey: function (d) { d = d || new Date(); return d.toISOString().slice(0, 10); },
+    // Append a token activity entry (grants +, spends −). Kept to the last 60 so
+    // the user — and support — can always see exactly where tokens went.
+    _logTok: function (p, delta, label) {
+      if (!delta) return;
+      p.tokLog = p.tokLog || [];
+      p.tokLog.unshift({ t: Date.now(), d: delta, k: label });
+      if (p.tokLog.length > 60) p.tokLog = p.tokLog.slice(0, 60);
+    },
+    tokenLog: function () { var p = load().profile; this._refreshTokens(p); save(); return (p.tokLog || []).slice(); },
     // Bring the profile's token buckets up to date: grant the monthly allowance,
     // add today's login bonus, and drop expired wallet batches.
     _refreshTokens: function (p) {
       var plan = p.plan || "free";
       var grant = this.PLAN_TOKENS[plan] != null ? this.PLAN_TOKENS[plan] : this.PLAN_TOKENS.free;
       var mk = this._monthKey();
-      if (p.planMonth !== mk) { p.planMonth = mk; p.planTokens = grant; }
+      if (p.planMonth !== mk) { p.planMonth = mk; p.planTokens = grant; this._logTok(p, grant, "Monthly " + plan + " grant"); }
       else if (p.planTokens == null) { p.planTokens = grant; }
       // If plan changed to a higher tier mid-month, top the monthly bucket up to
       // the new grant (never take away what they already have).
-      if ((p.planTokens || 0) < grant && p.planGrantedFor !== plan) { p.planTokens = grant; }
+      if ((p.planTokens || 0) < grant && p.planGrantedFor !== plan) { this._logTok(p, grant - (p.planTokens || 0), "Plan upgrade top-up"); p.planTokens = grant; }
       p.planGrantedFor = plan;
       var dk = this._dayKey();
-      if (p.bonusDay !== dk) { p.bonusDay = dk; p.bonusTokens = this.DAILY_BONUS; }   // does not stack
+      if (p.bonusDay !== dk) { p.bonusDay = dk; p.bonusTokens = this.DAILY_BONUS; this._logTok(p, this.DAILY_BONUS, "Daily login bonus"); }   // does not stack
       var now = Date.now();
       p.wallet = (p.wallet || []).filter(function (b) { return b && b.n > 0 && b.exp > now; });
     },
@@ -342,6 +351,7 @@
         for (var i = 0; i < p.wallet.length && rem > 0; i++) { var take = Math.min(p.wallet[i].n, rem); p.wallet[i].n -= take; rem -= take; }
         p.wallet = p.wallet.filter(function (x) { return x.n > 0; });
       }
+      this._logTok(p, -need, typeof action === "string" ? action : "spend");
       save(); return true;
     },
     // Back-compat: older callers used useToken() for one AI/replay use.
@@ -351,6 +361,7 @@
       var p = load().profile; n = +n || 0; if (n <= 0) return this._walletBalance(p);
       p.wallet = p.wallet || [];
       p.wallet.push({ n: n, exp: Date.now() + this.WALLET_TTL_DAYS * 86400000, at: Date.now() });
+      this._logTok(p, n, "Top-up / grant");
       save(); return this._walletBalance(p);
     },
     tokensForPack: function (product) { var pk = this.TOPUP_PACKS[product]; return pk ? pk.tokens : 0; },
