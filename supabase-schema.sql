@@ -43,6 +43,8 @@ alter table public.payments add column if not exists status text default 'paid';
 alter table public.payments add column if not exists method text;
 alter table public.payments add column if not exists currency text;
 alter table public.payments add column if not exists razorpay_order_id text;
+-- How long this payment entitles the plan (33 = monthly, 380 = yearly). Null = legacy/monthly.
+alter table public.payments add column if not exists period_days integer;
 -- Idempotency: one row per Razorpay payment (lets the webhook upsert on retries).
 create unique index if not exists payments_rzp_payment_id_key on public.payments(razorpay_payment_id);
 

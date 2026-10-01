@@ -124,9 +124,13 @@ async function handleMovers() {
 // amount. Secrets come from Worker env vars (RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET),
 // set in the Cloudflare dashboard — never committed to the repo.
 const RZP_PRODUCTS = {
-  plus:    { amount: 19900, type: "plan",   plan: "plus",    label: "ChintasMoney · Go Plus (monthly)" },
-  pro:     { amount: 49900, type: "plan",   plan: "pro",     label: "ChintasMoney · Platinum (monthly)" },
-  diamond: { amount: 99900, type: "plan",   plan: "diamond", label: "ChintasMoney · Diamond (monthly)" },
+  plus:    { amount: 19900, type: "plan",   plan: "plus",    months: 1,  label: "ChintasMoney · Go Plus (monthly)" },
+  pro:     { amount: 49900, type: "plan",   plan: "pro",     months: 1,  label: "ChintasMoney · Platinum (monthly)" },
+  diamond: { amount: 99900, type: "plan",   plan: "diamond", months: 1,  label: "ChintasMoney · Diamond (monthly)" },
+  // Yearly plans — pay for 10 months, get 12 (2 months free). Higher LTV + cash.
+  plus_yr:    { amount: 199000, type: "plan", plan: "plus",    months: 12, label: "ChintasMoney · Go Plus (yearly)" },
+  pro_yr:     { amount: 499000, type: "plan", plan: "pro",     months: 12, label: "ChintasMoney · Platinum (yearly)" },
+  diamond_yr: { amount: 999000, type: "plan", plan: "diamond", months: 12, label: "ChintasMoney · Diamond (yearly)" },
   // Token top-up packs (valid 2 months). Prices per the token model.
   tok400:  { amount: 19900,  type: "tokens", tokens: 400,   label: "ChintasMoney · 400 tokens (₹199)" },
   tok700:  { amount: 49900,  type: "tokens", tokens: 700,   label: "ChintasMoney · 700 tokens (₹499)" },
@@ -486,7 +490,7 @@ async function handleEntitlement(request, env) {
   // 1) Plan derived from verified payments for THIS email (last ~33 days).
   let bestPlan = "free", paidUntil = null, determined = false;
   try {
-    const pr = await fetch(base + "/rest/v1/payments?select=plan,status,created_at&email=eq." + encodeURIComponent(email) + "&order=created_at.desc", { headers: await sbHeaders(env) });
+    const pr = await fetch(base + "/rest/v1/payments?select=plan,status,created_at,period_days&email=eq." + encodeURIComponent(email) + "&order=created_at.desc", { headers: await sbHeaders(env) });
     if (pr.ok) {
       determined = true;
       const rows = await pr.json();
@@ -494,8 +498,9 @@ async function handleEntitlement(request, env) {
         if (!r || (r.status && r.status !== "paid")) return;
         const plan = r.plan; if (PLAN_RANK_W[plan] == null || plan === "free") return; // only plan rows
         const ts = r.created_at ? new Date(r.created_at).getTime() : 0;
-        if (now - ts > ENTITLEMENT_PERIOD_MS) return; // subscription period lapsed
-        if (PLAN_RANK_W[plan] > PLAN_RANK_W[bestPlan]) { bestPlan = plan; paidUntil = new Date(ts + ENTITLEMENT_PERIOD_MS).toISOString(); }
+        const period = (r.period_days ? r.period_days : 33) * 86400000; // yearly vs monthly
+        if (now - ts > period) return; // subscription period lapsed
+        if (PLAN_RANK_W[plan] > PLAN_RANK_W[bestPlan]) { bestPlan = plan; paidUntil = new Date(ts + period).toISOString(); }
       });
     }
   } catch (e) { /* determined stays false → app keeps current plan */ }
@@ -535,12 +540,13 @@ async function serverResolvePlan(env, email) {
   const base = env.SUPABASE_URL.replace(/\/$/, ""), now = Date.now();
   let plan = "free";
   try {
-    const pr = await fetch(base + "/rest/v1/payments?select=plan,status,created_at&email=eq." + encodeURIComponent(email) + "&order=created_at.desc", { headers: await sbHeaders(env) });
+    const pr = await fetch(base + "/rest/v1/payments?select=plan,status,created_at,period_days&email=eq." + encodeURIComponent(email) + "&order=created_at.desc", { headers: await sbHeaders(env) });
     if (pr.ok) (await pr.json() || []).forEach(function (r) {
       if (!r || (r.status && r.status !== "paid")) return;
       if (PLAN_RANK_W[r.plan] == null || r.plan === "free") return;
       var ts = r.created_at ? new Date(r.created_at).getTime() : 0;
-      if (now - ts <= ENTITLEMENT_PERIOD_MS && PLAN_RANK_W[r.plan] > PLAN_RANK_W[plan]) plan = r.plan;
+      var period = (r.period_days ? r.period_days : 33) * 86400000;
+      if (now - ts <= period && PLAN_RANK_W[r.plan] > PLAN_RANK_W[plan]) plan = r.plan;
     });
   } catch (e) {}
   try {
@@ -648,7 +654,10 @@ async function handleRzpVerify(request, env) {
   const email = (b && typeof b.email === "string") ? b.email.trim() : "";
   await recordPayment(env, {
     razorpay_payment_id: paymentId, razorpay_order_id: orderId,
-    email: email, product: product, plan: product,
+    // Store the BASE plan ("plus"/"pro"/"diamond") so the entitlement resolver
+    // reads it directly, plus how long this payment entitles (monthly vs yearly).
+    email: email, product: product, plan: (p.type === "plan" ? p.plan : product),
+    period_days: p.type === "plan" ? (p.months === 12 ? 380 : 33) : null,
     amount: p.amount, currency: "INR", method: "Razorpay",
     status: "paid", created_at: new Date().toISOString(),
   });
@@ -823,9 +832,12 @@ async function handleRzpWebhook(request, env) {
       const p = (ev.payload && ev.payload.payment && ev.payload.payment.entity) || null;
       if (p) {
         const product = (p.notes && p.notes.product) || null;
+        const pr = RZP_PRODUCTS[product];
         const row = {
           razorpay_payment_id: p.id, razorpay_order_id: p.order_id || null,
-          email: p.email || "", product: product, plan: product,
+          // Store base plan + entitlement period (yearly vs monthly), matching verify.
+          email: p.email || "", product: product, plan: (pr && pr.type === "plan" ? pr.plan : product),
+          period_days: (pr && pr.type === "plan") ? (pr.months === 12 ? 380 : 33) : null,
           amount: p.amount, currency: p.currency || "INR", method: p.method || "Razorpay",
           status: "paid", created_at: new Date((p.created_at || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
         };

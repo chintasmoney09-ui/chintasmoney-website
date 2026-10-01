@@ -3531,6 +3531,18 @@
         else { CM.setProfile({ plan: id }); render(); }
       });
       card.appendChild(b);
+      // Yearly option — pay for 10 months, get 12 (2 months free). Higher LTV.
+      if (payMode && !cur && !lower && id !== "free") {
+        var yrPrice = p.price * 10;
+        var yb = el('<button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:8px">Pay yearly · ₹' + yrPrice + '/yr <b style="color:var(--emerald)">· 2 months free</b></button>');
+        yb.addEventListener("click", function () {
+          signInThen(function () {
+            if (window.CMCloud && window.CMCloud.checkout) window.CMCloud.checkout(id + "_yr", function () { render(); celebrate("plan", id); });
+            else buyTokens(0, p.price);
+          });
+        });
+        card.appendChild(yb);
+      }
       detail.appendChild(card);
     }
     order.forEach(function (id) {
