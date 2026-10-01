@@ -195,7 +195,7 @@
       var nextName = s.profile.plan === "free" ? "Plus" : "Platinum";
       var nextPrice = s.profile.plan === "free" ? "₹199" : "₹499";
       var up = el('<a class="side-upsell" href="#/profile">' +
-        '<span class="su-badge">💎 1-day trial free</span>' +
+        '<span class="su-badge">💎 3-day trial free</span>' +
         '<div class="su-title">Go ' + nextName + '</div>' +
         '<div class="su-feats">✓ Unlimited logging<br>✓ AI Discipline Coach<br>✓ Deep analytics &amp; league</div>' +
         '<div class="su-cta">Upgrade — from ' + nextPrice + '/mo →</div></a>');
@@ -279,9 +279,9 @@
 
   // Human-friendly labels for every plan feature key (store.js uses slugs).
   var FEATURE_LABELS = {
-    "log-trades": "Log your trades", "log-trades-3": "Log 3 trades / month (90 tokens)", "discipline-score": "Discipline Score", "trader-personality": "Trader Personality",
+    "log-trades": "Log your trades", "log-trades-5": "Log 5 trades / month (150 tokens)", "discipline-score": "Discipline Score", "trader-personality": "Trader Personality",
     "last-30-days": "Last 30 days of history", "basic-mistakes": "Basic mistake spotting", "free-calculators": "Free risk & position calculators",
-    "tokens-300": "300 tokens / month (~10 trade logs)", "tokens-600": "600 tokens / month (~20 trade logs)", "tokens-1500": "1500 tokens / month (~50 trade logs)",
+    "tokens-600": "600 tokens / month (~20 trade logs)", "tokens-1200": "1200 tokens / month (~40 trade logs)", "tokens-3000": "3000 tokens / month (~100 trade logs)",
     "trade-replay": "🎬 Trade Replay on real charts",
     "everything-free": "Everything in Free", "unlimited-history": "Unlimited trade history",
     "full-mistake-analysis": "Full mistake analysis", "setup-and-time-insights": "Setup & time-of-day insights",
@@ -302,8 +302,8 @@
   // Crystal-clear "what each plan gives" comparison table.
   function planComparison(highlight) {
     var rows = [
-      ["🎟️ Tokens / month", "90", "300", "600", "1500"],
-      ["Trades you can log /mo", "3", "10", "20", "50"],
+      ["🎟️ Tokens / month", "150", "600", "1200", "3000"],
+      ["Trades you can log /mo", "5", "20", "40", "100"],
       ["Free daily bonus (30 tok)", "✓", "✓", "✓", "✓"],
       ["Journal history", "30 days", "Unlimited", "Unlimited", "Unlimited"],
       ["Discipline Score & personality", "✓", "✓", "✓", "✓"],
@@ -420,7 +420,7 @@
         '<h2 class="pw-title">Unlock ' + esc(s.title) + '</h2>' +
         '<p class="pw-tag">' + esc(s.tag) + '</p></div>' +
       '<div class="pw-feats">' + s.feats.map(function (f) { return '<div class="pw-feat"><span>✓</span> ' + esc(f) + '</div>'; }).join("") + '</div>' +
-      '<div class="pw-price"><b>' + priceTxt + '</b>' + (plan.price ? '<span> · 1-day trial · cancel anytime</span>' : '') + '</div>';
+      '<div class="pw-price"><b>' + priceTxt + '</b>' + (plan.price ? '<span> · 3-day trial · cancel anytime</span>' : '') + '</div>';
     var b = el('<button class="btn btn-primary btn-lg" style="width:100%;justify-content:center;margin-top:14px">Upgrade to ' + plan.name + ' →</button>');
     b.addEventListener("click", function () { go("profile"); render(); });
     c.appendChild(b);
@@ -580,7 +580,9 @@
   var handoff = { calc: null, log: null };
   var SYMBOLS = [["NIFTY", 24800, 11], ["BANKNIFTY", 51200, 23], ["RELIANCE", 2980, 7], ["TCS", 3910, 31], ["TATAMOTORS", 985, 5], ["ZOMATO", 168, 13]];
   // Real NSE symbols users can pick from (indices resolve to tracking ETFs via tvSymbolFor).
-  var POPULAR_SYMS = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX",
+  var POPULAR_SYMS = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX", "NIFTYNXT50",
+    "NIFTYIT", "NIFTYAUTO", "NIFTYPHARMA", "NIFTYFMCG", "NIFTYMETAL", "NIFTYREALTY", "NIFTYPSUBANK", "NIFTYENERGY",
+    "NASDAQ", "SP500", "DOWJONES", "NIKKEI", "HANGSENG", "FTSE", "DAX",
     "GOLD", "SILVER", "CRUDE", "BRENT", "NATGAS", "COPPER", "USDINR", "BTC", "ETH", "SOLANA",
     "RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY", "SBIN",
     "AXISBANK", "KOTAKBANK", "ITC", "LT", "BHARTIARTL", "HINDUNILVR", "MARUTI", "SUNPHARMA", "WIPRO", "HCLTECH",
@@ -696,11 +698,12 @@
   }
   // Markets catalogue for the Live Charts analyser (full TradingView symbols).
   var MARKET_GROUPS = [
-    ["Indian Indices", [["NIFTY 50", "NSE:NIFTY"], ["BANK NIFTY", "NSE:BANKNIFTY"], ["SENSEX", "BSE:SENSEX"]]],
+    ["Indian Indices", [["NIFTY 50", "NSE:NIFTY"], ["BANK NIFTY", "NSE:BANKNIFTY"], ["FIN NIFTY", "NSE:FINNIFTY"], ["MIDCAP NIFTY", "NSE:MIDCPNIFTY"], ["SENSEX", "BSE:SENSEX"]]],
+    ["Sectoral Indices", [["NIFTY IT", "NSE:NIFTYIT"], ["NIFTY AUTO", "NSE:NIFTYAUTO"], ["NIFTY PHARMA", "NSE:NIFTYPHARMA"], ["NIFTY FMCG", "NSE:NIFTYFMCG"], ["NIFTY METAL", "NSE:NIFTYMETAL"], ["NIFTY REALTY", "NSE:NIFTYREALTY"], ["NIFTY PSU BANK", "NSE:NIFTYPSUBANK"], ["NIFTY ENERGY", "NSE:NIFTYENERGY"]]],
     ["NSE Stocks", [["RELIANCE", "NSE:RELIANCE"], ["TCS", "NSE:TCS"], ["HDFC BANK", "NSE:HDFCBANK"], ["INFOSYS", "NSE:INFY"], ["ICICI BANK", "NSE:ICICIBANK"], ["SBI", "NSE:SBIN"], ["TATA MOTORS", "NSE:TATAMOTORS"], ["ADANI ENT", "NSE:ADANIENT"]]],
     ["Commodities", [["Gold · XAU/USD", "OANDA:XAUUSD"], ["Silver · XAG/USD", "OANDA:XAGUSD"], ["Crude Oil · WTI", "TVC:USOIL"], ["Brent Oil", "TVC:UKOIL"], ["Natural Gas", "NYMEX:NG1!"], ["Copper", "COMEX:HG1!"]]],
     ["Crypto", [["Bitcoin", "BINANCE:BTCUSDT"], ["Ethereum", "BINANCE:ETHUSDT"], ["Solana", "BINANCE:SOLUSDT"], ["Dogecoin", "BINANCE:DOGEUSDT"]]],
-    ["Global Indices", [["S&P 500", "TVC:SPX"], ["Nasdaq 100", "TVC:NDX"], ["Dow Jones", "TVC:DJI"]]],
+    ["Global Indices", [["S&P 500", "TVC:SPX"], ["Nasdaq 100", "TVC:NDX"], ["Dow Jones", "TVC:DJI"], ["Nikkei 225", "TVC:NIKKEI"], ["Hang Seng", "TVC:HANGSENG"], ["FTSE 100", "TVC:FTSE"], ["DAX", "TVC:DAX"]]],
     ["Forex", [["USD/INR", "FX_IDC:USDINR"], ["EUR/USD", "OANDA:EURUSD"], ["GBP/USD", "OANDA:GBPUSD"]]]
   ];
 
@@ -2227,6 +2230,10 @@
       // Indian indices
       NIFTY: "^NSEI", "NIFTY 50": "^NSEI", NIFTY50: "^NSEI", BANKNIFTY: "^NSEBANK", "BANK NIFTY": "^NSEBANK",
       FINNIFTY: "^CNXFIN", MIDCPNIFTY: "^NSEMDCP50", SENSEX: "^BSESN", NIFTYBEES: "^NSEI", BANKBEES: "^NSEBANK",
+      // Indian sectoral indices
+      NIFTYIT: "^CNXIT", NIFTYAUTO: "^CNXAUTO", NIFTYPHARMA: "^CNXPHARMA", NIFTYFMCG: "^CNXFMCG",
+      NIFTYMETAL: "^CNXMETAL", NIFTYREALTY: "^CNXREALTY", NIFTYPSUBANK: "^CNXPSUBANK", NIFTYENERGY: "^CNXENERGY",
+      NIFTYINFRA: "^CNXINFRA", NIFTYMEDIA: "^CNXMEDIA",
       // Commodities (global futures — closest real, live series)
       XAUUSD: "GC=F", GOLD: "GC=F", GC1: "GC=F", "GC1!": "GC=F",
       XAGUSD: "SI=F", SILVER: "SI=F", "SI1!": "SI=F",
@@ -2239,7 +2246,8 @@
       // Crypto
       BTCUSDT: "BTC-USD", ETHUSDT: "ETH-USD", SOLUSDT: "SOL-USD", DOGEUSDT: "DOGE-USD", XRPUSDT: "XRP-USD",
       // Global indices
-      SPX: "^GSPC", NDX: "^NDX", DJI: "^DJI", NASDAQ: "^IXIC"
+      SPX: "^GSPC", SP500: "^GSPC", NDX: "^NDX", DJI: "^DJI", DOWJONES: "^DJI", NASDAQ: "^IXIC",
+      NIKKEI: "^N225", HANGSENG: "^HSI", FTSE: "^FTSE", DAX: "^GDAXI"
     };
     if (map[sym]) return map[sym];
     if (/BANKNIFTY/.test(sym)) return "^NSEBANK";
@@ -2419,9 +2427,9 @@
     var body = '<p class="hint">' + (reason || "Top up to keep logging and analysing your trades.") + '</p>' +
       '<div class="buy-grid">' + packs + '</div>' +
       '<div class="buy-plans">' +
-        '<button class="btn btn-primary" data-plan="999">👑 Diamond — ₹999/mo · 1500 tokens + AI</button>' +
-        '<button class="btn" data-plan="499">💎 Platinum — ₹499/mo · 600 tokens</button>' +
-        '<button class="btn" data-plan="199">⚡ Go Plus — ₹199/mo · 300 tokens</button>' +
+        '<button class="btn btn-primary" data-plan="999">👑 Diamond — ₹999/mo · 3000 tokens + AI</button>' +
+        '<button class="btn" data-plan="499">💎 Platinum — ₹499/mo · 1200 tokens</button>' +
+        '<button class="btn" data-plan="199">⚡ Go Plus — ₹199/mo · 600 tokens</button>' +
       '</div>' +
       '<p class="hint" style="text-align:center;margin-top:12px">Tokens power logging a trade (30), the AI coach & deep analyses. Valid 2 months. Educational analysis of your <b>own</b> trades — no tips, no advice.</p>';
     dialog("Top up tokens 🎟️", body, function (b, close) {
@@ -2644,9 +2652,9 @@
     banner.querySelector("#tManage").addEventListener("click", function () { go("profile"); render(); });
 
     c.appendChild(el('<h3 style="margin:18px 0 8px">' + (curId === "free" ? "Subscribe" : "Change plan") + '</h3>'));
-    [["plus", "⚡", "Go Plus", "<b>300 tokens/month</b> (~10 trade logs), unlimited history, full mistake analysis &amp; the Money Leak Report."],
-     ["pro", "💎", "Platinum", "<b>600 tokens/month</b> (~20 trade logs), setup performance, trade grades, edge, Trade Replay, broker import &amp; weekly reports."],
-     ["diamond", "👑", "Diamond", "<b>1500 tokens/month</b> (~50 trade logs) + the <b>AI Discipline Coach</b>, What-If simulator, playbook, monthly 1:1 &amp; backtesting."]
+    [["plus", "⚡", "Go Plus", "<b>600 tokens/month</b> (~20 trade logs), unlimited history, full mistake analysis &amp; the Money Leak Report."],
+     ["pro", "💎", "Platinum", "<b>1200 tokens/month</b> (~40 trade logs), setup performance, trade grades, edge, Trade Replay, broker import &amp; weekly reports."],
+     ["diamond", "👑", "Diamond", "<b>3000 tokens/month</b> (~100 trade logs) + the <b>AI Discipline Coach</b>, What-If simulator, playbook, monthly 1:1 &amp; backtesting."]
     ].forEach(function (p) {
       var id = p[0], price = CM.PLANS[id].price, isCur = id === curId, lower = RANK[id] < RANK[curId];
       var tag = isCur ? ' <span class="badge b-navy">Current</span>' : (id === "pro" ? ' <span class="badge b-green">Most popular</span>' : "");
@@ -3303,34 +3311,34 @@
     curCard.appendChild(billRow);
     v.appendChild(curCard);
 
-    // 1-day Platinum trial
+    // 3-day Platinum trial
     var trialLeft = s.profile.trialEndsAt ? Math.ceil((new Date(s.profile.trialEndsAt) - Date.now()) / 86400000) : 0;
     if (trialLeft > 0) {
-      v.appendChild(el('<div class="notice" style="background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.35);color:#148a3c">🎉 Platinum trial active — <b>' + trialLeft + ' day</b> left. Explore the paid features today.</div>'));
+      v.appendChild(el('<div class="notice" style="background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.35);color:#148a3c">🎉 Platinum trial active — <b>' + trialLeft + ' day' + (trialLeft === 1 ? "" : "s") + '</b> left. Explore the paid features.</div>'));
     } else if (s.profile.plan === "free") {
-      var tb = el('<div class="card" style="border-color:var(--emerald);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><b>Try Platinum free for 1 day</b><div class="hint">A 24-hour look at the paid features. Tokens still apply.</div></div></div>');
-      var tbtn = el('<button class="btn btn-primary">Start 1-day trial</button>');
+      var tb = el('<div class="card" style="border-color:var(--emerald);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><b>Try Platinum free for 3 days</b><div class="hint">A 3-day look at the paid features. Tokens still apply.</div></div></div>');
+      var tbtn = el('<button class="btn btn-primary">Start 3-day trial</button>');
       tbtn.addEventListener("click", function () {
-        CM.setProfile({ plan: "pro", trialEndsAt: new Date(Date.now() + 1 * 86400000).toISOString() });
-        toast("Platinum trial started — 1 day ⏳", "ok"); render();
+        CM.setProfile({ plan: "pro", trialEndsAt: new Date(Date.now() + 3 * 86400000).toISOString() });
+        toast("Platinum trial started — 3 days ⏳", "ok"); render();
       });
       tb.appendChild(tbtn); v.appendChild(tb);
     }
     // Plans — a horizontal one-line TAB bar; tap a plan to see its full services.
     v.appendChild(el('<div style="display:flex;justify-content:space-between;align-items:baseline;margin:18px 2px 6px"><h2 style="font-size:1.15rem;margin:0">Plans</h2><span class="hint">tap a plan →</span></div>'));
     var SPEC = {
-      free: { trades: "3 / month", tokens: "90 / month" },
-      plus: { trades: "10 / month", tokens: "300 / month" },
-      pro: { trades: "20 / month", tokens: "600 / month" },
-      diamond: { trades: "50 / month", tokens: "1500 / month" }
+      free: { trades: "5 / month", tokens: "150 / month" },
+      plus: { trades: "20 / month", tokens: "600 / month" },
+      pro: { trades: "40 / month", tokens: "1200 / month" },
+      diamond: { trades: "100 / month", tokens: "3000 / month" }
     };
     var BADGEF = { plus: "plus", pro: "platinum", diamond: "diamond" };
     var RANKP = { free: 0, plus: 1, pro: 2, diamond: 3 };
     var PLAN_SELL = {
-      free: "See the truth about how you trade — free. 90 tokens/month (3 logs) + a free daily bonus, your Discipline Score, personality and basic mistakes.",
-      plus: "Where most traders finally improve. 300 tokens/month, unlimited history, full mistake analysis and the 💸 Money Leak Report — the exact ₹ your habits cost you.",
-      pro: "For serious, systematic traders. 600 tokens/month, setup performance, trade grades A–F, edge & expectancy, Trade Replay, broker import and weekly + monthly deep-dives.",
-      diamond: "The complete edge + AI. 1500 tokens/month plus the AI Discipline Coach, What-If simulator, Personal Playbook, priority AI, a monthly 1:1 and multi-year backtesting."
+      free: "See the truth about how you trade — free. 150 tokens/month (5 logs) + a free daily bonus, your Discipline Score, personality and basic mistakes.",
+      plus: "Where most traders finally improve. 600 tokens/month, unlimited history, full mistake analysis and the 💸 Money Leak Report — the exact ₹ your habits cost you.",
+      pro: "For serious, systematic traders. 1200 tokens/month, setup performance, trade grades A–F, edge & expectancy, Trade Replay, broker import and weekly + monthly deep-dives.",
+      diamond: "The complete edge + AI. 3000 tokens/month plus the AI Discipline Coach, What-If simulator, Personal Playbook, priority AI, a monthly 1:1 and multi-year backtesting."
     };
     var PLAN_WORTH = {
       plus: "Worth it if one avoided revenge-trade saves you more than ₹199.",
@@ -3339,15 +3347,15 @@
     };
     // Short description for every service, so each card explains what you get.
     var FEATURE_DESC = {
-      "log-trades-3": "Journal up to 3 trades a month (90 tokens).",
+      "log-trades-5": "Journal up to 5 trades a month (150 tokens).",
       "discipline-score": "A 0–100 score of how disciplined each trade was.",
       "trader-personality": "Your dominant trading behaviour, named.",
       "last-30-days": "See your last 30 days of history.",
       "basic-mistakes": "Spot your top repeating mistakes.",
       "free-calculators": "Risk, position-size & R:R calculators — always free.",
-      "tokens-300": "300 tokens every month (~10 trade logs).",
       "tokens-600": "600 tokens every month (~20 trade logs).",
-      "tokens-1500": "1500 tokens every month (~50 trade logs).",
+      "tokens-1200": "1200 tokens every month (~40 trade logs).",
+      "tokens-3000": "3000 tokens every month (~100 trade logs).",
       "everything-free": "Everything in the Free plan.",
       "everything-plus": "Everything in Go Plus.",
       "everything-pro": "Everything in Platinum.",

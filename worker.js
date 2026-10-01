@@ -195,7 +195,7 @@ function productDesc(product) {
 function planFeatureLines(plan) {
   const F = {
     plus: [
-      "🎟️ 300 tokens every month (~10 trade logs) + a free 30-token daily bonus",
+      "🎟️ 600 tokens every month (~20 trade logs) + a free 30-token daily bonus",
       "✅ Unlimited journal history",
       "💸 Money Leak Report — where your money quietly bleeds",
       "🔍 Full mistake analysis",
@@ -203,7 +203,7 @@ function planFeatureLines(plan) {
     ],
     pro: [
       "✅ Everything in Go Plus",
-      "🎟️ 600 tokens every month (~20 trade logs)",
+      "🎟️ 1200 tokens every month (~40 trade logs)",
       "🕐 Time & Day edge",
       "📊 Setup / strategy performance",
       "🎓 Trade Grades (A–F on every trade)",
@@ -215,7 +215,7 @@ function planFeatureLines(plan) {
     ],
     diamond: [
       "✅ Everything in Platinum",
-      "🎟️ 1500 tokens every month (~50 trade logs)",
+      "🎟️ 3000 tokens every month (~100 trade logs)",
       "🤖 AI Discipline Coach — available only on Diamond",
       "🔮 What-If Simulator + 📖 Personal Trading Playbook",
       "👑 Priority AI + a monthly 1:1 discipline review",
