@@ -2604,6 +2604,20 @@
   };
 
   // Per-plan token budget — shows how the monthly grant maps to each section the
+  // Recent token activity — every grant (+) and spend (−) so it's never a mystery.
+  var TOK_ACT_LABEL = { "log-trade": "📝 Logged a trade", "ai-coach": "🤖 AI coach", "replay": "🎬 Trade Replay", "whatif": "🔮 What-If", "deep-dive": "📅 Deep-dive", "setup-scan": "📊 Analysis", "spend": "Used tokens" };
+  function tokenActivityPanel() {
+    var log = CM.tokenLog();
+    var wrap = el('<div class="card" style="margin-top:14px"></div>');
+    wrap.appendChild(el('<div class="card-hd"><h3>Recent token activity</h3><span class="hint">last ' + Math.min(log.length, 60) + '</span></div>'));
+    if (!log.length) { wrap.appendChild(el('<p class="hint" style="margin:0">No activity yet — your daily bonus, grants and spends will show here.</p>')); return wrap; }
+    wrap.appendChild(el('<div>' + log.slice(0, 25).map(function (e) {
+      var pos = e.d > 0, when = new Date(e.t).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) + " " + new Date(e.t).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+      var label = TOK_ACT_LABEL[e.k] || esc(e.k);
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--line)"><span style="font-size:.84rem">' + label + ' <span class="hint" style="font-size:.72rem">· ' + when + '</span></span><b style="color:' + (pos ? "var(--emerald)" : "var(--ink-soft)") + '">' + (pos ? "+" : "") + e.d + ' 🎟️</b></div>';
+    }).join("") + '</div>'));
+    return wrap;
+  }
   // plan unlocks, so every paid plan can clearly afford what it includes.
   function tokenBudgetPanel(planId) {
     var grant = CM.PLAN_TOKENS[planId] || 0;
@@ -2632,6 +2646,7 @@
     v.appendChild(c);
     // What the current plan's monthly tokens actually cover, section by section.
     v.appendChild(tokenBudgetPanel(CM.load().profile.plan || "free"));
+    v.appendChild(tokenActivityPanel());
     c = el('<div class="card" style="margin-top:14px"></div>');
     c.appendChild(el('<h3 style="margin:18px 0 8px">Top up tokens <span class="hint" style="font-weight:400">· valid 2 months</span></h3>'));
     var packs = el('<div class="grid g3"></div>');
