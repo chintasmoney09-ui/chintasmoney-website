@@ -40,6 +40,7 @@
     { id: "badges", label: "Streaks & Badges", ic: "🏅" },
     { id: "leaderboard", label: "Leaderboard", ic: "🏆" },
     { id: "card", label: "Shareable Card", ic: "↗" },
+    { id: "wrapped", label: "Weekly Wrapped", ic: "🎞️" },
     { sep: true },
     { id: "tokens", label: "Analysis Tokens", ic: "🎟️" },
     { id: "refer", label: "Refer & Earn", ic: "🎁" },
@@ -1821,6 +1822,11 @@
     if (st.noSL > 0) list.push({ id: "nosl", ic: "🛡️", title: st.noSL + " trade(s) had no stop-loss", body: "The fastest way to lift your score is to always set a stop.", cta: ["See insights", "insights"] });
     if (plan === "free" && st.count >= 3) list.push({ id: "upsell", ic: "✨", title: "Unlock your full report", body: "Go Plus for full mistake analysis, the AI coach & time-of-day edge.", cta: ["See plans", "profile"] });
     if (e.nextBadge) list.push({ id: "badge", ic: "🏅", title: "Next badge: " + e.nextBadge.name, body: e.nextBadge.desc, cta: ["View badges", "badges"] });
+    // Weekly Wrapped nudge — once there are a few trades this week.
+    (function () {
+      var now = Date.now(), wkTrades = (s.trades || []).filter(function (t) { return !/^s\d+$/.test(t.id || "") && now - new Date(t.date).getTime() <= 7 * 86400000; }).length;
+      if (wkTrades >= 3) { var wkKey = new Date().getFullYear() + "-w" + Math.floor(now / (7 * 86400000)); list.push({ id: "wrapped-" + wkKey, ic: "🎞️", title: "Your Weekly Wrapped is ready", body: "See this week's discipline grade, your biggest leak and best trade — and share it.", cta: ["Open Wrapped", "wrapped"] }); }
+    })();
     if (!list.length) list.push({ id: "welcome", ic: "⭐", title: "Welcome to ChintasMoney", body: "Log your trades honestly and watch your discipline grow.", cta: ["Log a trade", "log"] });
     return list;
   }
@@ -3266,6 +3272,80 @@
     });
     v.appendChild(share);
     v.appendChild(el('<p class="hint" style="text-align:center;margin-top:10px">Screenshot or tap Share. Post it, tag a trader, climb the league. 🔥</p>'));
+    return v;
+  };
+
+  // ---- WEEKLY WRAPPED ------------------------------------------------------
+  // A shareable weekly recap — drives a weekly return habit AND viral sharing.
+  function emoExit(t) { return /revenge|fomo|fear|greed|bored/i.test(t.exit_reason || "") || /revenge|fomo|fear|greed|overconfident/i.test(t.emotion || ""); }
+  function weeklyRecap() {
+    var tr = CM.load().trades.filter(function (t) { return !/^s\d+$/.test(t.id || ""); });
+    var now = Date.now(), wk = 7 * 86400000;
+    var thisWk = tr.filter(function (t) { return now - new Date(t.date).getTime() <= wk; });
+    var lastWk = tr.filter(function (t) { var a = now - new Date(t.date).getTime(); return a > wk && a <= 2 * wk; });
+    function disc(a) { return a.length ? Math.round(a.reduce(function (s, t) { return s + CM.tradeDiscipline(t); }, 0) / a.length) : 0; }
+    function pnl(a) { return a.reduce(function (s, t) { return s + CM.pnl(t); }, 0); }
+    var dThis = disc(thisWk), dLast = disc(lastWk);
+    var noSL = thisWk.filter(function (t) { return !CM.hasSL(t); }).length;
+    var emo = thisWk.filter(emoExit).length;
+    var wins = thisWk.filter(CM.isWin).length;
+    // Money leak: losses on trades with no stop OR an emotional exit (behaviour cost).
+    var leak = thisWk.filter(function (t) { return (!CM.hasSL(t) || emoExit(t)) && CM.pnl(t) < 0; }).reduce(function (s, t) { return s + Math.abs(CM.pnl(t)); }, 0);
+    var sorted = thisWk.slice().sort(function (a, b) { return (CM.tradeDiscipline(b) - CM.tradeDiscipline(a)) || (CM.pnl(b) - CM.pnl(a)); });
+    var best = sorted[0], worst = sorted[sorted.length - 1];
+    // Top repeating mistake this week
+    var mk = { "No stop-loss": thisWk.filter(function (t) { return !CM.hasSL(t); }).length,
+      "Revenge trades": thisWk.filter(function (t) { return /revenge/i.test((t.exit_reason || "") + (t.emotion || "")); }).length,
+      "FOMO entries": thisWk.filter(function (t) { return /fomo/i.test((t.exit_reason || "") + (t.emotion || "")); }).length,
+      "Cut winners early": thisWk.filter(function (t) { return /fear|booked early/i.test((t.exit_reason || "") + (t.emotion || "")); }).length };
+    var topMistake = Object.keys(mk).sort(function (a, b) { return mk[b] - mk[a]; })[0];
+    if (!mk[topMistake]) topMistake = null;
+    var grade = dThis >= 90 ? "A+" : dThis >= 80 ? "A" : dThis >= 70 ? "B" : dThis >= 60 ? "C" : dThis >= 45 ? "D" : "F";
+    return { n: thisWk.length, dThis: dThis, delta: dThis - dLast, noSL: noSL, emo: emo, wins: wins,
+      winRate: thisWk.length ? Math.round(wins / thisWk.length * 100) : 0, pnl: pnl(thisWk), leak: Math.round(leak),
+      best: best, worst: worst, topMistake: topMistake, grade: grade, streak: CM.engagement().streak };
+  }
+  VIEWS.wrapped = function () {
+    var v = el('<div></div>');
+    v.appendChild(topbar("Weekly Wrapped", "Your trading week in one card — screenshot it, share it, beat it next week."));
+    var r = weeklyRecap();
+    if (!r.n) {
+      var e0 = el('<div class="card paywall"><div class="lock-ic">🎞️</div><h3>No trades this week yet</h3><p class="hint">Log a few trades and your Weekly Wrapped appears here every week — your discipline, your biggest leak, your best trade.</p></div>');
+      var eb = el('<button class="btn btn-primary" style="margin-top:8px">＋ Log a trade</button>'); eb.addEventListener("click", function () { go("log"); });
+      e0.appendChild(eb); v.appendChild(e0); return v;
+    }
+    var gcol = r.grade[0] === "A" ? "#22e08a" : r.grade[0] === "B" ? "#19d3c5" : r.grade[0] === "C" ? "#f5b849" : "#ff5a6a";
+    var deltaTxt = r.delta > 0 ? '▲ +' + r.delta : r.delta < 0 ? '▼ ' + r.delta : '– 0';
+    var deltaCol = r.delta > 0 ? "#22e08a" : r.delta < 0 ? "#ff5a6a" : "#8ea3c9";
+    function row(l, val, col) { return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid rgba(255,255,255,.08)"><span style="color:#b7c4dd;font-size:.86rem">' + l + '</span><b style="color:' + (col || "#fff") + '">' + val + '</b></div>'; }
+    var card = el('<div class="share-card"></div>');
+    card.innerHTML =
+      '<div class="sc-top"><b>ChintasMoney</b><span>WEEKLY WRAPPED</span></div>' +
+      '<div style="text-align:center;margin:8px 0 2px"><div style="font-size:3.4rem;font-weight:800;line-height:1;color:' + gcol + '">' + r.grade + '</div><div style="color:#8ea3c9;font-size:.78rem;letter-spacing:.08em">DISCIPLINE GRADE · ' + r.dThis + '/100 <span style="color:' + deltaCol + '">' + deltaTxt + ' vs last week</span></div></div>' +
+      '<div class="sc-stats" style="margin-top:12px">' +
+        '<div><div style="font-size:1.35rem;font-weight:800">' + r.n + '</div><div style="color:#8ea3c9;font-size:.72rem">trades</div></div>' +
+        '<div><div style="font-size:1.35rem;font-weight:800">' + r.winRate + '%</div><div style="color:#8ea3c9;font-size:.72rem">win rate</div></div>' +
+        '<div><div style="font-size:1.35rem;font-weight:800;color:#ff5a6a">' + (r.leak > 0 ? money(r.leak) : "₹0") + '</div><div style="color:#8ea3c9;font-size:.72rem">leaked</div></div>' +
+      '</div>' +
+      '<div style="margin:12px 2px 0">' +
+        (r.best ? row("🏅 Best trade", esc(r.best.symbol) + " · D" + CM.tradeDiscipline(r.best), "#22e08a") : "") +
+        (r.topMistake ? row("⚠️ Top leak", esc(r.topMistake)) : row("✅ Clean week", "no repeating leak", "#22e08a")) +
+        row("🛡️ Trades with no stop", r.noSL, r.noSL ? "#ff5a6a" : "#22e08a") +
+        row("🔥 Current streak", r.streak + " day" + (r.streak === 1 ? "" : "s")) +
+      '</div>' +
+      '<div class="sc-flex" style="margin-top:12px">' + (r.dThis >= 75 ? "Disciplined week. Protect this edge. 🧠" : r.leak > 0 ? "Your habits cost " + money(r.leak) + " this week. Fix one. 💪" : "Small, steady, disciplined. Keep going. 💚") + '</div>' +
+      '<div class="sc-foot">chintasmoney.com · discipline over profit</div>';
+    v.appendChild(card);
+    var shareUrl = referLink() || "https://chintasmoney.com";
+    var share = el('<div style="display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap"><button class="btn btn-primary" id="wrShare">📤 Share my week</button><button class="btn" id="wrCard">See my report card</button></div>');
+    share.querySelector("#wrShare").addEventListener("click", function () {
+      var text = "My ChintasMoney Weekly Wrapped: Discipline grade " + r.grade + " (" + r.dThis + "/100), " + r.n + " trades, " + r.winRate + "% win rate. " + (r.leak > 0 ? "My habits leaked " + money(r.leak) + " this week. " : "") + "Track yours free 👉 " + shareUrl;
+      if (navigator.share) navigator.share({ title: "My Weekly Wrapped", text: text, url: shareUrl }).catch(function () {});
+      else { try { navigator.clipboard.writeText(text); this.textContent = "✓ Copied!"; toast("Wrapped copied — paste it anywhere 📋", "ok"); } catch (er) {} }
+    });
+    share.querySelector("#wrCard").addEventListener("click", function () { go("card"); render(); });
+    v.appendChild(share);
+    v.appendChild(el('<p class="hint" style="text-align:center;margin-top:10px">A fresh Wrapped every week. Screenshot it, post it, come back next week to beat it. 🔁</p>'));
     return v;
   };
 
