@@ -3121,7 +3121,16 @@
       body: JSON.stringify({ question: q, context: coachContext(), history: history }) })
       .then(function (r) { return r.ok ? r.json() : r.json().then(function (j) { throw j; }); })
       .then(function (d) { _coachAI = true; typing.remove(); chat.push({ r: "a", t: d.text }); box.appendChild(bubble(chat[chat.length - 1])); box.scrollTop = box.scrollHeight; })
-      .catch(function (err) { if (err && err.error === "ai_not_configured") _coachAI = false; typing.remove(); localAnswer(q, box); });
+      .catch(function (err) {
+        typing.remove();
+        // Server-enforced gates (can't be bypassed by the client): don't fall back
+        // to a free local answer — show the correct upgrade / recharge path.
+        if (err && err.error === "upgrade_required") { chat.push({ r: "a", t: "The AI Discipline Coach is a Diamond feature. Upgrade to unlock unlimited, data-grounded coaching." }); box.appendChild(bubble(chat[chat.length - 1])); dialog("👑 Diamond feature", '<p class="hint">The AI Discipline Coach is available on <b>Diamond</b>. Upgrade to get AI coaching on your own trades.</p><div style="margin-top:14px"><button class="btn btn-primary" id="upD">See Diamond</button></div>', function (bb, close) { bb.querySelector("#upD").addEventListener("click", function () { close(); go("profile"); render(); }); }); return; }
+        if (err && err.error === "insufficient_tokens") { chat.push({ r: "a", t: "You're out of tokens for the AI coach. Top up or wait for your daily bonus." }); box.appendChild(bubble(chat[chat.length - 1])); outOfTokensDialog("ai-coach"); return; }
+        // Not configured or a network error → fall back to the local coach.
+        if (err && err.error === "ai_not_configured") _coachAI = false;
+        localAnswer(q, box);
+      });
   }
   function localAnswer(q, box) { var a = coach(q); chat.push({ r: "a", t: a.t, ev: a.ev }); box.appendChild(bubble(chat[chat.length - 1])); box.scrollTop = box.scrollHeight; }
   function coach(q) {
