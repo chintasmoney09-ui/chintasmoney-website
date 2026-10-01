@@ -21,19 +21,19 @@
   var PLANS = {
     free:  { id: "free",  name: "Free",  price: 0,   cadence: "forever",
       blurb: "Score your discipline.",
-      features: ["log-trades-3", "discipline-score", "trader-personality", "last-30-days", "basic-mistakes", "free-calculators"],
+      features: ["log-trades-5", "discipline-score", "trader-personality", "last-30-days", "basic-mistakes", "free-calculators"],
       limits: { history: 30 } },
     plus:  { id: "plus",  name: "Go Plus",  price: 199, cadence: "month",
       blurb: "Journal more, see your leaks.",
-      features: ["everything-free", "tokens-300", "unlimited-history", "full-mistake-analysis", "money-leak-report", "streaks-and-badges", "pro-shareable-card"],
+      features: ["everything-free", "tokens-600", "unlimited-history", "full-mistake-analysis", "money-leak-report", "streaks-and-badges", "pro-shareable-card"],
       limits: { history: Infinity } },
     pro:   { id: "pro",   name: "Platinum",   price: 499, cadence: "month",
       blurb: "For serious, systematic traders.",
-      features: ["everything-plus", "tokens-600", "time-day-edge", "strategy-performance", "trade-grades", "edge-expectancy", "rules-adherence", "trade-replay", "csv-import-export", "weekly-report", "monthly-deep-dive"],
+      features: ["everything-plus", "tokens-1200", "time-day-edge", "strategy-performance", "trade-grades", "edge-expectancy", "rules-adherence", "trade-replay", "csv-import-export", "weekly-report", "monthly-deep-dive"],
       limits: { history: Infinity } },
     diamond: { id: "diamond", name: "Diamond", price: 999, cadence: "month",
       blurb: "Everything + AI, white-glove.",
-      features: ["everything-pro", "tokens-1500", "ai-discipline-coach", "what-if-simulator", "trading-playbook", "priority-ai", "monthly-1-1-review", "multi-year-backtest", "early-access"],
+      features: ["everything-pro", "tokens-3000", "ai-discipline-coach", "what-if-simulator", "trading-playbook", "priority-ai", "monthly-1-1-review", "multi-year-backtest", "early-access"],
       limits: { history: Infinity } }
   };
   // Minimum plan required to OPEN each area. AI coach is Diamond-only now.
@@ -292,7 +292,7 @@
     // Nothing is unlimited. Extra tokens are ONLY added by a real payment or the
     // admin panel. Tokens are non-refundable once granted.
     TOKEN_COSTS: { "log-trade": 30, "ai-coach": 30, "replay": 30, "whatif": 30, "deep-dive": 50, "setup-scan": 20 },
-    PLAN_TOKENS: { free: 90, plus: 300, pro: 600, diamond: 1500 },   // per month
+    PLAN_TOKENS: { free: 150, plus: 600, pro: 1200, diamond: 3000 },   // per month
     TOPUP_PACKS: { t199: { price: 199, tokens: 400 }, t499: { price: 499, tokens: 700 }, t999: { price: 999, tokens: 1600 }, t2000: { price: 2000, tokens: 3000 } },
     DAILY_BONUS: 30,          // 1 free log-trade per day, for every account
     WALLET_TTL_DAYS: 60,      // purchased tokens valid 2 months
