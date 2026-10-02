@@ -267,13 +267,14 @@
   function topbar(title, sub, actions) {
     var bar = el('<div class="topbar"></div>');
     var mb = el('<button class="btn btn-sm menu-btn">☰</button>'); mb.addEventListener("click", function () { mobileOpen = true; render(); }); bar.appendChild(mb);
-    bar.appendChild(el('<div><h1>' + title + '</h1>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>'));
-    bar.appendChild(el('<div class="spacer"></div>'));
-    bar.appendChild(notifBell());
+    bar.appendChild(el('<div class="tb-titles"><h1>' + title + '</h1>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>'));
+    var acts = el('<div class="tb-actions"></div>');
+    acts.appendChild(notifBell());
     var searchBtn = el('<button class="btn btn-sm topbar-search" title="Search (press /)" aria-label="Search">🔍</button>');
     searchBtn.addEventListener("click", function () { openSearch(); });
-    bar.appendChild(searchBtn);
-    (actions || []).forEach(function (a) { bar.appendChild(a); });
+    acts.appendChild(searchBtn);
+    (actions || []).forEach(function (a) { acts.appendChild(a); });
+    bar.appendChild(acts);
     return bar;
   }
   function logBtn() { var b = el('<button class="btn btn-primary">＋ Log a trade</button>'); b.addEventListener("click", function () { go("log"); }); return b; }
@@ -814,7 +815,7 @@
   // ---- TODAY feed (the addictive scroll) -----------------------------------
   VIEWS.today = function () {
     var s = CM.load(), st = CM.stats(), e = CM.engagement(), ms = CM.mistakes(), v = el('<div></div>');
-    v.appendChild(topbar("Today", "Your daily money mirror — a fresh look every time you open.", [logBtn()]));
+    v.appendChild(topbar("Today", "Your daily money mirror — a fresh look every time you open."));
     v.appendChild(todayHero());
     var feed = el('<div class="grid" style="max-width:680px;margin:0 auto"></div>');
     // 0. Today's mission — a personalised daily discipline focus
@@ -3446,7 +3447,7 @@
     var PLAN_SELL = {
       free: "See the truth about how you trade — free. 150 tokens/month (5 logs) + a free daily bonus, your Discipline Score, personality and basic mistakes.",
       plus: "Where most traders finally improve. 600 tokens/month, unlimited history, full mistake analysis and the 💸 Money Leak Report — the exact ₹ your habits cost you.",
-      pro: "For serious, systematic traders. 1200 tokens/month, setup performance, trade grades A–F, edge & expectancy, Trade Replay, broker import and weekly + monthly deep-dives.",
+      pro: "1200 tokens/month, setup performance, trade grades A–F, edge & expectancy, Trade Replay, broker import and weekly + monthly deep-dives.",
       diamond: "The complete edge + AI. 3000 tokens/month plus the AI Discipline Coach, What-If simulator, Personal Playbook, priority AI, a monthly 1:1 and multi-year backtesting."
     };
     var PLAN_WORTH = {

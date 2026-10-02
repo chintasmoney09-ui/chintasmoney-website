@@ -26,7 +26,7 @@
   var PLAN_SELL = {
     free: "See the truth about how you trade — free. 150 tokens/month (5 logs) + a free daily bonus, your Discipline Score, personality and basic mistakes.",
     plus: "Where most traders finally improve. 600 tokens/month, unlimited history, full mistake analysis and the 💸 Money Leak Report — the exact ₹ your habits cost you.",
-    pro: "For serious, systematic traders. 1200 tokens/month, setup performance, trade grades A–F, edge & expectancy, Trade Replay, broker import and weekly + monthly deep-dives.",
+    pro: "1200 tokens/month, setup performance, trade grades A–F, edge & expectancy, Trade Replay, broker import and weekly + monthly deep-dives.",
     diamond: "The complete edge + AI. 3000 tokens/month plus the AI Discipline Coach, What-If simulator, Personal Playbook, priority AI, a monthly 1:1 and multi-year backtesting."
   };
   var PLAN_WORTH = {
