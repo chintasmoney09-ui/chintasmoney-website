@@ -661,6 +661,27 @@ async function handleRzpVerify(request, env) {
     amount: p.amount, currency: "INR", method: "Razorpay",
     status: "paid", created_at: new Date().toISOString(),
   });
+  // For token top-ups, credit the purchased tokens to the SERVER wallet so they
+  // are spendable on server-enforced features (the AI coach). Authoritative: the
+  // product + amount were just re-read from Razorpay above, so the token count is
+  // trusted. We resolve the buyer's uid from their Supabase auth token (sent by
+  // the client); best-effort — a failure here never blocks the client grant.
+  if (p.type === "tokens" && p.tokens > 0 && env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const authz = request.headers.get("Authorization") || "";
+      const utok = authz.replace(/^Bearer\s+/i, "").trim();
+      if (utok) {
+        const ur = await fetch(env.SUPABASE_URL.replace(/\/$/, "") + "/auth/v1/user", { headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: "Bearer " + utok } });
+        if (ur.ok) {
+          const user = await ur.json();
+          if (user && user.id) {
+            const plan = await serverResolvePlan(env, user.email);
+            await tokenCreditServer(env, user.id, user.email, plan, p.tokens);
+          }
+        }
+      }
+    } catch (e) { /* best-effort; client still gets the grant */ }
+  }
   await sendReceiptEmail(env, { email: email, product: product, label: p.label, amount: p.amount, paymentId: paymentId });
   if (p.type === "plan" && email) await sendSubWelcomeEmail(env, { email: email, plan: p.plan });
   if (p.type === "tokens" && email) await sendTokenWelcomeEmail(env, { email: email, tokens: p.tokens });
