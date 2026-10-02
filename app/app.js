@@ -267,13 +267,14 @@
   function topbar(title, sub, actions) {
     var bar = el('<div class="topbar"></div>');
     var mb = el('<button class="btn btn-sm menu-btn">☰</button>'); mb.addEventListener("click", function () { mobileOpen = true; render(); }); bar.appendChild(mb);
-    bar.appendChild(el('<div><h1>' + title + '</h1>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>'));
-    bar.appendChild(el('<div class="spacer"></div>'));
-    bar.appendChild(notifBell());
+    bar.appendChild(el('<div class="tb-titles"><h1>' + title + '</h1>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>'));
+    var acts = el('<div class="tb-actions"></div>');
+    acts.appendChild(notifBell());
     var searchBtn = el('<button class="btn btn-sm topbar-search" title="Search (press /)" aria-label="Search">🔍</button>');
     searchBtn.addEventListener("click", function () { openSearch(); });
-    bar.appendChild(searchBtn);
-    (actions || []).forEach(function (a) { bar.appendChild(a); });
+    acts.appendChild(searchBtn);
+    (actions || []).forEach(function (a) { acts.appendChild(a); });
+    bar.appendChild(acts);
     return bar;
   }
   function logBtn() { var b = el('<button class="btn btn-primary">＋ Log a trade</button>'); b.addEventListener("click", function () { go("log"); }); return b; }
