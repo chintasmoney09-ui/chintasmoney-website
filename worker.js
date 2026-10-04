@@ -1772,12 +1772,112 @@ async function sendRenewalReminders(env) {
   }
 }
 
+// ---- Unsubscribe (one-click) + opt-out list ---------------------------------
+// Responsible email: every re-engagement email carries a one-click unsubscribe
+// link. The link is HMAC-signed so only we can mint it, and clicking it adds the
+// address to email_optout, which the win-back job honours.
+async function unsubToken(env, email) {
+  return (await hmacHex(env.ADMIN_SESSION_SECRET || "cm", "unsub:" + String(email).toLowerCase())).slice(0, 32);
+}
+async function unsubLink(env, email) {
+  return SITE_URL + "/api/unsubscribe?e=" + encodeURIComponent(email) + "&t=" + (await unsubToken(env, email));
+}
+async function unsubFooter(env, email) {
+  var link = await unsubLink(env, email);
+  return '<p style="color:#98a6c4;font-size:12px;margin:18px 0 0;text-align:center">You get these because you have a ChintasMoney account. ' +
+    '<a href="' + link + '" style="color:#7cc7ff">Unsubscribe from reminders</a>.</p>';
+}
+async function emailOptoutSet(env, base, h) {
+  var set = {};
+  try {
+    var r = await fetch(base + "/rest/v1/email_optout?select=email", { headers: h });
+    if (r.ok) (await r.json()).forEach(function (x) { if (x && x.email) set[String(x.email).toLowerCase()] = 1; });
+  } catch (e) {}
+  return set;
+}
+async function handleUnsubscribe(request, env) {
+  var url = new URL(request.url);
+  var email = (url.searchParams.get("e") || "").trim().toLowerCase();
+  var tok = (url.searchParams.get("t") || "").trim();
+  var page = function (msg) {
+    return new Response('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+      '<title>ChintasMoney</title><div style="font-family:system-ui,Segoe UI,Arial,sans-serif;background:#f4f6fb;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">' +
+      '<div style="max-width:440px;background:#fff;border:1px solid #e6ebf5;border-radius:16px;padding:28px;text-align:center">' +
+      '<img src="' + LOGO_URL + '" alt="ChintasMoney" style="height:34px;margin-bottom:14px"/>' +
+      '<div style="color:#0f1730;font-size:1.05rem;line-height:1.6">' + msg + '</div>' +
+      '<p style="margin:18px 0 0"><a href="' + SITE_URL + '" style="color:#12b39a;font-weight:700;text-decoration:none">Back to chintasmoney.com →</a></p>' +
+      '</div></div>', { status: 200, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+  };
+  if (!email || !tok || tok !== (await unsubToken(env, email))) return page("This unsubscribe link looks invalid or expired. If you keep getting emails, reply <b>unsubscribe</b> to any of them and we\'ll remove you.");
+  if (env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+    var base = env.SUPABASE_URL.replace(/\/$/, "");
+    try {
+      await fetch(base + "/rest/v1/email_optout?on_conflict=email", {
+        method: "POST", headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=ignore-duplicates" }),
+        body: JSON.stringify({ email: email, created_at: new Date().toISOString() }),
+      });
+    } catch (e) {}
+  }
+  return page("You\'re unsubscribed from ChintasMoney reminder emails. 👋<br><span style=\"color:#5b6b8c;font-size:.9rem\">You\'ll still get important account emails like receipts. Changed your mind? Just open the app again.</span>");
+}
+
+// Weekly win-back — a warm Sunday-morning nudge to people who haven't opened the
+// app in a while, from Chintamani. Honours the opt-out list, and sends at most
+// one per week (deduped on the firing Sunday). Reaches users inactive 7–90 days;
+// after 90 days we stop (no endless pestering = fewer spam complaints).
+async function sendWinbackReminders(env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY || !env.RESEND_API_KEY || !env.RECEIPT_FROM) return;
+  const base = env.SUPABASE_URL.replace(/\/$/, "");
+  const h = { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: "Bearer " + env.SUPABASE_SERVICE_ROLE_KEY };
+  const optout = await emailOptoutSet(env, base, h);
+  // All auth users with their last sign-in.
+  const users = [];
+  try {
+    for (let page = 1; page <= 50; page++) {
+      const ur = await fetch(base + "/auth/v1/admin/users?page=" + page + "&per_page=200", { headers: h });
+      if (!ur.ok) break; const uj = await ur.json(); const batch = uj.users || (Array.isArray(uj) ? uj : []);
+      if (!batch.length) break;
+      batch.forEach(function (u) { if (u.email) users.push({ id: u.id, email: u.email.toLowerCase(), last: u.last_sign_in_at, created: u.created_at }); });
+      if (batch.length < 200) break;
+    }
+  } catch (e) { return; }
+  const now = Date.now();
+  const weekTag = "winback-" + new Date().toISOString().slice(0, 10); // the firing Sunday
+  for (const u of users) {
+    if (optout[u.email]) continue;
+    const lastTs = u.last ? new Date(u.last).getTime() : (u.created ? new Date(u.created).getTime() : 0);
+    if (!lastTs) continue;
+    const days = Math.floor((now - lastTs) / 86400000);
+    if (days < 7 || days > 90) continue; // the re-engagement window
+    // One per week max.
+    let claimed = false;
+    try {
+      const ins = await fetch(base + "/rest/v1/email_log?on_conflict=user_id,kind", {
+        method: "POST", headers: await sbHeaders(env, { "content-type": "application/json", Prefer: "resolution=ignore-duplicates,return=representation" }),
+        body: JSON.stringify({ user_id: u.id, kind: weekTag, email: u.email, created_at: new Date().toISOString() }),
+      });
+      if (ins.ok) { const rr = await ins.json().catch(function () { return []; }); claimed = Array.isArray(rr) && rr.length > 0; }
+    } catch (e) {}
+    if (!claimed) continue;
+    const inner =
+      '<h2 style="margin:0 0 6px;font-size:1.4rem">We miss you at ChintasMoney 👋</h2>' +
+      '<p style="color:#5b6b8c;margin:0 0 6px">It\'s been ' + days + ' days since your last visit. A calm Sunday is the perfect time to look back at your week — before the next one starts.</p>' +
+      '<p style="color:#5b6b8c;margin:0 0 14px">Two minutes is all it takes: log your trades, check your <b>Discipline Score</b>, and see your <b>Weekly Wrapped</b> — the one habit that quietly compounds into a better trader.</p>' +
+      '<div style="text-align:center;margin:20px 0 8px"><a href="' + APP_URL + '" style="display:inline-block;background:linear-gradient(135deg,#22e08a,#12b39a);color:#04231b;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:800">Open ChintasMoney →</a></div>' +
+      '<p style="color:#5b6b8c;font-size:13px;text-align:center;margin:6px 0 0">Don\'t forget — you earn <b>+30 free tokens</b> just for showing up today.</p>' +
+      '<p style="color:#5b6b8c;font-size:13px;margin:16px 0 0">To your discipline,<br>— Chintamani 🙏</p>' +
+      (await unsubFooter(env, u.email));
+    try { await sendEmail(env, { to: u.email, subject: "We miss you — your Sunday discipline check-in 🧘", html: emailShell(inner) }); } catch (e) {}
+  }
+}
+
 export default {
   async scheduled(event, env, ctx) {
     // Weekly report runs on Monday 04:00 UTC; the daily streak nudge runs every
-    // evening. We route by the cron string so each fires its own job.
+    // evening; the win-back email goes out Sunday morning. Route by cron string.
     if (event && event.cron === "0 4 * * 1") ctx.waitUntil(sendWeeklyReports(env));
     else if (event && event.cron === "30 12 * * *") ctx.waitUntil((async function () { try { await sendStreakReminders(env); } catch (e) {} try { await sendRenewalReminders(env); } catch (e) {} })());
+    else if (event && event.cron === "30 3 * * 0") ctx.waitUntil(sendWinbackReminders(env));
     else ctx.waitUntil(sendWeeklyReports(env));
   },
   async fetch(request, env, ctx) {
@@ -1796,6 +1896,7 @@ export default {
     if (request.method === "POST" && url.pathname === "/api/lifecycle") return handleLifecycle(request, env);
     if (request.method === "GET" && url.pathname === "/api/entitlement") return handleEntitlement(request, env);
     if (request.method === "GET" && url.pathname === "/api/tokens") return handleTokensGet(request, env);
+    if (request.method === "GET" && url.pathname === "/api/unsubscribe") return handleUnsubscribe(request, env);
     if (request.method === "POST" && url.pathname === "/api/push/subscribe") return handlePushSubscribe(request, env);
     if (request.method === "POST" && url.pathname === "/api/admin/push") return handleAdminPush(request, env);
     if (request.method === "GET" && url.pathname === "/api/admin/razorpay") return handleAdminRazorpay(request, env);
