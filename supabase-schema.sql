@@ -141,3 +141,13 @@ create table if not exists public.token_accounts (
 );
 -- RLS on with no policy = only the service-role (Worker) can read/write it.
 alter table public.token_accounts enable row level security;
+
+-- Email opt-out list. Anyone who clicks "Unsubscribe" in a reminder email is
+-- added here, and the weekly win-back job skips these addresses. (Account emails
+-- like receipts still send.) Written by the Worker via the one-click link.
+create table if not exists public.email_optout (
+  email      text primary key,
+  created_at timestamptz not null default now()
+);
+-- RLS on with no policy = only the service-role (Worker) can read/write it.
+alter table public.email_optout enable row level security;

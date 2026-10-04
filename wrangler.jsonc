@@ -33,7 +33,8 @@
   // Weekly discipline report email to Platinum/Diamond users.
   // Weekly report: Mondays 04:00 UTC = 09:30 IST.
   // Daily streak nudge: 12:30 UTC = 18:00 IST (evening reminder).
+  // Weekly win-back email: Sundays 03:30 UTC = 09:00 IST (Sunday morning).
   "triggers": {
-    "crons": ["0 4 * * 1", "30 12 * * *"]
+    "crons": ["0 4 * * 1", "30 12 * * *", "30 3 * * 0"]
   }
 }
