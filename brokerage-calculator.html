@@ -69,6 +69,17 @@
       <div id="leadMsg" style="font-size:.85rem;color:#64748b;margin-top:8px;min-height:16px"></div>
     </div>
 
+    <div class="card" style="margin-top:18px;padding:16px">
+      <div style="font-weight:800;margin-bottom:4px">🔗 Add this calculator to your website — free</div>
+      <p class="hint" style="margin:0 0 10px">Run a trading blog, course or community? Embed this calculator for your audience. Just copy the code below (keep the credit link).</p>
+      <textarea id="embedCode" readonly rows="4" style="width:100%;box-sizing:border-box;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.78rem;padding:10px;border:1px solid #cbd5e1;border-radius:10px;background:#f8fafc;color:#0f172a;resize:vertical">&lt;iframe src="https://chintasmoney.com/embed/brokerage-calculator.html" width="100%" height="560" style="border:1px solid #e3e8f2;border-radius:14px;max-width:470px" title="Brokerage Calculator" loading="lazy"&gt;&lt;/iframe&gt;
+&lt;p style="font:13px system-ui,sans-serif"&gt;Free &lt;a href="https://chintasmoney.com/brokerage-calculator"&gt;brokerage calculator&lt;/a&gt; by &lt;a href="https://chintasmoney.com"&gt;ChintasMoney&lt;/a&gt;&lt;/p&gt;</textarea>
+      <button id="embedCopy" style="margin-top:8px;padding:9px 16px;border-radius:10px;border:0;background:linear-gradient(135deg,#22e08a,#12b39a);color:#04231b;font-weight:800;cursor:pointer;font-family:inherit">📋 Copy embed code</button>
+      <script>
+        (function(){var b=document.getElementById("embedCopy"),t=document.getElementById("embedCode");if(!b||!t)return;b.addEventListener("click",function(){t.select();try{if(navigator.clipboard){navigator.clipboard.writeText(t.value);}else{document.execCommand("copy");}b.textContent="✓ Copied!";setTimeout(function(){b.textContent="📋 Copy embed code";},1600);}catch(e){}});})();
+      </script>
+    </div>
+
     <div class="card" style="margin-top:18px;padding:16px;text-align:center">
       <div style="font-weight:700;margin-bottom:8px">📢 Useful? Send it to a trading friend.</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
