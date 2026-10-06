@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brokerage Calculator — ChintasMoney</title>
+  <meta name="robots" content="noindex, follow" />
+  <style>
+    :root { --ink:#0f1730; --muted:#5b6b8c; --line:#e3e8f2; --bg:#f7f9fc; --card:#fff; --green:#12b39a; --green2:#22e08a; --red:#dc2626; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background: var(--bg); color: var(--ink); padding: 14px; }
+    .wrap { max-width: 460px; margin: 0 auto; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+    .hd { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; }
+    .hd h1 { font-size: 1.05rem; margin: 0; font-weight: 800; }
+    .hd .dot { width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(135deg, var(--green2), var(--green)); flex: 0 0 auto; }
+    .fld { display: flex; flex-direction: column; gap: 4px; margin: 0 0 10px; }
+    .fld span { font-size: .78rem; color: var(--muted); font-weight: 600; }
+    .fld input, .fld select { font-size: 1rem; padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px; background: #fff; color: var(--ink); width: 100%; }
+    .fld input:focus, .fld select:focus { outline: none; border-color: var(--green); }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .full { grid-column: 1 / -1; }
+    .net { border: 1px solid var(--green); background: rgba(18,179,154,.07); border-radius: 10px; padding: 10px; margin: 12px 0 8px; }
+    .net .k { font-size: .7rem; color: var(--muted); }
+    .net .v { font-size: 1.4rem; font-weight: 800; }
+    .rows { font-size: .85rem; }
+    .row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--line); }
+    .row span:first-child { color: var(--muted); }
+    .row span:last-child { font-weight: 700; }
+    .row.tot { font-weight: 800; border-bottom: 0; padding-top: 7px; }
+    .row.tot span:first-child { color: var(--ink); }
+    .msg { font-size: .85rem; color: var(--muted); }
+    .foot { margin: 12px 0 0; text-align: center; font-size: .78rem; }
+    .foot a { color: var(--green); font-weight: 700; text-decoration: none; }
+    .foot a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hd"><span class="dot"></span><h1>Brokerage &amp; Charges Calculator</h1></div>
+    <div class="grid">
+      <label class="fld full"><span>Trade type</span><select id="ttype"><option value="intraday">Intraday (equity)</option><option value="delivery">Delivery (equity)</option></select></label>
+      <label class="fld"><span>Buy price (₹)</span><input id="buy" type="number" value="100" inputmode="decimal" /></label>
+      <label class="fld"><span>Sell price (₹)</span><input id="sell" type="number" value="102" inputmode="decimal" /></label>
+      <label class="fld full"><span>Quantity (shares)</span><input id="qty" type="number" value="100" inputmode="decimal" /></label>
+    </div>
+    <div id="out"></div>
+    <p class="foot">⚡ Free calculator by <a href="https://chintasmoney.com/brokerage-calculator?utm_source=embed&utm_medium=widget" target="_blank" rel="noopener">ChintasMoney — the Trader Report Card</a></p>
+  </div>
+  <script>
+    (function () {
+      function n(id) { var x = parseFloat(document.getElementById(id).value); return isNaN(x) ? 0 : x; }
+      function money(v) { v = Math.round(v * 100) / 100; return "₹" + v.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+      function run() {
+        var type = document.getElementById("ttype").value, buy = n("buy"), sell = n("sell"), qty = n("qty");
+        var out = document.getElementById("out");
+        if (buy <= 0 || qty <= 0) { out.innerHTML = '<div class="msg">Enter a buy price and quantity to see your charges.</div>'; return; }
+        var buyVal = buy * qty, sellVal = sell * qty, turnover = buyVal + sellVal;
+        function brokLeg(val) { return Math.min(val * 0.0003, 20); }
+        var brokerage = type === "intraday" ? (brokLeg(buyVal) + brokLeg(sellVal)) : 0;
+        var stt = type === "intraday" ? sellVal * 0.00025 : (buyVal + sellVal) * 0.001;
+        var exch = turnover * 0.0000297;
+        var sebi = turnover * 0.000001;
+        var gst = (brokerage + exch + sebi) * 0.18;
+        var stamp = buyVal * (type === "intraday" ? 0.00003 : 0.00015);
+        var totalCharges = brokerage + stt + exch + sebi + gst + stamp;
+        var gross = sellVal - buyVal;
+        var net = gross - totalCharges;
+        function row(l, v) { return '<div class="row"><span>' + l + '</span><span>' + money(v) + '</span></div>'; }
+        out.innerHTML =
+          '<div class="net"><div class="k">Net P&amp;L (after charges)</div><div class="v" style="color:' + (net >= 0 ? "var(--green)" : "var(--red)") + '">' + money(net) + '</div></div>' +
+          '<div class="rows">' +
+          row("Gross P&amp;L", gross) +
+          row("Brokerage", brokerage) + row("STT / CTT", stt) + row("Exchange txn", exch) +
+          row("GST (18%)", gst) + row("SEBI charges", sebi) + row("Stamp duty", stamp) +
+          '<div class="row tot"><span>Total charges</span><span>' + money(totalCharges) + '</span></div>' +
+          '</div>';
+      }
+      ["ttype", "buy", "sell", "qty"].forEach(function (id) { var el = document.getElementById(id); el.addEventListener("input", run); el.addEventListener("change", run); });
+      run();
+    })();
+  </script>
+</body>
+</html>
