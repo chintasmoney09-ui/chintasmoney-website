@@ -1920,6 +1920,13 @@ export default {
       }
       return res;
     }
+    // Serve ads.txt explicitly as text/plain with a 200 — guarantees Google
+    // AdSense can always read it, independent of static-asset content-type
+    // detection (the usual cause of an "ads.txt not found" status).
+    if (url.pathname === "/ads.txt") {
+      return new Response("google.com, pub-1462824307424705, DIRECT, f08c47fec0942fa0\n",
+        { status: 200, headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "max-age=3600" } });
+    }
     return env.ASSETS.fetch(request);
   },
 };
